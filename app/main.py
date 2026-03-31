@@ -1,20 +1,20 @@
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from fastapi.staticfiles import StaticFiles
 
 from app.api.docs import router as docs_router
 from app.api.tasks import router as tasks_router
 from app.api.versions import router as versions_router
 from app.config import get_settings
-from app.db import Base, engine
+from app.errors import ApiError, api_error_handler, validation_error_handler
 
 
 settings = get_settings()
+
+
 app = FastAPI(title=settings.app_name)
-
-
-@app.on_event("startup")
-def on_startup() -> None:
-    Base.metadata.create_all(bind=engine)
+app.add_exception_handler(ApiError, api_error_handler)
+app.add_exception_handler(RequestValidationError, validation_error_handler)
 
 
 app.include_router(docs_router)

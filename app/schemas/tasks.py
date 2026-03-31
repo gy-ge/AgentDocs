@@ -2,32 +2,32 @@ from pydantic import BaseModel
 
 
 class TaskCreate(BaseModel):
-    block_id: int
     action: str
     instruction: str | None = None
     source_text: str
     start_offset: int
     end_offset: int
     doc_revision: int
-    auto_apply: bool = False
     actor: str = "browser"
 
 
-class TaskClaimRequest(BaseModel):
+class TaskNextRequest(BaseModel):
     agent_name: str
-    limit: int = 1
-    lease_seconds: int = 300
-
-
-class TaskHeartbeatRequest(BaseModel):
-    claim_token: str
-    lease_seconds: int = 300
 
 
 class TaskCompleteRequest(BaseModel):
-    claim_token: str
     result: str | None = None
     error_message: str | None = None
+
+
+class TaskDiffRead(BaseModel):
+    task_id: int
+    doc_id: int
+    current_text: str
+    source_text: str
+    result_text: str
+    can_accept: bool
+    diff: str
 
 
 class TaskAcceptRequest(BaseModel):

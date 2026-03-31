@@ -4,7 +4,6 @@ from pydantic import BaseModel
 
 
 class BlockRead(BaseModel):
-    id: int | None = None
     heading: str
     level: int
     position: int

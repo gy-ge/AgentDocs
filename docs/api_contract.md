@@ -11,7 +11,6 @@ Base URL:
 认证：
 
 - HTTP Header: Authorization: Bearer <api_key>
-- WebSocket 连接成功后，客户端先发送一条 auth 消息
 
 统一响应约定：
 
@@ -43,7 +42,6 @@ Base URL:
 - validation_error
 - conflict
 - invalid_state
-- claim_expired
 
 ## 2. 文档接口
 
@@ -93,7 +91,6 @@ Base URL:
     "revision": 3,
     "blocks": [
       {
-        "id": 10,
         "heading": "背景",
         "level": 2,
         "position": 0,
@@ -124,10 +121,10 @@ Base URL:
 行为：
 
 - 校验 expected_revision
-- 更新 raw_markdown
-- revision 加 1
-- 生成版本快照
-- 重建 blocks
+- 只有 raw_markdown 变化时才更新正文、revision 加 1，并生成版本快照
+- 如果只是 title 变化，只更新 title，不创建新版本
+- 如果 title 和 raw_markdown 都没变化，返回当前文档，不创建新版本
+- 读取时动态解析 blocks
 
 ### DELETE /api/docs/{doc_id}
 
@@ -172,14 +169,12 @@ Base URL:
 
 ```json
 {
-  "block_id": 10,
   "action": "rewrite",
   "instruction": "改成简历语气，控制在 180 字内",
   "source_text": "原文内容",
   "start_offset": 20,
   "end_offset": 40,
   "doc_revision": 3,
-  "auto_apply": false,
   "actor": "browser"
 }
 ```
@@ -188,6 +183,7 @@ Base URL:
 
 - 任务范围必须在同一个 block 内
 - source_text 必须与当前 raw_markdown 对应区间一致
+- 第一版不支持多段落或跨 block 选区
 
 ### GET /api/tasks
 
@@ -200,15 +196,37 @@ Base URL:
 
 返回任务详情和当前状态。
 
-### POST /api/tasks/claim
+### GET /api/tasks/{task_id}/diff
+
+说明：
+
+- 返回 source_text、result_text、current_text 和 unified diff
+- 当任务已有 result 时可用于前端预览 accept 前后的差异
+
+响应：
+
+```json
+{
+  "ok": true,
+  "data": {
+    "task_id": 9,
+    "doc_id": 1,
+    "current_text": "原文内容",
+    "source_text": "原文内容",
+    "result_text": "改写后的内容",
+    "can_accept": true,
+    "diff": "--- source\n+++ result\n@@ -1 +1 @@\n-原文内容\n+改写后的内容"
+  }
+}
+```
+
+### POST /api/tasks/next
 
 请求：
 
 ```json
 {
-  "agent_name": "picoclaw",
-  "limit": 1,
-  "lease_seconds": 300
+  "agent_name": "picoclaw"
 }
 ```
 
@@ -217,28 +235,14 @@ Base URL:
 ```json
 {
   "ok": true,
-  "data": [
-    {
-      "id": 9,
-      "doc_id": 1,
-      "action": "rewrite",
-      "instruction": "改成简历语气，控制在 180 字内",
-      "source_text": "原文内容",
-      "claim_token": "task-9-token",
-      "status": "claimed"
-    }
-  ]
-}
-```
-
-### POST /api/tasks/{task_id}/heartbeat
-
-请求：
-
-```json
-{
-  "claim_token": "task-9-token",
-  "lease_seconds": 300
+  "data": {
+    "id": 9,
+    "doc_id": 1,
+    "action": "rewrite",
+    "instruction": "改成简历语气，控制在 180 字内",
+    "source_text": "原文内容",
+    "status": "processing"
+  }
 }
 ```
 
@@ -248,7 +252,6 @@ Base URL:
 
 ```json
 {
-  "claim_token": "task-9-token",
   "result": "改写后的内容",
   "error_message": null
 }
@@ -258,7 +261,6 @@ Base URL:
 
 ```json
 {
-  "claim_token": "task-9-token",
   "result": null,
   "error_message": "model timeout"
 }
@@ -268,8 +270,8 @@ Base URL:
 
 - 有 result 时转为 done
 - 有 error_message 时转为 failed
-- 若 auto_apply 且锚点校验成功，则自动 accepted
-- 校验失败则转为 conflict
+- 必须且只能提供 result 或 error_message 其中一个
+- 不自动改正文
 
 ### POST /api/tasks/{task_id}/accept
 
@@ -309,59 +311,26 @@ Base URL:
 }
 ```
 
-## 4. WebSocket 协议
+### POST /api/tasks/{task_id}/retry
 
-连接：
+说明：
 
-- GET /ws
+- 允许 failed、cancelled、rejected 三种状态重新进入 pending
+- retry 前重新校验当前文档区间是否仍与 source_text 一致
+- retry 成功后会清空 agent_name、result、error_message 和时间戳
+- 如果正文已删除或改写掉原始目标文本，旧任务仍会保留，但 accept 会返回 conflict，retry 会返回 validation_error
 
-客户端首条消息：
+## 4. 第一版范围说明
 
-```json
-{
-  "type": "auth",
-  "api_key": "your-api-key"
-}
-```
+第一版不实现 WebSocket。
 
-服务端成功响应：
-
-```json
-{
-  "type": "auth.ok"
-}
-```
-
-服务端推送事件：
-
-```json
-{
-  "type": "task.created",
-  "task_id": 9,
-  "doc_id": 1
-}
-```
-
-```json
-{
-  "type": "task.completed",
-  "task_id": 9,
-  "doc_id": 1,
-  "status": "done"
-}
-```
-
-```json
-{
-  "type": "doc.updated",
-  "doc_id": 1,
-  "revision": 4
-}
-```
+浏览器端通过主动刷新或重新请求列表获知最新状态。
 
 ## 5. 关键实现备注
 
 - 所有正文写操作都必须经过 revision 校验
 - blocks 始终由 raw_markdown 派生，不接受独立更新
-- complete 接口必须校验 claim_token
+- 任务状态流转为 pending -> processing -> done 或 failed -> accepted 或 rejected
+- cancel 当前允许 pending 和 processing 两种状态
+- retry 当前允许 failed、cancelled、rejected 三种状态
 - accept 时只对 source_text 对应区间执行替换
