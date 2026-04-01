@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.api.deps import require_api_key
+from app.api.serializers import serialize_document, serialize_version
 from app.db import get_db
 from app.schemas.versions import RollbackRequest
 from app.services.document_service import DocumentService
@@ -13,16 +14,7 @@ service = DocumentService()
 @router.get("/{doc_id}/versions")
 def list_versions(doc_id: int, db: Session = Depends(get_db)):
     versions = service.list_versions(db, doc_id)
-    data = [
-        {
-            "id": version.id,
-            "revision": version.revision,
-            "actor": version.actor,
-            "note": version.note,
-            "created_at": version.created_at,
-        }
-        for version in versions
-    ]
+    data = [serialize_version(version).model_dump(mode="json") for version in versions]
     return {"ok": True, "data": data}
 
 
@@ -42,14 +34,4 @@ def rollback_version(
         note=payload.note,
     )
     blocks = service.parse_document(document.raw_markdown)
-    return {
-        "ok": True,
-        "data": {
-            "id": document.id,
-            "title": document.title,
-            "raw_markdown": document.raw_markdown,
-            "revision": document.revision,
-            "blocks": [block.__dict__ for block in blocks],
-            "updated_at": document.updated_at,
-        },
-    }
+    return {"ok": True, "data": serialize_document(document, blocks).model_dump(mode="json")}

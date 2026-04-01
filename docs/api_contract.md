@@ -174,8 +174,7 @@ Base URL:
   "source_text": "原文内容",
   "start_offset": 20,
   "end_offset": 40,
-  "doc_revision": 3,
-  "actor": "browser"
+  "doc_revision": 3
 }
 ```
 
@@ -201,6 +200,7 @@ Base URL:
 说明：
 
 - 返回 source_text、result_text、current_text 和 unified diff
+- 当 can_accept 为 false 时，额外返回 conflict_reason，便于前端或外部 Agent 判断是文本变更、结构位移还是选区已失效
 - 当任务已有 result 时可用于前端预览 accept 前后的差异
 
 响应：
@@ -215,6 +215,7 @@ Base URL:
     "source_text": "原文内容",
     "result_text": "改写后的内容",
     "can_accept": true,
+    "conflict_reason": null,
     "diff": "--- source\n+++ result\n@@ -1 +1 @@\n-原文内容\n+改写后的内容"
   }
 }
@@ -287,29 +288,11 @@ Base URL:
 
 ### POST /api/tasks/{task_id}/reject
 
-请求：
-
-```json
-{
-  "actor": "browser",
-  "note": "reject ai result"
-}
-```
-
 说明：
 
 - reject 默认不改正文，只改状态
 
 ### POST /api/tasks/{task_id}/cancel
-
-请求：
-
-```json
-{
-  "actor": "browser",
-  "note": "cancel before processing"
-}
-```
 
 ### POST /api/tasks/{task_id}/retry
 
@@ -319,6 +302,7 @@ Base URL:
 - retry 前重新校验当前文档区间是否仍与 source_text 一致
 - retry 成功后会清空 agent_name、result、error_message 和时间戳
 - 如果正文已删除或改写掉原始目标文本，旧任务仍会保留，但 accept 会返回 conflict，retry 会返回 validation_error
+- 如果任务 result 与 source_text 完全相同，accept 只会把任务标记为 accepted，不会产生新的 revision 或版本快照
 
 ## 4. 第一版范围说明
 
@@ -334,3 +318,4 @@ Base URL:
 - cancel 当前允许 pending 和 processing 两种状态
 - retry 当前允许 failed、cancelled、rejected 三种状态
 - accept 时只对 source_text 对应区间执行替换
+- rollback 到当前快照时视为 no-op，不创建新 revision

@@ -41,6 +41,7 @@ class TaskService:
             current_text == task.source_text
             and self._hash_text(current_text) == task.source_hash
         )
+        conflict_reason = None if can_accept else self._build_conflict_reason(task, document.raw_markdown)
         diff = "\n".join(
             unified_diff(
                 task.source_text.splitlines(),
@@ -57,6 +58,7 @@ class TaskService:
             "source_text": task.source_text,
             "result_text": task.result,
             "can_accept": can_accept,
+            "conflict_reason": conflict_reason,
             "diff": diff,
         }
 
@@ -157,6 +159,13 @@ class TaskService:
         if self._hash_text(current_text) != task.source_hash:
             raise ApiError(409, "conflict", "task source hash mismatch")
 
+        if task.result == task.source_text:
+            task.status = "accepted"
+            task.resolved_at = utcnow()
+            db.commit()
+            db.refresh(task)
+            return task
+
         document.raw_markdown = (
             document.raw_markdown[: task.start_offset]
             + task.result
@@ -251,3 +260,13 @@ class TaskService:
 
     def _hash_text(self, value: str) -> str:
         return sha256(value.encode("utf-8")).hexdigest()
+
+    def _build_conflict_reason(self, task: Task, raw_markdown: str) -> str:
+        current_text = raw_markdown[task.start_offset : task.end_offset]
+        if task.start_offset >= len(raw_markdown):
+            return "selection_removed"
+        if not current_text:
+            return "selection_removed"
+        if len(current_text) != len(task.source_text):
+            return "selection_shifted"
+        return "source_changed"

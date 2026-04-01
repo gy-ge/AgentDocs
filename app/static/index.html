@@ -295,8 +295,36 @@
 
       .board-grid {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
         gap: 16px;
+      }
+
+      .tab-strip {
+        display: inline-flex;
+        gap: 8px;
+        padding: 4px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--panel-muted);
+      }
+
+      .tab-button {
+        border: 0;
+        background: transparent;
+      }
+
+      .tab-button.active {
+        background: var(--panel);
+        box-shadow: var(--shadow);
+      }
+
+      .count-badge {
+        margin-left: 6px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .board-panel.hidden {
+        display: none;
       }
 
       .detail-note,
@@ -550,28 +578,33 @@
 
             <section class="panel">
               <div class="panel-body stack">
-                <div class="section-title">
-                  <h2>任务与版本</h2>
-                  <p>先看任务状态和版本列表，再决定是否接受结果或回滚文档。</p>
+                <div class="section-header">
+                  <div class="section-title">
+                    <h2>任务面板</h2>
+                    <p>只显示当前最需要处理的一块信息，先看任务，再切到版本。</p>
+                  </div>
+                  <div class="inline-actions">
+                    <div class="tab-strip" role="tablist" aria-label="任务与版本切换">
+                      <button id="show-tasks" class="tab-button active" role="tab" aria-selected="true">任务 <span id="task-count" class="count-badge">0</span></button>
+                      <button id="show-versions" class="tab-button" role="tab" aria-selected="false">版本 <span id="version-count" class="count-badge">0</span></button>
+                    </div>
+                    <button id="refresh-board">刷新当前面板</button>
+                  </div>
                 </div>
 
                 <div class="board-grid">
-                  <section class="stack">
-                    <div class="section-header">
-                      <div class="section-title">
-                        <h3>任务</h3>
-                      </div>
-                      <button id="refresh-tasks">刷新任务</button>
+                  <section id="tasks-panel" class="stack board-panel">
+                    <div class="section-title">
+                      <h3>任务</h3>
+                      <p>查看处理状态、冲突和可执行操作。</p>
                     </div>
                     <div id="task-list" class="task-list list"></div>
                   </section>
 
-                  <section class="stack">
-                    <div class="section-header">
-                      <div class="section-title">
-                        <h3>版本</h3>
-                      </div>
-                      <button id="refresh-versions">刷新版本</button>
+                  <section id="versions-panel" class="stack board-panel hidden">
+                    <div class="section-title">
+                      <h3>版本</h3>
+                      <p>按 revision 查看历史快照，需要时再执行回滚。</p>
                     </div>
                     <div id="version-list" class="version-list list"></div>
                   </section>
@@ -607,6 +640,7 @@
         docId: null,
         revision: null,
         selectedTaskId: null,
+        boardTab: "tasks",
       };
 
       const statusEl = document.getElementById("status");
@@ -617,6 +651,12 @@
       const docListEl = document.getElementById("doc-list");
       const taskListEl = document.getElementById("task-list");
       const versionListEl = document.getElementById("version-list");
+      const taskCountEl = document.getElementById("task-count");
+      const versionCountEl = document.getElementById("version-count");
+      const tasksPanelEl = document.getElementById("tasks-panel");
+      const versionsPanelEl = document.getElementById("versions-panel");
+      const showTasksButton = document.getElementById("show-tasks");
+      const showVersionsButton = document.getElementById("show-versions");
       const diffEl = document.getElementById("task-diff");
       const diffStateEl = document.getElementById("diff-state");
       const taskSummaryEl = document.getElementById("task-summary");
@@ -662,6 +702,21 @@
         `;
       }
 
+      function syncBoardTab() {
+        const showTasks = state.boardTab === "tasks";
+        tasksPanelEl.classList.toggle("hidden", !showTasks);
+        versionsPanelEl.classList.toggle("hidden", showTasks);
+        showTasksButton.classList.toggle("active", showTasks);
+        showVersionsButton.classList.toggle("active", !showTasks);
+        showTasksButton.setAttribute("aria-selected", String(showTasks));
+        showVersionsButton.setAttribute("aria-selected", String(!showTasks));
+      }
+
+      function setBoardTab(tab) {
+        state.boardTab = tab;
+        syncBoardTab();
+      }
+
       function resetTaskDetails() {
         state.selectedTaskId = null;
         diffStateEl.textContent = "未选择任务";
@@ -689,6 +744,19 @@
           return "API Key 无效，请重新输入并保存。";
         }
         return message || "请求失败";
+      }
+
+      function describeConflictReason(reason) {
+        if (reason === "selection_removed") {
+          return "原始选区已经被删掉，旧任务不能再直接合并。";
+        }
+        if (reason === "selection_shifted") {
+          return "原始选区长度已经变化，说明正文结构被改过。";
+        }
+        if (reason === "source_changed") {
+          return "原始选区内容已经变化，旧任务结果需要重新核对。";
+        }
+        return "当前正文已经变化，旧任务结果不能直接套用。";
       }
 
       function getHeaders() {
@@ -762,11 +830,13 @@
 
       async function loadTasks() {
         if (!state.docId) {
+          taskCountEl.textContent = "0";
           renderEmpty(taskListEl, "先选择文档。");
           resetTaskDetails();
           return;
         }
         const tasks = await api(`/api/tasks?doc_id=${state.docId}`);
+        taskCountEl.textContent = String(tasks.length);
         if (!tasks.length) {
           renderEmpty(taskListEl, "当前文档还没有任务。");
           resetTaskDetails();
@@ -792,10 +862,12 @@
 
       async function loadVersions() {
         if (!state.docId) {
+          versionCountEl.textContent = "0";
           renderEmpty(versionListEl, "先选择文档。");
           return;
         }
         const versions = await api(`/api/docs/${state.docId}/versions`);
+        versionCountEl.textContent = String(versions.length);
         if (!versions.length) {
           renderEmpty(versionListEl, "暂无版本。");
           return;
@@ -838,7 +910,7 @@
           } else {
             setTaskSummary(
               "需要人工处理冲突",
-              "当前正文已经变化，直接 accept 会失败。先比对原始文本和当前文本，再决定回滚文档，或 reject 后 retry。",
+              describeConflictReason(diff.conflict_reason),
               "warn",
               [
                 `原始文本: ${diff.source_text}`,
@@ -924,6 +996,7 @@
         if (!state.docId) {
           throw new Error("请先选择文档");
         }
+        const previousRevision = state.revision;
         const doc = await api(`/api/docs/${state.docId}`, {
           method: "PUT",
           body: JSON.stringify({
@@ -936,7 +1009,11 @@
         });
         state.revision = doc.revision;
         docRevisionPillEl.textContent = `revision ${doc.revision}`;
-        setStatus(`文档已保存到 revision ${doc.revision}。`, "success");
+        if (doc.revision === previousRevision) {
+          setStatus("文档没有正文变化，没有创建新版本。", "success");
+        } else {
+          setStatus(`文档已保存到 revision ${doc.revision}。`, "success");
+        }
         await Promise.all([loadDocs(), loadTasks(), loadVersions()]);
       }
 
@@ -959,7 +1036,6 @@
             start_offset: start,
             end_offset: end,
             doc_revision: state.revision,
-            actor: "browser",
           }),
         });
         await loadTasks();
@@ -981,20 +1057,14 @@
       }
 
       async function rejectTask(taskId) {
-        await api(`/api/tasks/${taskId}/reject`, {
-          method: "POST",
-          body: JSON.stringify({ actor: "browser", note: "reject from ui" }),
-        });
+        await api(`/api/tasks/${taskId}/reject`, { method: "POST" });
         setStatus(`任务 #${taskId} 已 reject。`, "success");
         await loadTasks();
         await selectTask(taskId);
       }
 
       async function cancelTask(taskId) {
-        await api(`/api/tasks/${taskId}/cancel`, {
-          method: "POST",
-          body: JSON.stringify({ actor: "browser", note: "cancel from ui" }),
-        });
+        await api(`/api/tasks/${taskId}/cancel`, { method: "POST" });
         setStatus(`任务 #${taskId} 已取消。`, "success");
         await loadTasks();
         await selectTask(taskId);
@@ -1035,6 +1105,14 @@
           return;
         }
         await loadDocs();
+      }
+
+      async function refreshBoard() {
+        if (state.boardTab === "versions") {
+          await loadVersions();
+          return;
+        }
+        await loadTasks();
       }
 
       function updateSelectionInfo() {
@@ -1079,12 +1157,13 @@
       });
       document.getElementById("refresh-current").addEventListener("click", () => safeRun(refreshCurrent));
       document.getElementById("refresh-docs").addEventListener("click", () => safeRun(loadDocs));
-      document.getElementById("refresh-tasks").addEventListener("click", () => safeRun(loadTasks));
-      document.getElementById("refresh-versions").addEventListener("click", () => safeRun(loadVersions));
+      document.getElementById("refresh-board").addEventListener("click", () => safeRun(refreshBoard));
       document.getElementById("create-doc").addEventListener("click", () => safeRun(createDoc));
       document.getElementById("save-doc").addEventListener("click", () => safeRun(saveDoc));
       document.getElementById("reload-doc").addEventListener("click", () => safeRun(() => refreshCurrent()));
       document.getElementById("create-task").addEventListener("click", () => safeRun(createTask));
+      showTasksButton.addEventListener("click", () => setBoardTab("tasks"));
+      showVersionsButton.addEventListener("click", () => setBoardTab("versions"));
       docBodyInput.addEventListener("select", updateSelectionInfo);
       docBodyInput.addEventListener("keyup", updateSelectionInfo);
       docBodyInput.addEventListener("mouseup", updateSelectionInfo);
@@ -1096,6 +1175,7 @@
       });
 
       syncKeyState();
+      syncBoardTab();
       resetTaskDetails();
       if (!apiKeyInput.value.trim()) {
         openKeyModal();

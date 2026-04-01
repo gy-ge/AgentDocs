@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.api.deps import require_api_key
+from app.api.serializers import serialize_document, serialize_document_list_item, serialize_task
 from app.db import get_db
 from app.schemas.docs import DocumentCreate, DocumentUpdate
 from app.schemas.tasks import TaskCreate
@@ -13,29 +14,10 @@ service = DocumentService()
 task_service = TaskService()
 
 
-def serialize_document(document, blocks):
-    return {
-        "id": document.id,
-        "title": document.title,
-        "raw_markdown": document.raw_markdown,
-        "revision": document.revision,
-        "blocks": [block.__dict__ for block in blocks],
-        "updated_at": document.updated_at,
-    }
-
-
 @router.get("")
 def list_docs(db: Session = Depends(get_db)):
     documents = service.list_documents(db)
-    data = [
-        {
-            "id": document.id,
-            "title": document.title,
-            "revision": document.revision,
-            "updated_at": document.updated_at,
-        }
-        for document in documents
-    ]
+    data = [serialize_document_list_item(document).model_dump(mode="json") for document in documents]
     return {"ok": True, "data": data}
 
 
@@ -58,7 +40,7 @@ def create_doc(payload: DocumentCreate, db: Session = Depends(get_db)):
 def get_doc(doc_id: int, db: Session = Depends(get_db)):
     document = service.get_document(db, doc_id)
     blocks = service.parse_document(document.raw_markdown)
-    return {"ok": True, "data": serialize_document(document, blocks)}
+    return {"ok": True, "data": serialize_document(document, blocks).model_dump(mode="json")}
 
 
 @router.put("/{doc_id}")
@@ -73,7 +55,7 @@ def update_doc(doc_id: int, payload: DocumentUpdate, db: Session = Depends(get_d
         note=payload.note,
     )
     blocks = service.parse_document(document.raw_markdown)
-    return {"ok": True, "data": serialize_document(document, blocks)}
+    return {"ok": True, "data": serialize_document(document, blocks).model_dump(mode="json")}
 
 
 @router.delete("/{doc_id}")
@@ -96,10 +78,5 @@ def create_doc_task(doc_id: int, payload: TaskCreate, db: Session = Depends(get_
     )
     return {
         "ok": True,
-        "data": {
-            "id": task.id,
-            "doc_id": task.doc_id,
-            "status": task.status,
-            "action": task.action,
-        },
+        "data": serialize_task(task).model_dump(mode="json"),
     }

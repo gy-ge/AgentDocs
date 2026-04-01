@@ -110,6 +110,9 @@ class DocumentService:
         if version is None or version.doc_id != doc_id:
             raise ApiError(404, "not_found", "version not found")
 
+        if document.raw_markdown == version.snapshot:
+            return document
+
         document.raw_markdown = version.snapshot
         document.revision += 1
         document.updated_at = utcnow()

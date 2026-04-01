@@ -104,7 +104,7 @@ uv run python scripts/simulate_agent.py --api-key change-me --mode fail
 
 ## 当前进度
 
-当前第一批后端业务代码已经落地，并已通过 pytest 集成测试：
+当前第一批后端业务代码已经落地，并已通过 21 项 pytest 集成测试：
 
 - 文档 CRUD 已实现
 - 文档 revision 校验已实现
@@ -114,12 +114,14 @@ uv run python scripts/simulate_agent.py --api-key change-me --mode fail
 - 文档版本列表与 rollback 已实现
 - Alembic 初始迁移已实现
 - 统一错误响应与单 API Key 认证已实现
+- 前端任务区已改为更简洁的单面板切换视图
+- 无变化保存、无变化 accept、无变化 rollback 都已收紧为 no-op，不再制造多余 revision
 - pytest 集成测试已建立并覆盖核心流程
 - 本地模拟 Agent 脚本已提供，可在没有真实 Agent 时联调任务流程
 
 当前还没有完成的部分包括：
 
-- 前端页面已可用于最小闭环操作，但还没有更细的交互打磨
+- 前端页面已可用于闭环操作，但仍有进一步打磨空间
 - 批量操作等增强能力尚未实现
 - WebSocket 与实时刷新仍未实现
 

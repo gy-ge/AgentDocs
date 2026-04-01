@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel
 
 
@@ -8,7 +10,6 @@ class TaskCreate(BaseModel):
     start_offset: int
     end_offset: int
     doc_revision: int
-    actor: str = "browser"
 
 
 class TaskNextRequest(BaseModel):
@@ -27,7 +28,27 @@ class TaskDiffRead(BaseModel):
     source_text: str
     result_text: str
     can_accept: bool
+    conflict_reason: str | None = None
     diff: str
+
+
+class TaskRead(BaseModel):
+    id: int
+    doc_id: int
+    doc_revision: int
+    start_offset: int
+    end_offset: int
+    source_text: str
+    action: str
+    instruction: str | None = None
+    result: str | None = None
+    status: str
+    agent_name: str | None = None
+    error_message: str | None = None
+    created_at: datetime
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    resolved_at: datetime | None = None
 
 
 class TaskAcceptRequest(BaseModel):
@@ -36,11 +57,3 @@ class TaskAcceptRequest(BaseModel):
     note: str | None = None
 
 
-class TaskRejectRequest(BaseModel):
-    actor: str = "browser"
-    note: str | None = None
-
-
-class TaskCancelRequest(BaseModel):
-    actor: str = "browser"
-    note: str | None = None
