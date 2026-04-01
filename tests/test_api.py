@@ -1461,7 +1461,7 @@ def test_document_parse_blocks_with_empty_content(client, auth_headers):
     assert data["blocks"] == []
 
 
-def test_create_task_rejects_empty_action(client, auth_headers):
+def test_create_task_rejects_blank_action(client, auth_headers):
     raw_markdown = "# Title\nContent\n"
     created = create_document(client, auth_headers, raw_markdown)
     doc_id = created["id"]
