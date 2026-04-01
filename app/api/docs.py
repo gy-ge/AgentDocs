@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import require_api_key
 from app.api.serializers import (
+    serialize_batch_accept,
     serialize_document,
     serialize_document_list_item,
     serialize_stale_cleanup,
@@ -10,7 +11,7 @@ from app.api.serializers import (
 )
 from app.db import get_db
 from app.schemas.docs import DocumentCreate, DocumentUpdate
-from app.schemas.tasks import TaskCreate
+from app.schemas.tasks import TaskBatchActionRequest, TaskCreate
 from app.services.document_service import DocumentService
 from app.services.task_service import TaskService
 
@@ -94,3 +95,20 @@ def cleanup_doc_stale_tasks(doc_id: int, db: Session = Depends(get_db)):
         "ok": True,
         "data": serialize_stale_cleanup(doc_id, **result).model_dump(mode="json"),
     }
+
+
+@router.post("/{doc_id}/tasks/accept-ready")
+def accept_ready_doc_tasks(
+    doc_id: int, payload: TaskBatchActionRequest, db: Session = Depends(get_db)
+):
+    result = task_service.accept_ready_tasks(
+        db,
+        doc_id=doc_id,
+        actor=payload.actor,
+        note=payload.note,
+        action=payload.action,
+        start_offset=payload.start_offset,
+        end_offset=payload.end_offset,
+        limit=payload.limit,
+    )
+    return {"ok": True, "data": serialize_batch_accept(result).model_dump(mode="json")}

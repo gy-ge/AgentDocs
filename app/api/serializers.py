@@ -1,5 +1,10 @@
 from app.schemas.docs import BlockRead, DocumentListItem, DocumentRead
-from app.schemas.tasks import CleanupStaleTasksRead, TaskRead
+from app.schemas.tasks import (
+    CleanupStaleTasksRead,
+    TaskBatchAcceptRead,
+    TaskRead,
+    TaskRelocateRead,
+)
 from app.schemas.versions import VersionRead
 
 
@@ -39,6 +44,7 @@ def serialize_task(
     is_stale: bool = False,
     stale_reason: str | None = None,
     recommended_action: str | None = None,
+    context: dict[str, object] | None = None,
 ) -> TaskRead:
     return TaskRead(
         id=task.id,
@@ -56,6 +62,7 @@ def serialize_task(
         is_stale=is_stale,
         stale_reason=stale_reason,
         recommended_action=recommended_action,
+        context=context,
         created_at=task.created_at,
         started_at=task.started_at,
         completed_at=task.completed_at,
@@ -71,6 +78,31 @@ def serialize_stale_cleanup(
         cancelled=cancelled,
         rejected=rejected,
         unchanged=unchanged,
+    )
+
+
+def serialize_batch_accept(result: dict[str, object]) -> TaskBatchAcceptRead:
+    return TaskBatchAcceptRead(**result)
+
+
+def serialize_task_relocation(
+    task,
+    *,
+    relocation_strategy: str,
+    is_stale: bool = False,
+    stale_reason: str | None = None,
+    recommended_action: str | None = None,
+    context: dict[str, object] | None = None,
+) -> TaskRelocateRead:
+    return TaskRelocateRead(
+        task=serialize_task(
+            task,
+            is_stale=is_stale,
+            stale_reason=stale_reason,
+            recommended_action=recommended_action,
+            context=context,
+        ),
+        relocation_strategy=relocation_strategy,
     )
 
 

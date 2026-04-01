@@ -135,11 +135,23 @@ documents.raw_markdown 是唯一真源。
 
 1. Agent 调用 POST /api/tasks/next
 2. 服务端取一个 pending 任务并置为 processing
-3. Agent 完成后调用 POST /api/tasks/{id}/complete
+3. 服务端在 next 响应里返回任务本身以及最小上下文快照：当前文档标题、当前 revision、所在 block、block Markdown、选区前后文窗口
+4. Agent 完成后调用 POST /api/tasks/{id}/complete
 
 如果 Agent 异常退出，人工后续可 cancel 或 retry。
 
 当前实现中已经补充 diff 预览与 stale cleanup，作为人工处理旧任务的最小辅助工具。
+在第二阶段增强中，服务端额外补充了两条个人使用优先能力：
+
+- safe batch accept：按 offset 倒序批量接受当前文档里仍然可安全合并的 done 任务，减少人肉逐条确认
+- light relocate：当正文改动导致旧任务失效时，先尝试基于原 block 或全文唯一命中的轻量重定位，而不是直接放弃旧任务
+- visible-only polling：前端只在页面可见时做短轮询刷新任务列表与当前任务详情，避免为低性能服务器维持额外连接和无意义请求
+
+出于低性能服务器部署考虑，第二阶段继续遵守以下原则：
+
+- 不引入 WebSocket 或 SSE 常驻连接
+- 不为任务分组新增后端聚合接口，任务分组放在前端本地完成
+- 批量接受支持 action、区间与单次上限过滤，避免一次性扫完整个文档任务集
 
 ## 五、数据模型
 

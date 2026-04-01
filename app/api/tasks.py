@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import require_api_key
-from app.api.serializers import serialize_task
+from app.api.serializers import serialize_task, serialize_task_relocation
 from app.db import get_db
 from app.schemas.tasks import (
     TaskAcceptRequest,
@@ -35,9 +35,14 @@ def list_tasks(
 @router.get("/{task_id}")
 def get_task(task_id: int, db: Session = Depends(get_db)):
     task = service.get_task(db, task_id)
+    description = service.describe_task(db, task)
     return {
         "ok": True,
-        "data": serialize_task(task, **service.describe_task(db, task)).model_dump(mode="json"),
+        "data": serialize_task(
+            task,
+            **description,
+            context=service.build_task_context(db, task),
+        ).model_dump(mode="json"),
     }
 
 
@@ -50,9 +55,16 @@ def get_task_diff(task_id: int, db: Session = Depends(get_db)):
 @router.post("/next")
 def pickup_next_task(payload: TaskNextRequest, db: Session = Depends(get_db)):
     task = service.pickup_next_task(db, agent_name=payload.agent_name)
+    description = None if task is None else service.describe_task(db, task)
     return {
         "ok": True,
-        "data": None if task is None else serialize_task(task).model_dump(mode="json"),
+        "data": None
+        if task is None
+        else serialize_task(
+            task,
+            **description,
+            context=service.build_task_context(db, task),
+        ).model_dump(mode="json"),
     }
 
 
@@ -99,3 +111,18 @@ def cancel_task(task_id: int, db: Session = Depends(get_db)):
 def retry_task(task_id: int, db: Session = Depends(get_db)):
     task = service.retry_task(db, task_id=task_id)
     return {"ok": True, "data": serialize_task(task).model_dump(mode="json")}
+
+
+@router.post("/{task_id}/relocate")
+def relocate_task(task_id: int, db: Session = Depends(get_db)):
+    task, relocation_strategy = service.relocate_task(db, task_id=task_id)
+    description = service.describe_task(db, task)
+    return {
+        "ok": True,
+        "data": serialize_task_relocation(
+            task,
+            relocation_strategy=relocation_strategy,
+            **description,
+            context=service.build_task_context(db, task),
+        ).model_dump(mode="json"),
+    }

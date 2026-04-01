@@ -224,6 +224,15 @@
         white-space: nowrap;
       }
 
+      #auto-refresh-pill {
+        width: 100%;
+        min-width: 0;
+        justify-content: center;
+        white-space: normal;
+        text-align: center;
+        line-height: 1.35;
+      }
+
       .status {
         margin: 16px 0;
         padding: 10px 12px;
@@ -355,13 +364,20 @@
         gap: 8px;
       }
 
+      .task-list-tools {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        align-items: end;
+      }
+
       .task-list-wrap select {
         background: var(--panel-soft);
       }
 
       .task-button-row {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 10px;
       }
 
@@ -446,23 +462,144 @@
         background: #f6f8fa;
         color: #1f2328;
         padding: 14px;
+      }
+
+      .diff-preview {
+        display: grid;
+        gap: 12px;
+      }
+
+      .diff-columns {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .diff-column {
+        display: grid;
+        gap: 8px;
+        min-width: 0;
+      }
+
+      .diff-label {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        color: var(--muted);
+        text-transform: uppercase;
+      }
+
+      .diff-snippet,
+      .diff-unified {
+        min-height: 74px;
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #ffffff;
+        color: var(--text);
         font-family: Consolas, monospace;
         font-size: 12px;
         line-height: 1.55;
         white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .diff-snippet.source {
+        background: rgba(154, 103, 0, 0.06);
+        border-left: 4px solid rgba(154, 103, 0, 0.55);
+      }
+
+      .diff-snippet.current {
+        background: rgba(31, 35, 40, 0.05);
+        border-left: 4px solid rgba(31, 35, 40, 0.4);
+      }
+
+      .diff-snippet.result {
+        background: rgba(26, 127, 55, 0.07);
+        border-left: 4px solid rgba(26, 127, 55, 0.55);
+      }
+
+      .diff-meta {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .diff-meta .pill {
+        min-height: 24px;
+      }
+
+      .diff-preview details {
+        background: #ffffff;
+      }
+
+      .diff-preview .panel-caption {
+        margin-top: 0;
+      }
+
+      .diff-preview summary {
+        padding: 10px 12px;
+        font-size: 13px;
+      }
+
+      .template-list {
+        display: grid;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .template-item {
+        display: grid;
+        gap: 8px;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--panel-soft);
+      }
+
+      .template-item h3,
+      .template-item p {
+        margin: 0;
+      }
+
+      .template-item .meta {
+        margin: 0;
+      }
+
+      .template-item-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .template-item-actions button {
+        width: auto;
       }
 
       .task-actions {
         margin-top: -2px;
+        gap: 8px;
       }
 
       .task-actions:empty {
         display: none;
       }
 
+      .task-actions button {
+        min-width: 116px;
+      }
+
       .task-panel .diff,
       .task-panel .detail-note {
         background-clip: padding-box;
+      }
+
+      .task-composer-panel .section-title p,
+      .task-panel .section-title p,
+      .task-composer-panel .panel-caption,
+      .task-panel .panel-caption,
+      #task-group-summary {
+        display: none;
       }
 
       .version-panel .panel-body {
@@ -506,6 +643,7 @@
         justify-content: center;
         padding: 20px;
         background: rgba(31, 35, 40, 0.52);
+        z-index: 40;
       }
 
       .modal-backdrop.hidden {
@@ -560,6 +698,8 @@
 
         .doc-switcher,
         .doc-toolbar,
+        .task-list-tools,
+        .diff-columns,
         .task-actions,
         .inline-actions,
         .modal-actions {
@@ -568,6 +708,14 @@
 
         .doc-switcher .doc-switcher-actions,
         .doc-switcher {
+          grid-template-columns: 1fr;
+        }
+
+        .task-list-tools {
+          grid-template-columns: 1fr;
+        }
+
+        .diff-columns {
           grid-template-columns: 1fr;
         }
 
@@ -636,6 +784,41 @@
       </section>
     </div>
 
+    <section id="template-modal" class="modal-backdrop hidden" aria-modal="true" role="dialog">
+      <div class="modal-card" style="width: min(720px, 100%)">
+        <div class="stack">
+          <h2>管理模板</h2>
+          <p>内置模板只读，自定义模板保存在当前浏览器本地，适合个人长期复用。</p>
+          <div class="task-composer-grid">
+            <div>
+              <label for="template-name">模板名称</label>
+              <input id="template-name" placeholder="例如：技术方案润色" />
+            </div>
+            <div>
+              <label for="template-action">模板动作</label>
+              <select id="template-action">
+                <option value="rewrite">rewrite</option>
+                <option value="summarize">summarize</option>
+                <option value="expand">expand</option>
+                <option value="translate">translate</option>
+                <option value="custom">custom</option>
+              </select>
+            </div>
+            <div>
+              <label for="template-instruction">模板说明</label>
+              <textarea id="template-instruction" rows="3" placeholder="例如：改成正式、克制、适合项目文档的说明"></textarea>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button id="save-template" class="primary">保存模板</button>
+            <button id="reset-template-form" class="secondary">清空表单</button>
+            <button id="close-template-modal" class="secondary">关闭</button>
+          </div>
+          <div id="template-list" class="template-list"></div>
+        </div>
+      </div>
+    </section>
+
     <main class="app-shell">
       <div class="app-frame">
         <header class="app-header">
@@ -659,7 +842,6 @@
                 <div class="section-header">
                   <div class="section-title">
                     <h2>任务动作</h2>
-                    <p>选中文本后，从这里发起处理。</p>
                   </div>
                 </div>
 
@@ -683,13 +865,23 @@
                     <label for="task-instruction">补充说明</label>
                     <textarea id="task-instruction" rows="1" placeholder="例如：改成更正式的项目说明"></textarea>
                   </div>
+                  <div>
+                    <label for="task-template">快捷模板</label>
+                    <select id="task-template"></select>
+                  </div>
+                  <div>
+                    <label for="recent-instruction">最近说明</label>
+                    <select id="recent-instruction">
+                      <option value="">暂无最近说明</option>
+                    </select>
+                  </div>
                   <div class="task-button-row">
                     <button id="create-task" class="primary">创建任务</button>
+                    <button id="manage-templates" class="secondary">管理模板</button>
                     <button id="cleanup-stale" class="secondary">清理失效</button>
                     <button id="clear-instruction" class="secondary">清空说明</button>
                   </div>
                 </div>
-                <div class="panel-caption">保持选区状态固定展示，选中后可直接创建任务，不会挤压按钮区域。</div>
               </div>
             </section>
 
@@ -698,16 +890,38 @@
                 <div class="section-header">
                   <div class="section-title">
                     <h2>任务处理</h2>
-                    <p>按需查看和确认结果。</p>
                   </div>
-                  <span id="task-count-pill" class="pill">任务 0</span>
+                  <div class="inline-actions">
+                    <button id="accept-ready" class="secondary">批量接受可合并结果</button>
+                    <span id="task-count-pill" class="pill">任务 0</span>
+                  </div>
                 </div>
 
                 <div class="task-list-wrap">
                   <select id="task-list">
                     <option value="">先选择文档</option>
                   </select>
-                  <div class="panel-caption">只展示当前文档任务。选择后下方会给出 diff 和建议动作。</div>
+                  <div class="task-list-tools">
+                    <div class="compact-field">
+                      <label for="accept-ready-scope">批量接受范围</label>
+                      <select id="accept-ready-scope">
+                        <option value="all">当前文档全部可合并结果</option>
+                        <option value="selected-action">仅所选任务同动作</option>
+                        <option value="current-block">仅当前 block</option>
+                      </select>
+                    </div>
+                    <div class="compact-field">
+                      <label for="accept-ready-limit">单次上限</label>
+                      <select id="accept-ready-limit">
+                        <option value="10">10</option>
+                        <option value="20" selected>20</option>
+                        <option value="50">50</option>
+                        <option value="all">不限</option>
+                      </select>
+                    </div>
+                    <span id="auto-refresh-pill" class="pill">自动刷新：前台 15s</span>
+                  </div>
+                  <div id="task-group-summary" class="panel-caption">按状态分组显示当前文档任务。</div>
                 </div>
 
                 <div class="section-header" style="margin-top: 8px;">
@@ -716,10 +930,10 @@
                 
                 <div id="task-summary" class="detail-note">
                   <strong>操作建议</strong>
-                  <div>选择任务后，这里会说明当前状态和建议动作。</div>
+                  <div>选择任务后，这里只保留当前最重要的判断和动作。</div>
                 </div>
                 <div id="task-actions" class="task-actions"></div>
-                <div id="task-diff" class="diff">这里会显示任务 source_text 到 result 的 unified diff。</div>
+                <div id="task-diff" class="diff">这里会显示原始文本、当前文本、任务结果和 unified diff 对照，也可展开查看 unified diff。</div>
               </div>
             </section>
 
@@ -777,6 +991,7 @@
                 <div class="doc-toolbar">
                   <span class="pill">常用动作</span>
                   <button id="save-doc" class="primary">保存文档</button>
+                  <button id="export-doc" class="secondary">导出 Markdown</button>
                   <button id="delete-doc" class="danger">删除文档</button>
                 </div>
 
@@ -795,12 +1010,61 @@
       const state = {
         docId: null,
         revision: null,
+        docBlocks: [],
         selectedTaskId: null,
+        selectedTaskDetail: null,
+        tasks: [],
+        taskSignature: "",
+        taskPollMs: 15000,
+        taskPollTimer: null,
+        isTaskPollRunning: false,
       };
+
+      const taskGroupMeta = [
+        { key: 'processing', title: '处理中' },
+        { key: 'pending', title: '待处理' },
+        { key: 'done', title: '待确认' },
+        { key: 'stale', title: '已失效' },
+        { key: 'failed', title: '失败' },
+        { key: 'accepted', title: '已接受' },
+        { key: 'closed', title: '已关闭' },
+      ];
+
+      const BUILTIN_TEMPLATE_MAP = {
+        'builtin:formal-rewrite': {
+          id: 'builtin:formal-rewrite',
+          name: '润色为正式说明',
+          action: 'rewrite',
+          instruction: '改成更正式的项目说明，保持原意，去掉口语化表达。',
+        },
+        'builtin:brief-summary': {
+          id: 'builtin:brief-summary',
+          name: '压缩为简短摘要',
+          action: 'summarize',
+          instruction: '提炼成简短摘要，保留关键信息，控制在 3 句内。',
+        },
+        'builtin:expand-details': {
+          id: 'builtin:expand-details',
+          name: '补充细节与背景',
+          action: 'expand',
+          instruction: '在不改变事实的前提下补充背景、细节和上下文。',
+        },
+        'builtin:translate-zh-en': {
+          id: 'builtin:translate-zh-en',
+          name: '翻译成自然英文',
+          action: 'translate',
+          instruction: '翻译成自然、简洁、适合工作场景的英文表达。',
+        },
+      };
+
+      const RECENT_INSTRUCTIONS_KEY = 'agentdocs.recentInstructions';
+      const LAST_TASK_ACTION_KEY = 'agentdocs.lastTaskAction';
+      const CUSTOM_TEMPLATES_KEY = 'agentdocs.customTemplates';
 
       const statusEl = document.getElementById("status");
       const apiKeyInput = document.getElementById("api-key");
       const keyModalEl = document.getElementById("key-modal");
+      const templateModalEl = document.getElementById("template-modal");
       const keyStateEl = document.getElementById("key-state");
       const docRevisionPillEl = document.getElementById("doc-revision-pill");
       const docSelectorEl = document.getElementById("doc-selector");
@@ -808,16 +1072,30 @@
       const selectionStatusEl = document.getElementById("selection-status");
       const docTitleInput = document.getElementById("doc-title");
       const docBodyInput = document.getElementById("doc-body");
+      const taskActionEl = document.getElementById("task-action");
+      const taskInstructionEl = document.getElementById("task-instruction");
+      const taskTemplateEl = document.getElementById("task-template");
+      const recentInstructionEl = document.getElementById("recent-instruction");
+      const templateNameEl = document.getElementById("template-name");
+      const templateActionEl = document.getElementById("template-action");
+      const templateInstructionEl = document.getElementById("template-instruction");
+      const templateListEl = document.getElementById("template-list");
       const taskListEl = document.getElementById("task-list");
       const taskCountPillEl = document.getElementById("task-count-pill");
+      const taskGroupSummaryEl = document.getElementById("task-group-summary");
       const taskSummaryEl = document.getElementById("task-summary");
       const taskActionsEl = document.getElementById("task-actions");
       const diffEl = document.getElementById("task-diff");
       const diffStateEl = document.getElementById("diff-state");
+      const acceptReadyScopeEl = document.getElementById("accept-ready-scope");
+      const acceptReadyLimitEl = document.getElementById("accept-ready-limit");
+      const autoRefreshPillEl = document.getElementById("auto-refresh-pill");
       const versionListEl = document.getElementById("version-list");
       const versionCountPillEl = document.getElementById("version-count-pill");
 
       apiKeyInput.value = localStorage.getItem("agentdocs.apiKey") || "";
+
+      let editingTemplateId = null;
 
       function setStatus(message, mode = "") {
         statusEl.textContent = message;
@@ -840,6 +1118,16 @@
         keyModalEl.classList.add("hidden");
       }
 
+      function openTemplateModal() {
+        templateModalEl.classList.remove('hidden');
+        renderTemplateList();
+        setTimeout(() => templateNameEl.focus(), 0);
+      }
+
+      function closeTemplateModal() {
+        templateModalEl.classList.add('hidden');
+      }
+
       function escapeHtml(value) {
         return String(value)
           .replaceAll("&", "&amp;")
@@ -857,7 +1145,11 @@
       function clearEditor() {
         state.docId = null;
         state.revision = null;
+        state.docBlocks = [];
         state.selectedTaskId = null;
+        state.selectedTaskDetail = null;
+        state.tasks = [];
+        state.taskSignature = "";
         docRevisionPillEl.textContent = "未选择文档";
         docSelectorEl.innerHTML = '<option value="">请选择文档</option>';
         docSelectorEl.value = "";
@@ -868,7 +1160,275 @@
         renderEmpty(versionListEl, "先选择文档。", "版本列表");
         resetTaskDetails();
         taskCountPillEl.textContent = "任务 0";
+        taskGroupSummaryEl.textContent = "";
         versionCountPillEl.textContent = "版本 0";
+      }
+
+      function loadRecentInstructions() {
+        try {
+          const raw = localStorage.getItem(RECENT_INSTRUCTIONS_KEY);
+          if (!raw) {
+            return [];
+          }
+          const value = JSON.parse(raw);
+          if (!Array.isArray(value)) {
+            return [];
+          }
+          return value.filter((item) => typeof item === 'string' && item.trim()).slice(0, 6);
+        } catch {
+          return [];
+        }
+      }
+
+      function loadCustomTemplates() {
+        try {
+          const raw = localStorage.getItem(CUSTOM_TEMPLATES_KEY);
+          if (!raw) {
+            return [];
+          }
+          const parsed = JSON.parse(raw);
+          if (!Array.isArray(parsed)) {
+            return [];
+          }
+          return parsed.filter(
+            (item) => item && typeof item.id === 'string' && typeof item.name === 'string'
+          );
+        } catch {
+          return [];
+        }
+      }
+
+      function saveCustomTemplates(templates) {
+        localStorage.setItem(CUSTOM_TEMPLATES_KEY, JSON.stringify(templates));
+      }
+
+      function getTemplateCatalog() {
+        return [
+          ...Object.values(BUILTIN_TEMPLATE_MAP),
+          ...loadCustomTemplates(),
+        ];
+      }
+
+      function renderTaskTemplates() {
+        const options = [
+          '<option value="">不使用模板</option>',
+          ...Object.values(BUILTIN_TEMPLATE_MAP).map(
+            (template) => `<option value="${template.id}">内置 · ${escapeHtml(template.name)}</option>`
+          ),
+          ...loadCustomTemplates().map(
+            (template) => `<option value="${template.id}">自定义 · ${escapeHtml(template.name)}</option>`
+          ),
+        ];
+        taskTemplateEl.innerHTML = options.join('');
+        taskTemplateEl.value = '';
+      }
+
+      function resetTemplateForm() {
+        editingTemplateId = null;
+        templateNameEl.value = '';
+        templateActionEl.value = 'rewrite';
+        templateInstructionEl.value = '';
+      }
+
+      function renderTemplateList() {
+        const builtinCards = Object.values(BUILTIN_TEMPLATE_MAP).map(
+          (template) => `
+            <div class="template-item">
+              <h3>${escapeHtml(template.name)}</h3>
+              <div class="meta">内置模板 · ${escapeHtml(template.action)}</div>
+              <p>${escapeHtml(template.instruction)}</p>
+            </div>
+          `
+        );
+        const customTemplates = loadCustomTemplates();
+        const customCards = customTemplates.map(
+          (template) => `
+            <div class="template-item">
+              <h3>${escapeHtml(template.name)}</h3>
+              <div class="meta">自定义模板 · ${escapeHtml(template.action)}</div>
+              <p>${escapeHtml(template.instruction)}</p>
+              <div class="template-item-actions">
+                <button class="secondary" data-template-edit="${template.id}">编辑</button>
+                <button class="danger" data-template-delete="${template.id}">删除</button>
+              </div>
+            </div>
+          `
+        );
+        templateListEl.innerHTML = [...builtinCards, ...customCards].join('') || '<div class="card"><p class="hint">暂无模板。</p></div>';
+        templateListEl.querySelectorAll('[data-template-edit]').forEach((button) => {
+          button.addEventListener('click', () => {
+            const template = loadCustomTemplates().find((item) => item.id === button.dataset.templateEdit);
+            if (!template) {
+              return;
+            }
+            editingTemplateId = template.id;
+            templateNameEl.value = template.name;
+            templateActionEl.value = template.action;
+            templateInstructionEl.value = template.instruction;
+          });
+        });
+        templateListEl.querySelectorAll('[data-template-delete]').forEach((button) => {
+          button.addEventListener('click', () => {
+            const templates = loadCustomTemplates().filter((item) => item.id !== button.dataset.templateDelete);
+            saveCustomTemplates(templates);
+            renderTaskTemplates();
+            renderTemplateList();
+            if (editingTemplateId === button.dataset.templateDelete) {
+              resetTemplateForm();
+            }
+          });
+        });
+      }
+
+      function saveTemplateFromForm() {
+        const name = templateNameEl.value.trim();
+        const instruction = templateInstructionEl.value.trim();
+        if (!name) {
+          throw new Error('模板名称不能为空');
+        }
+        if (!instruction) {
+          throw new Error('模板说明不能为空');
+        }
+        const templates = loadCustomTemplates();
+        const nextTemplate = {
+          id: editingTemplateId || `custom:${Date.now()}`,
+          name,
+          action: templateActionEl.value,
+          instruction,
+        };
+        const nextTemplates = editingTemplateId
+          ? templates.map((item) => (item.id === editingTemplateId ? nextTemplate : item))
+          : [nextTemplate, ...templates].slice(0, 12);
+        saveCustomTemplates(nextTemplates);
+        renderTaskTemplates();
+        renderTemplateList();
+        taskTemplateEl.value = nextTemplate.id;
+        resetTemplateForm();
+        setStatus(`模板“${name}”已保存。`, 'success');
+      }
+
+      function renderRecentInstructions() {
+        const instructions = loadRecentInstructions();
+        if (!instructions.length) {
+          recentInstructionEl.innerHTML = '<option value="">暂无最近说明</option>';
+          recentInstructionEl.value = '';
+          return;
+        }
+        recentInstructionEl.innerHTML = [
+          '<option value="">选择最近说明</option>',
+          ...instructions.map(
+            (instruction, index) => `<option value="${index}">${escapeHtml(instruction)}</option>`
+          ),
+        ].join('');
+        recentInstructionEl.value = '';
+      }
+
+      function rememberInstruction(instruction) {
+        const trimmed = instruction.trim();
+        if (!trimmed) {
+          return;
+        }
+        const nextInstructions = [trimmed, ...loadRecentInstructions().filter((item) => item !== trimmed)].slice(0, 6);
+        localStorage.setItem(RECENT_INSTRUCTIONS_KEY, JSON.stringify(nextInstructions));
+        renderRecentInstructions();
+      }
+
+      function restoreTaskComposerState() {
+        const lastAction = localStorage.getItem(LAST_TASK_ACTION_KEY);
+        if (lastAction && [...taskActionEl.options].some((option) => option.value === lastAction)) {
+          taskActionEl.value = lastAction;
+        }
+        renderTaskTemplates();
+        renderRecentInstructions();
+      }
+
+      function syncCurrentBlocks() {
+        const rawMarkdown = docBodyInput.value;
+        const lines = rawMarkdown.split(/(?<=\n)/);
+        const blocks = [];
+        let currentHeading = '';
+        let currentLevel = 0;
+        let currentContent = [];
+        let blockStart = 0;
+        let cursor = 0;
+
+        for (const line of lines) {
+          const stripped = line.replace(/^\s+/, '');
+          if (stripped.startsWith('#')) {
+            if (currentHeading || currentContent.length > 0) {
+              blocks.push({
+                heading: currentHeading,
+                level: currentLevel,
+                position: blocks.length,
+                start_offset: blockStart,
+                end_offset: cursor,
+                content: currentContent.join('').replace(/^\n+|\n+$/g, ''),
+              });
+            }
+            const marker = stripped.split(' ', 1)[0];
+            currentLevel = marker.length;
+            currentHeading = stripped.slice(marker.length).trim();
+            currentContent = [];
+            blockStart = cursor;
+          } else {
+            currentContent.push(line);
+          }
+          cursor += line.length;
+        }
+
+        if (currentHeading || currentContent.length > 0) {
+          blocks.push({
+            heading: currentHeading,
+            level: currentLevel,
+            position: blocks.length,
+            start_offset: blockStart,
+            end_offset: cursor,
+            content: currentContent.join('').replace(/^\n+|\n+$/g, ''),
+          });
+        }
+
+        state.docBlocks = blocks;
+      }
+
+      function findBlockForOffset(offset) {
+        return state.docBlocks.find(
+          (block) => offset >= block.start_offset && offset <= block.end_offset
+        ) || null;
+      }
+
+      function renderDiffPlaceholder(message) {
+        diffEl.innerHTML = `
+          <div class="diff-preview">
+            <div class="panel-caption">${escapeHtml(message)}</div>
+          </div>
+        `;
+      }
+
+      function renderDiffPreview(task, diff) {
+        diffEl.innerHTML = `
+          <div class="diff-preview">
+            <div class="diff-columns">
+              <div class="diff-column">
+                <span class="diff-label">原始文本</span>
+                <div class="diff-snippet source">${escapeHtml(diff.source_text || '无')}</div>
+              </div>
+              <div class="diff-column">
+                <span class="diff-label">当前文本</span>
+                <div class="diff-snippet current">${escapeHtml(diff.current_text || '无')}</div>
+              </div>
+              <div class="diff-column">
+                <span class="diff-label">任务结果</span>
+                <div class="diff-snippet result">${escapeHtml(diff.result_text || '无')}</div>
+              </div>
+            </div>
+            <details>
+              <summary>查看 unified diff</summary>
+              <div class="details-body">
+                <div class="diff-unified">${escapeHtml(diff.diff || 'source_text 与 result 只有单行差异，没有额外上下文。')}</div>
+              </div>
+            </details>
+          </div>
+        `;
       }
 
       function setTaskSummary(title, message, mode = "", details = []) {
@@ -886,10 +1446,92 @@
 
       function resetTaskDetails() {
         state.selectedTaskId = null;
+        state.selectedTaskDetail = null;
         diffStateEl.textContent = "未选择任务";
         taskActionsEl.innerHTML = "";
-        diffEl.textContent = "这里会显示任务 source_text 到 result 的 unified diff。";
-        setTaskSummary("操作建议", "选择任务后，这里会说明当前状态和建议动作。");
+        renderDiffPlaceholder('这里会显示原始文本、当前文本、任务结果和 unified diff 对照。');
+        setTaskSummary("操作建议", "选择任务后，这里只保留当前最重要的判断和动作。");
+      }
+
+      function updateAutoRefreshPill() {
+        autoRefreshPillEl.textContent = document.hidden
+          ? '自动刷新：页面隐藏时暂停'
+          : `自动刷新：前台 ${Math.floor(state.taskPollMs / 1000)}s`;
+      }
+
+      function buildTaskSignature(tasks) {
+        return tasks
+          .map((task) => [
+            task.id,
+            task.status,
+            task.doc_revision,
+            task.is_stale ? 1 : 0,
+            task.stale_reason || '',
+            task.agent_name || '',
+            task.completed_at || '',
+            task.resolved_at || '',
+          ].join(':'))
+          .join('|');
+      }
+
+      function getTaskGroupKey(task) {
+        if (task.is_stale) {
+          return 'stale';
+        }
+        if (task.status === 'processing') {
+          return 'processing';
+        }
+        if (task.status === 'pending') {
+          return 'pending';
+        }
+        if (task.status === 'done') {
+          return 'done';
+        }
+        if (task.status === 'failed') {
+          return 'failed';
+        }
+        if (task.status === 'accepted') {
+          return 'accepted';
+        }
+        return 'closed';
+      }
+
+      function buildTaskGroups(tasks) {
+        const grouped = new Map(taskGroupMeta.map((item) => [item.key, { ...item, tasks: [] }]));
+        tasks.forEach((task) => {
+          grouped.get(getTaskGroupKey(task)).tasks.push(task);
+        });
+        return taskGroupMeta.map((item) => grouped.get(item.key)).filter((group) => group.tasks.length > 0);
+      }
+
+      function renderTaskGroupSummary(tasks) {
+        if (!tasks.length) {
+          taskGroupSummaryEl.textContent = '';
+          return;
+        }
+        taskGroupSummaryEl.textContent = '';
+      }
+
+      function renderTaskList(tasks) {
+        taskCountPillEl.textContent = `任务 ${tasks.length}`;
+        renderTaskGroupSummary(tasks);
+        if (!tasks.length) {
+          taskListEl.innerHTML = '<option value="">当前文档无任务</option>';
+          return;
+        }
+        taskListEl.innerHTML = buildTaskGroups(tasks)
+          .map((group) => {
+            const options = group.tasks
+              .map((task) => {
+                return `<option value="${task.id}">#${task.id} ${escapeHtml(task.action)}</option>`;
+              })
+              .join('');
+            return `<optgroup label="${escapeHtml(`${group.title} (${group.tasks.length})`)}">${options}</optgroup>`;
+          })
+          .join('');
+        if (state.selectedTaskId && tasks.some((task) => task.id === state.selectedTaskId)) {
+          taskListEl.value = String(state.selectedTaskId);
+        }
       }
 
       function buildFriendlyError(code, message) {
@@ -921,6 +1563,57 @@
           return "原始选区内容已经变化，旧任务结果需要重新核对。";
         }
         return "当前正文已经变化，旧任务结果不能直接套用。";
+      }
+
+      function describeRelocationStrategy(strategy) {
+        if (strategy === 'same_block_position_match') {
+          return '按原 block 位置重新定位';
+        }
+        if (strategy === 'same_heading_unique_match') {
+          return '按同标题 block 重新定位';
+        }
+        if (strategy === 'document_unique_match') {
+          return '按全文唯一命中重新定位';
+        }
+        if (strategy === 'current_selection_match') {
+          return '当前选区仍然匹配，只同步了最新 revision';
+        }
+        return '已按当前正文重新定位';
+      }
+
+      function canRelocateTask(task) {
+        return Boolean(task?.context)
+          && task.status !== 'accepted'
+          && task.status !== 'processing'
+          && task.doc_revision !== task.context.document_revision;
+      }
+
+      function buildAcceptReadyPayload() {
+        const payload = {
+          actor: 'browser',
+          note: 'bulk accept from ui',
+        };
+        const limit = acceptReadyLimitEl.value;
+        if (limit !== 'all') {
+          payload.limit = Number(limit);
+        }
+
+        if (acceptReadyScopeEl.value === 'selected-action') {
+          if (!state.selectedTaskDetail) {
+            throw new Error('请先选择一个任务，再按动作筛选批量接受范围');
+          }
+          payload.action = state.selectedTaskDetail.action;
+        }
+
+        if (acceptReadyScopeEl.value === 'current-block') {
+          const block = state.selectedTaskDetail?.context?.block;
+          if (!block) {
+            throw new Error('当前任务无法定位 block，不能按当前 block 批量接受');
+          }
+          payload.start_offset = block.start_offset;
+          payload.end_offset = block.end_offset;
+        }
+        return payload;
       }
 
       function describeTaskStatusText(task) {
@@ -1021,11 +1714,13 @@
         const doc = await api(`/api/docs/${docId}`);
         state.docId = doc.id;
         state.revision = doc.revision;
+        state.docBlocks = doc.blocks;
         state.selectedTaskId = null;
         docRevisionPillEl.textContent = `revision ${doc.revision}`;
         docSelectorEl.value = String(doc.id);
         docTitleInput.value = doc.title;
         docBodyInput.value = doc.raw_markdown;
+        syncCurrentBlocks();
         updateSelectionInfo();
         resetTaskDetails();
         if (options.refreshDocs) {
@@ -1035,35 +1730,39 @@
         setStatus(`已加载文档 #${doc.id}，当前 revision ${doc.revision}。`, 'success');
       }
 
-      async function loadTasks() {
+      async function loadTasks(options = {}) {
+        const { autoSelect = true, forceRefreshSelected = false } = options;
         if (!state.docId) {
+          state.tasks = [];
+          state.taskSignature = '';
           taskCountPillEl.textContent = '任务 0';
+          taskGroupSummaryEl.textContent = '按状态分组显示当前文档任务。';
           taskListEl.innerHTML = '<option value="">先选择文档</option>';
           resetTaskDetails();
-          return;
+          return { tasks: [], changed: false };
         }
+        const previousSignature = state.taskSignature;
         const tasks = await api(`/api/tasks?doc_id=${state.docId}`);
-        taskCountPillEl.textContent = `任务 ${tasks.length}`;
+        state.tasks = tasks;
+        state.taskSignature = buildTaskSignature(tasks);
         if (!tasks.length) {
-          taskListEl.innerHTML = '<option value="">当前文档无任务</option>';
+          renderTaskList(tasks);
           resetTaskDetails();
-          return;
+          return { tasks, changed: previousSignature !== state.taskSignature };
         }
         if (state.selectedTaskId && !tasks.some((task) => task.id === state.selectedTaskId)) {
           resetTaskDetails();
         }
-        taskListEl.innerHTML = tasks
-          .map((task) => {
-            const status = describeTaskStatusText(task);
-            return `<option value="${task.id}">#${task.id} ${escapeHtml(task.action)} (${status})</option>`;
-          })
-          .join('');
+        renderTaskList(tasks);
 
-        taskListEl.value = state.selectedTaskId ? String(state.selectedTaskId) : String(tasks[0].id);
-
-        if (!state.selectedTaskId && tasks.length > 0) {
-          await selectTask(tasks[0].id);
+        const selectedTaskId = state.selectedTaskId ?? (autoSelect ? tasks[0].id : null);
+        if (selectedTaskId !== null) {
+          taskListEl.value = String(selectedTaskId);
+          if (forceRefreshSelected || state.selectedTaskId !== selectedTaskId || state.selectedTaskDetail === null) {
+            await selectTask(selectedTaskId);
+          }
         }
+        return { tasks, changed: previousSignature !== state.taskSignature };
       }
 
       async function loadVersions() {
@@ -1107,106 +1806,156 @@
         return button;
       }
 
+      function buildTaskActionConfigs(task, taskId, relocationAvailable) {
+        const actions = [];
+        if (task.status === 'done' && !task.is_stale) {
+          actions.push({ label: '接受', handler: () => acceptTask(taskId), className: 'primary' });
+        }
+        if (relocationAvailable) {
+          actions.push({
+            label: task.is_stale ? '重定位' : '同步定位',
+            handler: () => relocateTask(taskId),
+            className: 'secondary',
+          });
+        }
+        if (['failed', 'cancelled', 'rejected'].includes(task.status) && !task.is_stale) {
+          actions.push({ label: '重试', handler: () => retryTask(taskId), className: 'secondary' });
+        }
+        if (task.status === 'done') {
+          actions.push({
+            label: task.is_stale ? '标记失效' : '拒绝',
+            handler: () => rejectTask(taskId),
+            className: task.is_stale ? 'warn' : 'secondary',
+          });
+        }
+        if (['pending', 'processing'].includes(task.status)) {
+          actions.push({
+            label: task.is_stale ? '关闭失效任务' : '取消',
+            handler: () => cancelTask(taskId),
+            className: task.is_stale ? 'warn' : 'secondary',
+          });
+        }
+        if (task.is_stale) {
+          actions.push({
+            label: '清理失效任务',
+            handler: cleanupStaleTasks,
+            className: 'secondary',
+          });
+        }
+        return actions;
+      }
+
+      function renderTaskActions(task, taskId, relocationAvailable) {
+        taskActionsEl.innerHTML = '';
+        buildTaskActionConfigs(task, taskId, relocationAvailable).forEach((action) => {
+          taskActionsEl.append(buildActionButton(action.label, action.handler, action.className));
+        });
+      }
+
+      function buildExportFileName() {
+        const safeTitle = (docTitleInput.value.trim() || `doc-${state.docId}`)
+          .replace(/[\\/:*?"<>|]/g, '-')
+          .replace(/\s+/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '');
+        const revisionPart = Number.isFinite(state.revision) ? `r${state.revision}` : `doc-${state.docId}`;
+        const now = new Date();
+        const datePart = [
+          now.getFullYear(),
+          String(now.getMonth() + 1).padStart(2, '0'),
+          String(now.getDate()).padStart(2, '0'),
+        ].join('-');
+        return `${safeTitle || 'document'}-${revisionPart}-${datePart}.md`;
+      }
+
       async function selectTask(taskId) {
         state.selectedTaskId = taskId;
         const task = await api(`/api/tasks/${taskId}`);
-        await loadTasks();
-        taskActionsEl.innerHTML = '';
+        state.selectedTaskDetail = task;
+        taskListEl.value = String(taskId);
+        const relocationAvailable = canRelocateTask(task);
 
         if (['done', 'accepted', 'rejected'].includes(task.status) && task.result) {
           const diff = await api(`/api/tasks/${taskId}/diff`);
           if (task.status === 'done' && diff.can_accept) {
-            diffStateEl.textContent = '可以 accept';
+            diffStateEl.textContent = '可直接接受';
             setTaskSummary(
-              '可以直接接受',
-              '当前正文仍与任务源文本一致，accept 会把选中区间替换成任务结果。',
-              'success',
-              [`当前文本: ${diff.current_text}`, `任务结果: ${diff.result_text}`]
+              '可直接接受',
+              '当前正文仍与任务源文本一致，可以直接确认。',
+              'success'
             );
           } else if (task.status === 'done') {
             diffStateEl.textContent = '存在冲突';
             setTaskSummary(
-              '建议先清理或重建任务',
-              describeConflictReason(diff.conflict_reason),
-              'warn',
-              [
-                `原始文本: ${diff.source_text}`,
-                `当前文本: ${diff.current_text}`,
-                `任务结果: ${diff.result_text}`,
-              ]
+              relocationAvailable ? '建议先重定位' : '建议重建或关闭',
+              relocationAvailable
+                ? `${describeConflictReason(diff.conflict_reason)} 先同步定位，再决定是否接受。`
+                : describeConflictReason(diff.conflict_reason),
+              'warn'
             );
           } else {
-            diffStateEl.textContent = `状态：${task.status}`;
+            diffStateEl.textContent = task.status === 'accepted' ? '已接受' : '已拒绝';
             setTaskSummary(
               task.status === 'accepted' ? '任务已接受' : '任务已拒绝',
               describeResolvedTask(task),
-              task.status === 'accepted' ? 'success' : 'warn',
-              [
-                `原始文本: ${diff.source_text}`,
-                `任务结果: ${diff.result_text}`,
-              ]
+              task.status === 'accepted' ? 'success' : 'warn'
             );
           }
-          diffEl.textContent = diff.diff || 'source_text 与 result 只有单行差异，没有额外上下文。';
+          renderDiffPreview(task, diff);
         } else {
-          diffStateEl.textContent = task.is_stale ? '任务已失效' : `状态：${task.status}`;
-          diffEl.textContent = task.error_message || '该任务当前没有可展示的 diff。';
+          if (task.is_stale) {
+            diffStateEl.textContent = '已失效';
+          } else if (task.status === 'processing') {
+            diffStateEl.textContent = '处理中';
+          } else if (task.status === 'pending') {
+            diffStateEl.textContent = '待处理';
+          } else if (task.status === 'failed') {
+            diffStateEl.textContent = '处理失败';
+          } else if (task.status === 'cancelled') {
+            diffStateEl.textContent = '已取消';
+          } else {
+            diffStateEl.textContent = task.status;
+          }
+          renderDiffPlaceholder(task.error_message || '该任务当前没有可展示的 diff。');
           if (task.status === 'failed') {
             setTaskSummary(
               'Agent 处理失败',
               task.is_stale
                 ? `${describeConflictReason(task.stale_reason)} 旧任务通常不值得重试，建议重新创建。`
-                : '这次任务没有产出结果。确认后可以直接 retry。',
-              'error',
-              [task.error_message || '没有额外错误信息']
+                : '这次任务没有产出结果。确认后可以直接重试。',
+              'error'
             );
           } else if (task.status === 'pending' || task.status === 'processing') {
             setTaskSummary(
               task.is_stale ? '建议关闭这个失效任务' : '任务仍在处理中',
               task.is_stale
                 ? `${describeConflictReason(task.stale_reason)} 推荐先取消，再按当前正文重新建任务。`
-                : '当前还不能 accept 或 reject。若 Agent 卡住，可以先 cancel。',
-              task.is_stale ? 'warn' : '',
-              [task.source_text]
+                : '当前还不能接受或拒绝。若 Agent 卡住，可以直接取消。',
+              task.is_stale ? 'warn' : ''
             );
           } else if (task.status === 'cancelled') {
             setTaskSummary(
               '任务已取消',
-              task.is_stale
-                ? '源文本已经变了，这条旧任务已安全关闭，只保留记录。'
-                : '当前结果不会改写正文。若原始文本仍匹配，可以 retry。',
-              'warn',
-              [task.source_text]
+              relocationAvailable
+                ? '正文已经变化，可以先同步定位，再决定是否重新排队。'
+                : task.is_stale
+                  ? '源文本已经变了，这条旧任务已安全关闭，只保留记录。'
+                  : '当前结果不会改写正文。若原始文本仍匹配，可以直接重试。',
+              'warn'
             );
           } else {
             setTaskSummary(
               task.is_stale ? '旧任务已失效' : '当前没有可接受结果',
-              task.is_stale
-                ? `${describeConflictReason(task.stale_reason)} 可以直接清理这条任务，或在当前正文上重新建一条。`
-                : '这个任务现在没有可直接合并到文档的结果。',
-              task.is_stale ? 'warn' : '',
-              [task.source_text]
+              relocationAvailable
+                ? '当前文档已经变更，可以先同步定位，再决定是否重试。'
+                : task.is_stale
+                  ? `${describeConflictReason(task.stale_reason)} 可以直接清理这条任务，或在当前正文上重新建一条。`
+                  : '这个任务现在没有可直接合并到文档的结果。',
+              task.is_stale ? 'warn' : ''
             );
           }
         }
-
-        if (task.status === 'done') {
-          taskActionsEl.append(buildActionButton('接受结果', () => acceptTask(taskId), 'primary'));
-          taskActionsEl.append(
-            buildActionButton(task.is_stale ? '标记失效' : '拒绝结果', () => rejectTask(taskId), task.is_stale ? 'warn' : 'secondary')
-          );
-        }
-        if (['pending', 'processing'].includes(task.status)) {
-          taskActionsEl.append(
-            buildActionButton(task.is_stale ? '关闭失效任务' : '取消任务', () => cancelTask(taskId), task.is_stale ? 'warn' : 'secondary')
-          );
-        }
-        if (['failed', 'cancelled', 'rejected'].includes(task.status) && !task.is_stale) {
-          taskActionsEl.append(buildActionButton('重新排队', () => retryTask(taskId), 'secondary'));
-        }
-        if (task.is_stale) {
-          taskActionsEl.append(buildActionButton('清理当前文档失效任务', cleanupStaleTasks, 'secondary'));
-        }
+        renderTaskActions(task, taskId, relocationAvailable);
       }
 
       async function createDoc() {
@@ -1243,8 +1992,10 @@
           }),
         });
         state.revision = doc.revision;
+        state.docBlocks = doc.blocks;
         docTitleInput.value = doc.title;
         docRevisionPillEl.textContent = `revision ${doc.revision}`;
+        syncCurrentBlocks();
         setStatus(
           doc.revision === previousRevision
             ? '正文没有变化，没有创建新版本。'
@@ -1269,6 +2020,23 @@
         setStatus(`文档 #${deletedId} 已删除。`, 'success');
       }
 
+      function exportDoc() {
+        if (!state.docId) {
+          throw new Error('请先选择文档');
+        }
+        const fileName = buildExportFileName();
+        const blob = new Blob([docBodyInput.value], { type: 'text/markdown;charset=utf-8' });
+        const url = window.URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = fileName;
+        document.body.append(anchor);
+        anchor.click();
+        anchor.remove();
+        window.URL.revokeObjectURL(url);
+        setStatus(`已导出 ${fileName}。`, 'success');
+      }
+
       async function cleanupStaleTasks() {
         if (!state.docId) {
           throw new Error('请先选择文档');
@@ -1284,6 +2052,29 @@
         );
       }
 
+      async function acceptReadyTasks() {
+        if (!state.docId) {
+          throw new Error('请先选择文档');
+        }
+        const payload = buildAcceptReadyPayload();
+        const result = await api(`/api/docs/${state.docId}/tasks/accept-ready`, {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        });
+        await selectDoc(state.docId, { refreshDocs: true });
+        if (result.accepted_task_ids.length > 0) {
+          await selectTask(result.accepted_task_ids[0]);
+        }
+        if (result.accepted === 0) {
+          setStatus(`当前没有可安全合并的任务，跳过 ${result.skipped} 条。`, '');
+          return;
+        }
+        setStatus(
+          `已批量接受 ${result.accepted} 条任务，跳过 ${result.skipped} 条，当前 revision ${result.document_revision}。`,
+          'success'
+        );
+      }
+
       async function createTask() {
         if (!state.docId) {
           throw new Error('请先选择文档');
@@ -1294,18 +2085,22 @@
           throw new Error('请先在编辑区选中文本');
         }
         const sourceText = docBodyInput.value.slice(start, end);
-        await api(`/api/docs/${state.docId}/tasks`, {
+        const task = await api(`/api/docs/${state.docId}/tasks`, {
           method: 'POST',
           body: JSON.stringify({
-            action: document.getElementById('task-action').value,
-            instruction: document.getElementById('task-instruction').value || null,
+            action: taskActionEl.value,
+            instruction: taskInstructionEl.value || null,
             source_text: sourceText,
             start_offset: start,
             end_offset: end,
             doc_revision: state.revision,
           }),
         });
-        await loadTasks();
+        localStorage.setItem(LAST_TASK_ACTION_KEY, taskActionEl.value);
+        rememberInstruction(taskInstructionEl.value);
+        taskTemplateEl.value = '';
+        state.selectedTaskId = task.id;
+        await loadTasks({ forceRefreshSelected: true });
         setStatus('任务已创建，等待 Agent 处理。', 'success');
       }
 
@@ -1344,6 +2139,57 @@
         await selectTask(taskId);
       }
 
+      async function relocateTask(taskId) {
+        const result = await api(`/api/tasks/${taskId}/relocate`, { method: 'POST' });
+        await loadTasks({ forceRefreshSelected: false });
+        await selectTask(taskId);
+        setStatus(
+          `任务 #${taskId} 已${describeRelocationStrategy(result.relocation_strategy)}。`,
+          'success'
+        );
+      }
+
+      async function pollTaskPanel() {
+        if (document.hidden || !state.docId || state.isTaskPollRunning || !apiKeyInput.value.trim()) {
+          updateAutoRefreshPill();
+          return;
+        }
+        state.isTaskPollRunning = true;
+        try {
+          const previousSelectedTaskId = state.selectedTaskId;
+          const { tasks, changed } = await loadTasks({ autoSelect: false, forceRefreshSelected: false });
+          if (!tasks.length) {
+            return;
+          }
+          if (!changed) {
+            if (previousSelectedTaskId && tasks.some((task) => task.id === previousSelectedTaskId)) {
+              taskListEl.value = String(previousSelectedTaskId);
+            }
+            return;
+          }
+          if (previousSelectedTaskId && tasks.some((task) => task.id === previousSelectedTaskId)) {
+            await selectTask(previousSelectedTaskId);
+            return;
+          }
+          await selectTask(tasks[0].id);
+        } catch (error) {
+          console.error('task polling failed', error);
+        } finally {
+          state.isTaskPollRunning = false;
+          updateAutoRefreshPill();
+        }
+      }
+
+      function startTaskAutoRefresh() {
+        if (state.taskPollTimer !== null) {
+          window.clearInterval(state.taskPollTimer);
+        }
+        updateAutoRefreshPill();
+        state.taskPollTimer = window.setInterval(() => {
+          void pollTaskPanel();
+        }, state.taskPollMs);
+      }
+
       async function rollbackVersion(versionId) {
         if (!state.docId) {
           throw new Error('请先选择文档');
@@ -1357,9 +2203,11 @@
           }),
         });
         state.revision = doc.revision;
+        state.docBlocks = doc.blocks;
         docRevisionPillEl.textContent = `revision ${doc.revision}`;
         docTitleInput.value = doc.title;
         docBodyInput.value = doc.raw_markdown;
+        syncCurrentBlocks();
         updateSelectionInfo();
         resetTaskDetails();
         setStatus(`已回滚到版本 #${versionId}，当前 revision ${doc.revision}。`, 'success');
@@ -1375,14 +2223,20 @@
       }
 
       function updateSelectionInfo() {
+        syncCurrentBlocks();
         const start = docBodyInput.selectionStart;
         const end = docBodyInput.selectionEnd;
+        const anchorOffset = start === end ? start : Math.min(start, end);
+        const block = findBlockForOffset(anchorOffset);
+        const blockLabel = block
+          ? ` · 当前 block：${block.heading || '未命名段落'}`
+          : '';
         if (start === end) {
-          selectionInfoEl.textContent = '尚未选择文本';
+          selectionInfoEl.textContent = `尚未选择文本${blockLabel}`;
           selectionStatusEl.classList.remove('is-active');
           return;
         }
-        selectionInfoEl.textContent = `选中区域 ${start}-${end}，长度 ${end - start}`;
+        selectionInfoEl.textContent = `选中区域 ${start}-${end}，长度 ${end - start}${blockLabel}`;
         selectionStatusEl.classList.add('is-active');
       }
 
@@ -1410,13 +2264,44 @@
       document.getElementById('refresh-current').addEventListener('click', () => safeRun(refreshCurrent));
       document.getElementById('create-doc').addEventListener('click', () => safeRun(createDoc));
       document.getElementById('save-doc').addEventListener('click', () => safeRun(saveDoc));
+      document.getElementById('export-doc').addEventListener('click', () => safeRun(async () => exportDoc()));
+      document.getElementById('accept-ready').addEventListener('click', () => safeRun(acceptReadyTasks));
+      document.getElementById('manage-templates').addEventListener('click', openTemplateModal);
+      document.getElementById('close-template-modal').addEventListener('click', closeTemplateModal);
+      document.getElementById('save-template').addEventListener('click', () => safeRun(async () => saveTemplateFromForm()));
+      document.getElementById('reset-template-form').addEventListener('click', resetTemplateForm);
       document.getElementById('cleanup-stale').addEventListener('click', () => safeRun(cleanupStaleTasks));
       document.getElementById('clear-instruction').addEventListener('click', () => {
-        document.getElementById('task-instruction').value = '';
+        taskInstructionEl.value = '';
+        taskTemplateEl.value = '';
+        recentInstructionEl.value = '';
       });
       document.getElementById('delete-doc').addEventListener('click', () => safeRun(deleteDoc));
       document.getElementById('create-task').addEventListener('click', () => safeRun(createTask));
       docSelectorEl.addEventListener('change', () => safeRun(() => selectDoc(Number(docSelectorEl.value))));
+      taskActionEl.addEventListener('change', () => {
+        localStorage.setItem(LAST_TASK_ACTION_KEY, taskActionEl.value);
+      });
+      taskTemplateEl.addEventListener('change', () => {
+        const template = getTemplateCatalog().find((item) => item.id === taskTemplateEl.value);
+        if (!template) {
+          return;
+        }
+        taskActionEl.value = template.action;
+        taskInstructionEl.value = template.instruction;
+        localStorage.setItem(LAST_TASK_ACTION_KEY, template.action);
+      });
+      recentInstructionEl.addEventListener('change', () => {
+        const selectedIndex = Number(recentInstructionEl.value);
+        if (Number.isNaN(selectedIndex)) {
+          return;
+        }
+        const instruction = loadRecentInstructions()[selectedIndex];
+        if (!instruction) {
+          return;
+        }
+        taskInstructionEl.value = instruction;
+      });
       taskListEl.addEventListener('change', () => {
         if (!taskListEl.value) {
           resetTaskDetails();
@@ -1424,6 +2309,7 @@
         }
         safeRun(() => selectTask(Number(taskListEl.value)));
       });
+      docBodyInput.addEventListener('input', updateSelectionInfo);
       docBodyInput.addEventListener('select', updateSelectionInfo);
       docBodyInput.addEventListener('keyup', updateSelectionInfo);
       docBodyInput.addEventListener('mouseup', updateSelectionInfo);
@@ -1432,10 +2318,29 @@
         if (event.key === 'Escape' && !keyModalEl.classList.contains('hidden')) {
           closeKeyModal();
         }
+        if (event.key === 'Escape' && !templateModalEl.classList.contains('hidden')) {
+          closeTemplateModal();
+        }
+      });
+
+      document.addEventListener('visibilitychange', () => {
+        updateAutoRefreshPill();
+        if (!document.hidden) {
+          void pollTaskPanel();
+        }
+      });
+
+      templateModalEl.addEventListener('click', (event) => {
+        if (event.target === templateModalEl) {
+          closeTemplateModal();
+        }
       });
 
       syncKeyState();
+      restoreTaskComposerState();
+      startTaskAutoRefresh();
       clearEditor();
+      updateAutoRefreshPill();
       if (!apiKeyInput.value.trim()) {
         openKeyModal();
       }

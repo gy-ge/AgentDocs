@@ -56,8 +56,16 @@ def test_root_page_is_served(client):
     assert "任务动作" in response.text
     assert "任务处理" in response.text
     assert "创建任务" in response.text
+    assert "导出 Markdown" in response.text
     assert "删除文档" in response.text
     assert "清理失效" in response.text
+    assert "批量接受可合并结果" in response.text
+    assert "批量接受范围" in response.text
+    assert "自动刷新：前台 15s" in response.text
+    assert "快捷模板" in response.text
+    assert "最近说明" in response.text
+    assert "管理模板" in response.text
+    assert "查看 unified diff" in response.text
 
 
 def test_create_document_rejects_blank_title(client, auth_headers):
@@ -311,6 +319,442 @@ def test_task_reject_and_cancel_do_not_change_document(client, auth_headers):
     doc_response = client.get(f"/api/docs/{doc_id}", headers=auth_headers)
     assert doc_response.json()["data"]["raw_markdown"] == raw_markdown
     assert doc_response.json()["data"]["revision"] == 1
+
+
+def test_accept_ready_tasks_accepts_multiple_safe_done_tasks(client, auth_headers):
+    raw_markdown = "# Title\n## Section\nHello world\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+
+    hello_task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "Hello")
+    world_task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "world")
+
+    client.post(
+        "/api/tasks/next",
+        headers=auth_headers,
+        json={"agent_name": "agent-one"},
+    )
+    client.post(
+        f"/api/tasks/{hello_task['id']}/complete",
+        headers=auth_headers,
+        json={"result": "Hi", "error_message": None},
+    )
+    client.post(
+        "/api/tasks/next",
+        headers=auth_headers,
+        json={"agent_name": "agent-two"},
+    )
+    client.post(
+        f"/api/tasks/{world_task['id']}/complete",
+        headers=auth_headers,
+        json={"result": "planet", "error_message": None},
+    )
+
+    response = client.post(
+        f"/api/docs/{doc_id}/tasks/accept-ready",
+        headers=auth_headers,
+        json={"actor": "browser", "note": "bulk accept"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data == {
+        "doc_id": doc_id,
+        "document_revision": 3,
+        "accepted": 2,
+        "skipped": 0,
+        "accepted_task_ids": [world_task["id"], hello_task["id"]],
+        "skipped_tasks": [],
+    }
+
+    doc_response = client.get(f"/api/docs/{doc_id}", headers=auth_headers)
+    assert doc_response.status_code == 200
+    assert doc_response.json()["data"]["raw_markdown"] == "# Title\n## Section\nHi planet\n"
+    assert doc_response.json()["data"]["revision"] == 3
+
+
+def test_accept_ready_tasks_skips_stale_results_and_accepts_safe_ones(client, auth_headers):
+    raw_markdown = "# Title\n## A\nHello\n## B\nWorld\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+
+    stale_task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "Hello")
+    safe_task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "World")
+
+    client.post(
+        "/api/tasks/next",
+        headers=auth_headers,
+        json={"agent_name": "agent-one"},
+    )
+    client.post(
+        f"/api/tasks/{stale_task['id']}/complete",
+        headers=auth_headers,
+        json={"result": "Hi", "error_message": None},
+    )
+    client.post(
+        "/api/tasks/next",
+        headers=auth_headers,
+        json={"agent_name": "agent-two"},
+    )
+    client.post(
+        f"/api/tasks/{safe_task['id']}/complete",
+        headers=auth_headers,
+        json={"result": "Planet", "error_message": None},
+    )
+
+    update_response = client.put(
+        f"/api/docs/{doc_id}",
+        headers=auth_headers,
+        json={
+            "title": "Doc",
+            "raw_markdown": "# Title\n## A\nHallo\n## B\nWorld\n",
+            "expected_revision": 1,
+            "actor": "browser",
+            "note": "make first task stale",
+        },
+    )
+    assert update_response.status_code == 200
+
+    response = client.post(
+        f"/api/docs/{doc_id}/tasks/accept-ready",
+        headers=auth_headers,
+        json={"actor": "browser", "note": "bulk accept"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["accepted"] == 1
+    assert data["skipped"] == 1
+    assert data["accepted_task_ids"] == [safe_task["id"]]
+    assert data["skipped_tasks"] == [{"task_id": stale_task["id"], "reason": "task_stale"}]
+    assert data["document_revision"] == 3
+
+    doc_response = client.get(f"/api/docs/{doc_id}", headers=auth_headers)
+    assert doc_response.status_code == 200
+    assert doc_response.json()["data"]["raw_markdown"] == "# Title\n## A\nHallo\n## B\nPlanet\n"
+
+
+def test_accept_ready_tasks_can_filter_by_action_and_range(client, auth_headers):
+    raw_markdown = "# Title\n## First\nAlpha\n## Second\nBeta\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+
+    alpha_start = raw_markdown.index("Alpha")
+    beta_start = raw_markdown.index("Beta")
+    alpha_task_response = client.post(
+        f"/api/docs/{doc_id}/tasks",
+        headers=auth_headers,
+        json={
+            "action": "rewrite",
+            "instruction": "rewrite alpha",
+            "source_text": "Alpha",
+            "start_offset": alpha_start,
+            "end_offset": alpha_start + len("Alpha"),
+            "doc_revision": 1,
+        },
+    )
+    assert alpha_task_response.status_code == 200
+    alpha_task = alpha_task_response.json()["data"]
+
+    beta_task_response = client.post(
+        f"/api/docs/{doc_id}/tasks",
+        headers=auth_headers,
+        json={
+            "action": "summarize",
+            "instruction": "summarize beta",
+            "source_text": "Beta",
+            "start_offset": beta_start,
+            "end_offset": beta_start + len("Beta"),
+            "doc_revision": 1,
+        },
+    )
+    assert beta_task_response.status_code == 200
+    beta_task = beta_task_response.json()["data"]
+
+    client.post(
+        "/api/tasks/next",
+        headers=auth_headers,
+        json={"agent_name": "agent-one"},
+    )
+    client.post(
+        f"/api/tasks/{alpha_task['id']}/complete",
+        headers=auth_headers,
+        json={"result": "Gamma", "error_message": None},
+    )
+    client.post(
+        "/api/tasks/next",
+        headers=auth_headers,
+        json={"agent_name": "agent-two"},
+    )
+    client.post(
+        f"/api/tasks/{beta_task['id']}/complete",
+        headers=auth_headers,
+        json={"result": "Delta", "error_message": None},
+    )
+
+    response = client.post(
+        f"/api/docs/{doc_id}/tasks/accept-ready",
+        headers=auth_headers,
+        json={
+            "actor": "browser",
+            "note": "filtered accept",
+            "action": "rewrite",
+            "start_offset": raw_markdown.index("## First"),
+            "end_offset": raw_markdown.index("## Second"),
+            "limit": 10,
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["accepted"] == 1
+    assert data["skipped"] == 0
+    assert data["accepted_task_ids"] == [alpha_task["id"]]
+
+    alpha_response = client.get(f"/api/tasks/{alpha_task['id']}", headers=auth_headers)
+    beta_response = client.get(f"/api/tasks/{beta_task['id']}", headers=auth_headers)
+    assert alpha_response.status_code == 200
+    assert beta_response.status_code == 200
+    assert alpha_response.json()["data"]["status"] == "accepted"
+    assert beta_response.json()["data"]["status"] == "done"
+
+    doc_response = client.get(f"/api/docs/{doc_id}", headers=auth_headers)
+    assert doc_response.status_code == 200
+    assert doc_response.json()["data"]["raw_markdown"] == "# Title\n## First\nGamma\n## Second\nBeta\n"
+
+
+def test_relocate_done_task_finds_unique_match_in_same_block(client, auth_headers):
+    raw_markdown = "# Title\n## Section\nAlpha\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+    task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "Alpha")
+
+    client.post(
+        "/api/tasks/next",
+        headers=auth_headers,
+        json={"agent_name": "agent-one"},
+    )
+    client.post(
+        f"/api/tasks/{task['id']}/complete",
+        headers=auth_headers,
+        json={"result": "Gamma", "error_message": None},
+    )
+
+    update_response = client.put(
+        f"/api/docs/{doc_id}",
+        headers=auth_headers,
+        json={
+            "title": "Doc",
+            "raw_markdown": "# Title\n## Section\nBeta Alpha\n",
+            "expected_revision": 1,
+            "actor": "browser",
+            "note": "shift target within same block",
+        },
+    )
+    assert update_response.status_code == 200
+
+    relocate_response = client.post(
+        f"/api/tasks/{task['id']}/relocate",
+        headers=auth_headers,
+    )
+    assert relocate_response.status_code == 200
+    relocate_data = relocate_response.json()["data"]
+    assert relocate_data["relocation_strategy"] == "same_block_position_match"
+    assert relocate_data["task"]["doc_revision"] == 2
+    assert relocate_data["task"]["is_stale"] is False
+
+    diff_response = client.get(f"/api/tasks/{task['id']}/diff", headers=auth_headers)
+    assert diff_response.status_code == 200
+    assert diff_response.json()["data"]["can_accept"] is True
+
+    accept_response = client.post(
+        f"/api/tasks/{task['id']}/accept",
+        headers=auth_headers,
+        json={
+            "expected_revision": 2,
+            "actor": "browser",
+            "note": "accept after relocation",
+        },
+    )
+    assert accept_response.status_code == 200
+
+    doc_response = client.get(f"/api/docs/{doc_id}", headers=auth_headers)
+    assert doc_response.status_code == 200
+    assert doc_response.json()["data"]["raw_markdown"] == "# Title\n## Section\nBeta Gamma\n"
+
+
+def test_relocate_rejected_task_allows_retry_after_manual_edit(client, auth_headers):
+    raw_markdown = "# Title\n## Section\nHello\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+    task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "Hello")
+
+    client.post(
+        "/api/tasks/next",
+        headers=auth_headers,
+        json={"agent_name": "agent-one"},
+    )
+    client.post(
+        f"/api/tasks/{task['id']}/complete",
+        headers=auth_headers,
+        json={"result": "Hi", "error_message": None},
+    )
+
+    client.put(
+        f"/api/docs/{doc_id}",
+        headers=auth_headers,
+        json={
+            "title": "Doc",
+            "raw_markdown": "# Title\n## Section\nStart Hello\n",
+            "expected_revision": 1,
+            "actor": "browser",
+            "note": "shift content",
+        },
+    )
+    client.post(
+        f"/api/docs/{doc_id}/tasks/cleanup-stale",
+        headers=auth_headers,
+    )
+
+    relocate_response = client.post(
+        f"/api/tasks/{task['id']}/relocate",
+        headers=auth_headers,
+    )
+    assert relocate_response.status_code == 200
+    assert relocate_response.json()["data"]["relocation_strategy"] == "same_block_position_match"
+    assert relocate_response.json()["data"]["task"]["doc_revision"] == 2
+
+    retry_response = client.post(
+        f"/api/tasks/{task['id']}/retry",
+        headers=auth_headers,
+    )
+    assert retry_response.status_code == 200
+    assert retry_response.json()["data"]["status"] == "pending"
+    assert retry_response.json()["data"]["doc_revision"] == 2
+
+
+def test_relocate_returns_conflict_when_source_is_ambiguous(client, auth_headers):
+    raw_markdown = "# Title\n## Section\nAlpha\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+    task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "Alpha")
+
+    update_response = client.put(
+        f"/api/docs/{doc_id}",
+        headers=auth_headers,
+        json={
+            "title": "Doc",
+            "raw_markdown": "# Title\n## First\nAlpha\n## Second\nAlpha\n",
+            "expected_revision": 1,
+            "actor": "browser",
+            "note": "duplicate source text",
+        },
+    )
+    assert update_response.status_code == 200
+
+    relocate_response = client.post(
+        f"/api/tasks/{task['id']}/relocate",
+        headers=auth_headers,
+    )
+    assert relocate_response.status_code == 409
+    assert relocate_response.json()["error"]["code"] == "conflict"
+
+
+def test_pickup_next_task_includes_context_window_and_block_metadata(client, auth_headers):
+    raw_markdown = "# Title\n## Background\nAlpha beta gamma\n## Next\nMore\n"
+    created = create_document(client, auth_headers, raw_markdown, title="Knowledge Base")
+    doc_id = created["id"]
+    task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "beta")
+
+    response = client.post(
+        "/api/tasks/next",
+        headers=auth_headers,
+        json={"agent_name": "agent-one"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["id"] == task["id"]
+    assert data["status"] == "processing"
+    assert data["is_stale"] is False
+    assert data["recommended_action"] is None
+    assert data["context"] == {
+        "document_title": "Knowledge Base",
+        "document_revision": 1,
+        "block": {
+            "heading": "Background",
+            "level": 2,
+            "position": 1,
+            "start_offset": raw_markdown.index("## Background"),
+            "end_offset": raw_markdown.index("## Next"),
+        },
+        "block_markdown": "## Background\nAlpha beta gamma\n",
+        "context_before": "# Title\n## Background\nAlpha ",
+        "context_after": " gamma\n## Next\nMore\n",
+    }
+
+
+def test_pickup_next_task_reports_stale_state_and_current_context(client, auth_headers):
+    raw_markdown = "# Title\n## Section\nHello world\n"
+    created = create_document(client, auth_headers, raw_markdown, title="Doc")
+    doc_id = created["id"]
+    task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "Hello")
+
+    update_response = client.put(
+        f"/api/docs/{doc_id}",
+        headers=auth_headers,
+        json={
+            "title": "Doc",
+            "raw_markdown": "# Title\n## Section\nHallo world\n",
+            "expected_revision": 1,
+            "actor": "browser",
+            "note": "manual edit before pickup",
+        },
+    )
+    assert update_response.status_code == 200
+
+    next_response = client.post(
+        "/api/tasks/next",
+        headers=auth_headers,
+        json={"agent_name": "agent-one"},
+    )
+    assert next_response.status_code == 200
+
+    task_data = next_response.json()["data"]
+    assert task_data["id"] == task["id"]
+    assert task_data["status"] == "processing"
+    assert task_data["is_stale"] is True
+    assert task_data["stale_reason"] == "source_changed"
+    assert task_data["recommended_action"] == "cancel"
+    assert task_data["context"]["document_revision"] == 2
+    assert task_data["context"]["block"]["heading"] == "Section"
+    assert task_data["context"]["block_markdown"] == "## Section\nHallo world\n"
+
+
+def test_get_task_includes_current_context_snapshot(client, auth_headers):
+    raw_markdown = "# Title\n## Section\nHello world\n"
+    created = create_document(client, auth_headers, raw_markdown, title="Doc")
+    doc_id = created["id"]
+    task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "world")
+
+    response = client.get(f"/api/tasks/{task['id']}", headers=auth_headers)
+
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["context"] == {
+        "document_title": "Doc",
+        "document_revision": 1,
+        "block": {
+            "heading": "Section",
+            "level": 2,
+            "position": 1,
+            "start_offset": raw_markdown.index("## Section"),
+            "end_offset": len(raw_markdown),
+        },
+        "block_markdown": "## Section\nHello world\n",
+        "context_before": "# Title\n## Section\nHello ",
+        "context_after": "\n",
+    }
 
 
 def test_task_create_rejects_cross_block_range(client, auth_headers):

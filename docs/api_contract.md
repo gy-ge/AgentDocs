@@ -163,6 +163,59 @@ Base URL:
 }
 ```
 
+### POST /api/docs/{doc_id}/tasks/accept-ready
+
+说明：
+
+- 批量接受当前文档中所有状态为 done 且仍可安全合并的任务
+- 服务端会按 start_offset 倒序处理，尽量避免前一个 accept 改写正文后破坏后一个任务的 offset
+- 无法安全接受的任务不会报整批失败，而是留在 skipped_tasks 中返回原因
+
+请求：
+
+```json
+{
+  "actor": "browser",
+  "note": "bulk accept from ui",
+  "action": "rewrite",
+  "start_offset": 7,
+  "end_offset": 32,
+  "limit": 20
+}
+```
+
+可选筛选字段：
+
+- action: 只接受指定 action 的 done 任务
+- start_offset 与 end_offset: 只接受当前正文某个区间内的 done 任务，通常用于“当前 block”范围
+- limit: 单次最多处理多少条，建议在低性能服务器上保守设置为 10 到 20
+
+响应：
+
+```json
+{
+  "ok": true,
+  "data": {
+    "doc_id": 1,
+    "document_revision": 5,
+    "accepted": 2,
+    "skipped": 1,
+    "accepted_task_ids": [12, 11],
+    "skipped_tasks": [
+      {
+        "task_id": 10,
+        "reason": "task_stale"
+      }
+    ]
+  }
+}
+```
+
+说明：
+
+- 当前前端任务工作台不额外增加新的分组接口，而是基于 GET /api/tasks 的结果在浏览器本地分组，避免服务器端额外计算与更多请求
+- 当前默认实时策略为“前台页面短轮询”，不会在页面隐藏时持续刷新，也没有引入 WebSocket 长连接
+
 ### GET /api/docs/{doc_id}/versions
 
 响应：
@@ -241,6 +294,16 @@ Base URL:
 - is_stale: 当前正文是否已与任务源文本失配
 - stale_reason: 失配原因，可能是 selection_removed、selection_shifted、source_changed
 - recommended_action: 针对 stale 任务的建议动作，第一版可能为 reject 或 cancel
+- context: 当前文档上下文快照，便于前端或外部 Agent 判断任务环境
+
+context 字段结构：
+
+- document_title: 当前文档标题
+- document_revision: 当前文档 revision，区别于任务自己的 doc_revision
+- block: 当前选区所在 block 的标题和范围；如果当前正文已无法定位 block，则为 null
+- block_markdown: 当前 block 的完整 Markdown 文本；如果当前正文已无法定位 block，则为 null
+- context_before: 当前正文里选区前最多 200 个字符
+- context_after: 当前正文里选区后最多 200 个字符
 
 ### GET /api/tasks/{task_id}/diff
 
@@ -272,9 +335,95 @@ Base URL:
 
 ### POST /api/tasks/next
 
+说明：
+
+- 领取一个 pending 任务并置为 processing
+- 响应体会直接返回任务当前的 stale 描述与 context 快照，便于 Agent 在处理前拿到周边上下文
+
+响应 data 示例：
+
+```json
+{
+  "id": 9,
+  "doc_id": 1,
+  "doc_revision": 3,
+  "start_offset": 20,
+  "end_offset": 40,
+  "source_text": "原文内容",
+  "action": "rewrite",
+  "instruction": "改成简历语气，控制在 180 字内",
+  "status": "processing",
+  "agent_name": "agent-one",
+  "is_stale": false,
+  "stale_reason": null,
+  "recommended_action": null,
+  "context": {
+    "document_title": "研究笔记",
+    "document_revision": 3,
+    "block": {
+      "heading": "背景",
+      "level": 2,
+      "position": 1,
+      "start_offset": 7,
+      "end_offset": 32
+    },
+    "block_markdown": "## 背景\n原文内容\n",
+    "context_before": "# 研究笔记\n## 背景\n",
+    "context_after": "\n## 结论\n待补充"
+  }
+}
+```
+
 约束：
 
 - agent_name 会先 trim，且不能为空字符串
+
+### POST /api/tasks/{task_id}/relocate
+
+说明：
+
+- 尝试把旧任务重新对齐到当前正文
+- processing 任务和 accepted 任务不允许重定位
+- 重定位会优先尝试原 block 位置精确命中，再尝试同标题 block 唯一命中，最后尝试全文唯一命中
+- 重定位成功后会更新 task 的 start_offset、end_offset 和 doc_revision，但不会改正文，也不会改变任务状态
+
+响应：
+
+```json
+{
+  "ok": true,
+  "data": {
+    "task": {
+      "id": 9,
+      "doc_id": 1,
+      "doc_revision": 4,
+      "start_offset": 26,
+      "end_offset": 30,
+      "source_text": "原文",
+      "action": "rewrite",
+      "status": "done",
+      "is_stale": false,
+      "stale_reason": null,
+      "recommended_action": null,
+      "context": {
+        "document_title": "研究笔记",
+        "document_revision": 4,
+        "block": {
+          "heading": "背景",
+          "level": 2,
+          "position": 1,
+          "start_offset": 7,
+          "end_offset": 32
+        },
+        "block_markdown": "## 背景\n新的原文\n",
+        "context_before": "# 研究笔记\n## 背景\n新的",
+        "context_after": "\n## 结论\n待补充"
+      }
+    },
+    "relocation_strategy": "same_block_position_match"
+  }
+}
+```
 
 请求：
 
