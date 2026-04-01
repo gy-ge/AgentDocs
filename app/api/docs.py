@@ -2,7 +2,12 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.api.deps import require_api_key
-from app.api.serializers import serialize_document, serialize_document_list_item, serialize_task
+from app.api.serializers import (
+    serialize_document,
+    serialize_document_list_item,
+    serialize_stale_cleanup,
+    serialize_task,
+)
 from app.db import get_db
 from app.schemas.docs import DocumentCreate, DocumentUpdate
 from app.schemas.tasks import TaskCreate
@@ -79,4 +84,13 @@ def create_doc_task(doc_id: int, payload: TaskCreate, db: Session = Depends(get_
     return {
         "ok": True,
         "data": serialize_task(task).model_dump(mode="json"),
+    }
+
+
+@router.post("/{doc_id}/tasks/cleanup-stale")
+def cleanup_doc_stale_tasks(doc_id: int, db: Session = Depends(get_db)):
+    result = task_service.cleanup_stale_tasks(db, doc_id)
+    return {
+        "ok": True,
+        "data": serialize_stale_cleanup(doc_id, **result).model_dump(mode="json"),
     }

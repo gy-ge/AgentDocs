@@ -9,13 +9,12 @@
         color-scheme: light;
         --bg: #f6f8fa;
         --panel: #ffffff;
-        --panel-muted: #f6f8fa;
+        --panel-soft: #f6f8fa;
         --line: #d0d7de;
         --line-strong: #8c959f;
         --text: #1f2328;
         --muted: #59636e;
         --accent: #24292f;
-        --accent-soft: #f3f4f6;
         --success: #1a7f37;
         --warning: #9a6700;
         --danger: #cf222e;
@@ -38,7 +37,81 @@
       input,
       textarea,
       select {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #ffffff;
+        color: var(--text);
         font: inherit;
+      }
+
+      button,
+      input,
+      select {
+        min-height: 40px;
+        padding: 0 12px;
+      }
+
+      textarea {
+        min-height: 140px;
+        padding: 12px;
+        resize: vertical;
+        line-height: 1.6;
+      }
+
+      input:focus,
+      textarea:focus,
+      select:focus,
+      button:focus,
+      details summary:focus {
+        outline: 2px solid rgba(36, 41, 47, 0.16);
+        outline-offset: 1px;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      button:hover:not(:disabled) {
+        background: var(--panel-soft);
+      }
+
+      button:disabled {
+        opacity: 0.55;
+        cursor: default;
+      }
+
+      button.primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #ffffff;
+      }
+
+      button.primary:hover:not(:disabled) {
+        background: #111418;
+      }
+
+      button.secondary {
+        background: var(--panel-soft);
+      }
+
+      button.warn {
+        background: #fff8c5;
+        border-color: #d4a72c;
+        color: #5a4600;
+      }
+
+      button.danger {
+        border-color: rgba(207, 34, 46, 0.36);
+        color: var(--danger);
+        background: rgba(207, 34, 46, 0.05);
+      }
+
+      label {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 13px;
+        font-weight: 600;
       }
 
       .app-shell {
@@ -47,46 +120,67 @@
       }
 
       .app-frame {
-        max-width: 1480px;
+        max-width: 1560px;
         margin: 0 auto;
       }
 
-      .app-header {
+      .app-header,
+      .panel-header,
+      .section-header,
+      .inline-actions,
+      .stack,
+      .doc-toolbar,
+      .task-actions,
+      .modal-actions,
+      .doc-switcher {
         display: flex;
-        align-items: flex-start;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+
+      .stack {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .app-header,
+      .panel-header,
+      .section-header {
         justify-content: space-between;
-        gap: 16px;
-        margin-bottom: 16px;
+      }
+
+      .brand h1,
+      .section-title h2,
+      .section-title h3,
+      .section-title h4 {
+        margin: 0;
       }
 
       .brand h1 {
-        margin: 0;
         font-size: 28px;
-        line-height: 1.1;
+        line-height: 1.08;
       }
 
-      .brand p {
+      .brand p,
+      .section-title p,
+      .hint,
+      .meta {
         margin: 6px 0 0;
         color: var(--muted);
-        font-size: 14px;
-      }
-
-      .header-actions {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        flex-wrap: wrap;
+        font-size: 13px;
+        line-height: 1.5;
       }
 
       .workspace {
         display: grid;
-        grid-template-columns: 280px minmax(0, 1fr);
-        gap: 16px;
+        grid-template-columns: 340px minmax(0, 1fr);
+        gap: 18px;
         align-items: start;
       }
 
-      .main-column,
-      .stack {
+      .sidebar,
+      .editor-column {
         display: grid;
         gap: 16px;
       }
@@ -102,34 +196,6 @@
         padding: 18px;
       }
 
-      .panel-header,
-      .section-header,
-      .field-stack,
-      .inline-actions,
-      .actions {
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-        align-items: center;
-      }
-
-      .panel-header,
-      .section-header {
-        justify-content: space-between;
-      }
-
-      .section-title h2,
-      .section-title h3 {
-        margin: 0;
-        font-size: 18px;
-      }
-
-      .section-title p {
-        margin: 4px 0 0;
-        color: var(--muted);
-        font-size: 13px;
-      }
-
       .pill {
         display: inline-flex;
         align-items: center;
@@ -138,14 +204,14 @@
         padding: 0 10px;
         border: 1px solid var(--line);
         border-radius: 999px;
-        background: var(--panel-muted);
+        background: var(--panel-soft);
         color: var(--muted);
         font-size: 12px;
         white-space: nowrap;
       }
 
       .status {
-        margin-bottom: 16px;
+        margin: 16px 0;
         padding: 10px 12px;
         border: 1px solid var(--line);
         border-radius: 10px;
@@ -165,90 +231,17 @@
         color: var(--danger);
       }
 
-      label {
-        display: block;
-        margin-bottom: 6px;
-        font-size: 13px;
-        font-weight: 600;
-      }
-
-      input,
-      textarea,
-      select {
-        width: 100%;
-        border: 1px solid var(--line);
-        border-radius: 10px;
-        background: #ffffff;
-        color: var(--text);
-        padding: 10px 12px;
-      }
-
-      input:focus,
-      textarea:focus,
-      select:focus,
-      button:focus {
-        outline: 2px solid rgba(36, 41, 47, 0.15);
-        outline-offset: 1px;
-      }
-
-      textarea {
-        min-height: 380px;
-        resize: vertical;
-        line-height: 1.55;
-      }
-
-      button {
-        border: 1px solid var(--line);
-        border-radius: 10px;
-        padding: 9px 14px;
-        background: var(--panel);
-        color: var(--text);
-        cursor: pointer;
-      }
-
-      button:hover:not(:disabled) {
-        background: var(--panel-muted);
-      }
-
-      button:disabled {
-        opacity: 0.55;
-        cursor: default;
-      }
-
-      button.primary {
-        background: var(--accent);
-        border-color: var(--accent);
-        color: #ffffff;
-      }
-
-      button.primary:hover:not(:disabled) {
-        background: #111418;
-      }
-
-      button.secondary {
-        background: var(--accent-soft);
-      }
-
-      button.warn {
-        background: #fff8c5;
-        border-color: #d4a72c;
-        color: #5a4600;
-      }
-
-      .list {
+      .version-list {
         display: grid;
         gap: 10px;
-      }
-
-      .doc-list,
-      .task-list,
-      .version-list {
-        max-height: 320px;
         overflow: auto;
       }
 
+      .version-list {
+        max-height: 280px;
+      }
+
       .card {
-        width: 100%;
         border: 1px solid var(--line);
         border-radius: 10px;
         background: var(--panel);
@@ -256,86 +249,90 @@
         text-align: left;
       }
 
-      .card.active {
-        border-color: var(--line-strong);
-        box-shadow: inset 0 0 0 1px var(--line-strong);
-      }
-
       .card h4,
       .card p {
         margin: 0;
       }
 
-      .meta {
-        margin-top: 6px;
-        color: var(--muted);
-        font-size: 12px;
-        line-height: 1.45;
+      .doc-toolbar button,
+      .task-actions button,
+      .inline-actions button,
+      .modal-actions button,
+      .doc-switcher button {
+        width: auto;
       }
 
-      .hint {
-        color: var(--muted);
-        font-size: 13px;
-        line-height: 1.5;
+      .doc-toolbar .pill {
+        margin-right: auto;
       }
 
-      .editor-layout {
+      .doc-switcher {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) 300px;
-        gap: 16px;
-        align-items: start;
+        grid-template-columns: minmax(0, 1.5fr) minmax(180px, 1fr) auto;
+        gap: 10px;
+        align-items: center;
       }
 
-      .editor-fields,
-      .editor-side,
-      .field-group {
+      .doc-switcher > * {
+        min-width: 0;
+      }
+
+      .doc-switcher .doc-switcher-actions {
+        justify-content: flex-end;
+      }
+
+      .task-composer-grid {
         display: grid;
         gap: 12px;
       }
 
-      .board-grid {
+      .task-composer-grid textarea {
+        min-height: 40px;
+      }
+
+      .task-button-row {
         display: grid;
-        gap: 16px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
       }
 
-      .tab-strip {
-        display: inline-flex;
-        gap: 8px;
-        padding: 4px;
-        border: 1px solid var(--line);
-        border-radius: 12px;
-        background: var(--panel-muted);
+      .editor-panel #doc-body {
+        height: 56vh;
+        min-height: 120px;
       }
 
-      .tab-button {
+      .compact-field {
+        display: grid;
+        gap: 6px;
+      }
+
+      .compact-field label {
+        margin-bottom: 0;
+      }
+
+      .visually-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
         border: 0;
-        background: transparent;
-      }
-
-      .tab-button.active {
-        background: var(--panel);
-        box-shadow: var(--shadow);
-      }
-
-      .count-badge {
-        margin-left: 6px;
-        color: var(--muted);
-        font-size: 12px;
-      }
-
-      .board-panel.hidden {
-        display: none;
       }
 
       .detail-note,
       .diff {
         border: 1px solid var(--line);
         border-radius: 10px;
+        overflow: auto;
       }
 
       .detail-note {
         padding: 12px;
-        background: var(--panel-muted);
+        background: var(--panel-soft);
+        max-height: 160px;
       }
 
       .detail-note.success {
@@ -373,7 +370,8 @@
       }
 
       .diff {
-        min-height: 220px;
+        min-height: 120px;
+        max-height: 240px;
         overflow: auto;
         background: #f6f8fa;
         color: #1f2328;
@@ -382,6 +380,35 @@
         font-size: 12px;
         line-height: 1.55;
         white-space: pre-wrap;
+      }
+
+      details {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--panel-soft);
+      }
+
+      .sidebar details {
+        background: var(--panel);
+      }
+
+      details summary {
+        list-style: none;
+        cursor: pointer;
+        padding: 12px 14px;
+        font-weight: 600;
+      }
+
+      details summary::-webkit-details-marker {
+        display: none;
+      }
+
+      details[open] summary {
+        border-bottom: 1px solid var(--line);
+      }
+
+      .details-body {
+        padding: 14px;
       }
 
       .modal-backdrop {
@@ -419,39 +446,53 @@
         line-height: 1.5;
       }
 
-      @media (max-width: 1120px) {
-        .workspace,
-        .editor-layout,
-        .board-grid {
+      @media (max-width: 1200px) {
+        .workspace {
           grid-template-columns: 1fr;
         }
 
-        textarea {
-          min-height: 280px;
+        .editor-panel #doc-body {
+          height: 58vh;
+        }
+
+        .task-list,
+        .version-list {
+          max-height: none;
+        }
+      }
+
+      @media (max-width: 860px) {
+        .doc-switcher,
+        .doc-toolbar,
+        .task-actions,
+        .inline-actions,
+        .modal-actions {
+          align-items: stretch;
+        }
+
+        .doc-switcher .doc-switcher-actions,
+        .doc-switcher {
+          grid-template-columns: 1fr;
+        }
+
+        .doc-switcher .doc-switcher-actions,
+        .doc-switcher > div,
+        .doc-toolbar button,
+        .task-actions button,
+        .inline-actions button,
+        .modal-actions button {
+          width: 100%;
+          min-width: 0;
+        }
+
+        .task-button-row {
+          grid-template-columns: 1fr;
         }
       }
 
       @media (max-width: 720px) {
         .app-shell {
           padding: 14px;
-        }
-
-        .app-header,
-        .panel-header,
-        .section-header {
-          align-items: stretch;
-        }
-
-        .header-actions,
-        .actions,
-        .inline-actions {
-          width: 100%;
-        }
-
-        .header-actions > *,
-        .actions > *,
-        .inline-actions > * {
-          flex: 1 1 auto;
         }
       }
     </style>
@@ -462,13 +503,13 @@
         <div class="stack" style="gap: 14px">
           <div>
             <h2 id="key-modal-title">连接设置</h2>
-            <p>输入共享 API Key。页面只在当前浏览器本地保存，不会回传到别处。</p>
+            <p>输入共享 API Key。页面只会保存在当前浏览器本地。</p>
           </div>
           <div>
             <label for="api-key">API Key</label>
             <input id="api-key" type="password" placeholder="输入共享 API Key" />
           </div>
-          <div class="actions">
+          <div class="modal-actions">
             <button id="save-key" class="primary">保存并继续</button>
             <button id="close-key" class="secondary">稍后再说</button>
           </div>
@@ -481,9 +522,9 @@
         <header class="app-header">
           <div class="brand">
             <h1>AgentDocs</h1>
-            <p>单用户 Markdown 协作台，围绕文档、任务和版本做最小闭环。</p>
+            <p>主区域只保留文档工作台，左侧集中处理任务和版本。</p>
           </div>
-          <div class="header-actions">
+          <div class="inline-actions">
             <span id="key-state" class="pill">未设置 API Key</span>
             <button id="open-key-modal">连接设置</button>
             <button id="refresh-current">刷新当前</button>
@@ -493,141 +534,131 @@
         <div id="status" class="status">等待连接。</div>
 
         <section class="workspace">
-          <aside class="panel">
-            <div class="panel-body stack">
-              <div class="section-header">
-                <div class="section-title">
-                  <h2>文档</h2>
-                  <p>先创建或选择一篇文档，再开始编辑和派发任务。</p>
+          <aside class="sidebar">
+            <section class="panel">
+              <div class="panel-body stack">
+                <div class="section-header">
+                  <div class="section-title">
+                    <h2>任务动作</h2>
+                    <p>选中文本后，从这里发起处理。</p>
+                  </div>
+                  <span id="selection-info" class="pill">尚未选择文本</span>
                 </div>
-                <button id="refresh-docs">刷新列表</button>
-              </div>
 
-              <div class="field-group">
+                <div class="task-composer-grid">
+                  <div>
+                    <label for="task-action">任务动作</label>
+                    <select id="task-action">
+                      <option value="rewrite">rewrite</option>
+                      <option value="summarize">summarize</option>
+                      <option value="expand">expand</option>
+                      <option value="translate">translate</option>
+                      <option value="custom">custom</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label for="task-instruction">补充说明</label>
+                    <textarea id="task-instruction" rows="1" placeholder="例如：改成更正式的项目说明"></textarea>
+                  </div>
+                  <div class="task-button-row">
+                    <button id="create-task" class="primary">创建任务</button>
+                    <button id="cleanup-stale" class="secondary">清理失效</button>
+                    <button id="clear-instruction" class="secondary">清空说明</button>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-body stack">
+                <div class="section-header">
+                  <div class="section-title">
+                    <h2>任务处理</h2>
+                    <p>按需查看和确认结果。</p>
+                  </div>
+                  <span id="task-count-pill" class="pill">任务 0</span>
+                </div>
+
                 <div>
-                  <label for="new-title">新文档标题</label>
-                  <input id="new-title" placeholder="例如：研究笔记" />
+                  <select id="task-list">
+                    <option value="">先选择文档</option>
+                  </select>
                 </div>
-                <button id="create-doc" class="primary">创建文档</button>
-              </div>
 
-              <div id="doc-list" class="doc-list list"></div>
-            </div>
+                <div class="section-header" style="margin-top: 8px;">
+                  <span id="diff-state" class="pill">未选择任务</span>
+                </div>
+                
+                <div id="task-summary" class="detail-note">
+                  <strong>操作建议</strong>
+                  <div>选择任务后，这里会说明当前状态和建议动作。</div>
+                </div>
+                <div id="task-actions" class="task-actions"></div>
+                <div id="task-diff" class="diff">这里会显示任务 source_text 到 result 的 unified diff。</div>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-body stack">
+                <details id="version-details">
+                  <summary>版本历史</summary>
+                  <div class="details-body stack">
+                    <div class="section-header">
+                      <div class="section-title">
+                        <h3>历史版本</h3>
+                        <p>只在需要回滚时展开。</p>
+                      </div>
+                      <span id="version-count-pill" class="pill">版本 0</span>
+                    </div>
+                    <div id="version-list" class="version-list"></div>
+                  </div>
+                </details>
+              </div>
+            </section>
           </aside>
 
-          <section class="main-column">
-            <section class="panel">
+          <section class="editor-column">
+            <section class="panel editor-panel">
               <div class="panel-body stack">
                 <div class="panel-header">
                   <div class="section-title">
                     <h2>文档工作台</h2>
-                    <p>编辑正文、选中一段文本并创建任务。第一版任务必须位于单个 block 内。</p>
+                    <p>这是核心写作区，文档选择和新建也在这里完成。</p>
                   </div>
-                  <div class="inline-actions">
-                    <span id="doc-revision-pill" class="pill">未选择文档</span>
-                    <button id="reload-doc">重新加载</button>
-                  </div>
+                  <span id="doc-revision-pill" class="pill">未选择文档</span>
                 </div>
 
-                <div class="editor-layout">
-                  <div class="editor-fields">
-                    <div>
-                      <label for="doc-title">标题</label>
-                      <input id="doc-title" placeholder="未选择文档" />
-                    </div>
-
-                    <div>
-                      <label for="doc-body">Markdown</label>
-                      <textarea id="doc-body" placeholder="# 开始写文档"></textarea>
-                    </div>
-
-                    <div class="actions">
-                      <button id="save-doc" class="primary">保存文档</button>
-                    </div>
+                <div class="doc-switcher">
+                  <div class="compact-field">
+                    <label class="visually-hidden" for="doc-selector">已有文档</label>
+                    <select id="doc-selector">
+                      <option value="">请选择文档</option>
+                    </select>
                   </div>
-
-                  <aside class="editor-side">
-                    <div class="card">
-                      <div class="section-title">
-                        <h3>创建任务</h3>
-                        <p>先在左侧编辑区选中一段文本。</p>
-                      </div>
-                      <div class="stack" style="margin-top: 12px">
-                        <span id="selection-info" class="pill">尚未选择文本</span>
-                        <div>
-                          <label for="task-action">任务动作</label>
-                          <select id="task-action">
-                            <option value="rewrite">rewrite</option>
-                            <option value="summarize">summarize</option>
-                            <option value="expand">expand</option>
-                            <option value="translate">translate</option>
-                            <option value="custom">custom</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label for="task-instruction">补充说明</label>
-                          <textarea id="task-instruction" style="min-height: 140px" placeholder="例如：改成更正式的项目说明"></textarea>
-                        </div>
-                        <button id="create-task" class="primary">创建任务</button>
-                      </div>
-                    </div>
-                  </aside>
-                </div>
-              </div>
-            </section>
-
-            <section class="panel">
-              <div class="panel-body stack">
-                <div class="section-header">
-                  <div class="section-title">
-                    <h2>任务面板</h2>
-                    <p>只显示当前最需要处理的一块信息，先看任务，再切到版本。</p>
+                  <div class="compact-field">
+                    <label class="visually-hidden" for="new-title">新建文档</label>
+                    <input id="new-title" placeholder="输入新文档标题后创建" />
                   </div>
-                  <div class="inline-actions">
-                    <div class="tab-strip" role="tablist" aria-label="任务与版本切换">
-                      <button id="show-tasks" class="tab-button active" role="tab" aria-selected="true">任务 <span id="task-count" class="count-badge">0</span></button>
-                      <button id="show-versions" class="tab-button" role="tab" aria-selected="false">版本 <span id="version-count" class="count-badge">0</span></button>
-                    </div>
-                    <button id="refresh-board">刷新当前面板</button>
+                  <div class="doc-switcher-actions inline-actions">
+                    <button id="create-doc" class="primary">新建</button>
                   </div>
                 </div>
 
-                <div class="board-grid">
-                  <section id="tasks-panel" class="stack board-panel">
-                    <div class="section-title">
-                      <h3>任务</h3>
-                      <p>查看处理状态、冲突和可执行操作。</p>
-                    </div>
-                    <div id="task-list" class="task-list list"></div>
-                  </section>
-
-                  <section id="versions-panel" class="stack board-panel hidden">
-                    <div class="section-title">
-                      <h3>版本</h3>
-                      <p>按 revision 查看历史快照，需要时再执行回滚。</p>
-                    </div>
-                    <div id="version-list" class="version-list list"></div>
-                  </section>
-                </div>
-              </div>
-            </section>
-
-            <section class="panel">
-              <div class="panel-body stack">
-                <div class="section-header">
-                  <div class="section-title">
-                    <h2>任务详情</h2>
-                    <p>这里展示当前任务是否可以 accept，以及 source_text 到 result 的差异。</p>
-                  </div>
-                  <span id="diff-state" class="pill">未选择任务</span>
+                <div>
+                  <label for="doc-title">标题</label>
+                  <input id="doc-title" placeholder="未选择文档" />
                 </div>
 
-                <div id="task-summary" class="detail-note">
-                  <strong>操作建议</strong>
-                  <div>选择任务后，这里会说明当前是否可 accept，以及下一步建议。</div>
+                <div class="doc-toolbar">
+                  <span class="pill">常用动作</span>
+                  <button id="save-doc" class="primary">保存文档</button>
+                  <button id="delete-doc" class="danger">删除文档</button>
                 </div>
-                <div id="task-actions" class="actions"></div>
-                <div id="task-diff" class="diff">这里会显示任务 source_text 到 result 的 unified diff。</div>
+
+                <div>
+                  <label for="doc-body">Markdown</label>
+                  <textarea id="doc-body" placeholder="# 开始写文档"></textarea>
+                </div>
               </div>
             </section>
           </section>
@@ -640,7 +671,6 @@
         docId: null,
         revision: null,
         selectedTaskId: null,
-        boardTab: "tasks",
       };
 
       const statusEl = document.getElementById("status");
@@ -648,22 +678,18 @@
       const keyModalEl = document.getElementById("key-modal");
       const keyStateEl = document.getElementById("key-state");
       const docRevisionPillEl = document.getElementById("doc-revision-pill");
-      const docListEl = document.getElementById("doc-list");
-      const taskListEl = document.getElementById("task-list");
-      const versionListEl = document.getElementById("version-list");
-      const taskCountEl = document.getElementById("task-count");
-      const versionCountEl = document.getElementById("version-count");
-      const tasksPanelEl = document.getElementById("tasks-panel");
-      const versionsPanelEl = document.getElementById("versions-panel");
-      const showTasksButton = document.getElementById("show-tasks");
-      const showVersionsButton = document.getElementById("show-versions");
-      const diffEl = document.getElementById("task-diff");
-      const diffStateEl = document.getElementById("diff-state");
-      const taskSummaryEl = document.getElementById("task-summary");
-      const taskActionsEl = document.getElementById("task-actions");
+      const docSelectorEl = document.getElementById("doc-selector");
+      const selectionInfoEl = document.getElementById("selection-info");
       const docTitleInput = document.getElementById("doc-title");
       const docBodyInput = document.getElementById("doc-body");
-      const selectionInfoEl = document.getElementById("selection-info");
+      const taskListEl = document.getElementById("task-list");
+      const taskCountPillEl = document.getElementById("task-count-pill");
+      const taskSummaryEl = document.getElementById("task-summary");
+      const taskActionsEl = document.getElementById("task-actions");
+      const diffEl = document.getElementById("task-diff");
+      const diffStateEl = document.getElementById("diff-state");
+      const versionListEl = document.getElementById("version-list");
+      const versionCountPillEl = document.getElementById("version-count-pill");
 
       apiKeyInput.value = localStorage.getItem("agentdocs.apiKey") || "";
 
@@ -673,8 +699,7 @@
       }
 
       function syncKeyState() {
-        const value = apiKeyInput.value.trim();
-        keyStateEl.textContent = value ? "API Key 已保存" : "未设置 API Key";
+        keyStateEl.textContent = apiKeyInput.value.trim() ? "API Key 已保存" : "未设置 API Key";
       }
 
       function openKeyModal() {
@@ -689,9 +714,40 @@
         keyModalEl.classList.add("hidden");
       }
 
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      function renderEmpty(container, message, title = "") {
+        const heading = title ? `<h4>${escapeHtml(title)}</h4>` : "";
+        container.innerHTML = `<div class="card">${heading}<p class="hint">${escapeHtml(message)}</p></div>`;
+      }
+
+      function clearEditor() {
+        state.docId = null;
+        state.revision = null;
+        state.selectedTaskId = null;
+        docRevisionPillEl.textContent = "未选择文档";
+        docSelectorEl.innerHTML = '<option value="">请选择文档</option>';
+        docSelectorEl.value = "";
+        docTitleInput.value = "";
+        docBodyInput.value = "";
+        updateSelectionInfo();
+        taskListEl.innerHTML = '<option value="">先选择文档</option>';
+        renderEmpty(versionListEl, "先选择文档。", "版本列表");
+        resetTaskDetails();
+        taskCountPillEl.textContent = "任务 0";
+        versionCountPillEl.textContent = "版本 0";
+      }
+
       function setTaskSummary(title, message, mode = "", details = []) {
         const detailHtml = details
-          .filter((value) => value)
+          .filter(Boolean)
           .map((value) => `<code>${escapeHtml(value)}</code>`)
           .join("");
         taskSummaryEl.className = `detail-note ${mode}`.trim();
@@ -702,42 +758,24 @@
         `;
       }
 
-      function syncBoardTab() {
-        const showTasks = state.boardTab === "tasks";
-        tasksPanelEl.classList.toggle("hidden", !showTasks);
-        versionsPanelEl.classList.toggle("hidden", showTasks);
-        showTasksButton.classList.toggle("active", showTasks);
-        showVersionsButton.classList.toggle("active", !showTasks);
-        showTasksButton.setAttribute("aria-selected", String(showTasks));
-        showVersionsButton.setAttribute("aria-selected", String(!showTasks));
-      }
-
-      function setBoardTab(tab) {
-        state.boardTab = tab;
-        syncBoardTab();
-      }
-
       function resetTaskDetails() {
         state.selectedTaskId = null;
         diffStateEl.textContent = "未选择任务";
         taskActionsEl.innerHTML = "";
         diffEl.textContent = "这里会显示任务 source_text 到 result 的 unified diff。";
-        setTaskSummary(
-          "操作建议",
-          "选择任务后，这里会说明当前是否可 accept，以及下一步建议。"
-        );
+        setTaskSummary("操作建议", "选择任务后，这里会说明当前状态和建议动作。");
       }
 
       function buildFriendlyError(code, message) {
         const detail = message ? ` 细节：${message}` : "";
         if (code === "conflict") {
-          return `检测到冲突。先刷新文档和任务状态，再决定是回滚文档，还是 reject 后 retry。${detail}`;
+          return `正文和任务源文本已经不一致。可以先清理失效任务，或手动检查后再决定是否重建任务。${detail}`;
         }
         if (code === "validation_error") {
           return `请求未通过校验。请检查当前选区、revision 或任务状态。${detail}`;
         }
         if (code === "invalid_state") {
-          return `当前状态不允许这个操作。请先刷新任务状态后再试。${detail}`;
+          return `当前状态不允许这个操作。请先刷新当前文档和任务状态。${detail}`;
         }
         if (code === "unauthorized") {
           openKeyModal();
@@ -759,6 +797,29 @@
         return "当前正文已经变化，旧任务结果不能直接套用。";
       }
 
+      function describeTaskStatusText(task) {
+        if (task.is_stale && task.status === "rejected") {
+          return "失效任务已关闭";
+        }
+        if (task.is_stale && task.status === "cancelled") {
+          return "失效任务已取消";
+        }
+        if (task.is_stale) {
+          return `失效任务 · 建议 ${task.recommended_action || "重建"}`;
+        }
+        return `状态：${task.status}`;
+      }
+
+      function describeResolvedTask(task) {
+        if (task.status === 'accepted') {
+          return '该任务已经接受完成，仅保留结果对照。';
+        }
+        if (task.status === 'rejected') {
+          return '该任务已经明确拒绝，不会再自动影响正文。';
+        }
+        return '该任务已结束，仅展示当前结果记录。';
+      }
+
       function getHeaders() {
         const apiKey = apiKeyInput.value.trim();
         if (!apiKey) {
@@ -766,7 +827,7 @@
           throw new Error("请先设置 API Key");
         }
         return {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
           Authorization: `Bearer ${apiKey}`,
         };
       }
@@ -775,7 +836,7 @@
         const response = await fetch(path, {
           ...options,
           headers: {
-            ...(options.body ? { "Content-Type": "application/json" } : {}),
+            ...(options.body ? { 'Content-Type': 'application/json' } : {}),
             Authorization: getHeaders().Authorization,
             ...(options.headers || {}),
           },
@@ -787,58 +848,78 @@
         return payload.data;
       }
 
-      function renderEmpty(container, message) {
-        container.innerHTML = `<div class="card"><p class="hint">${message}</p></div>`;
+      function renderDocOptions(docs) {
+        if (!docs.length) {
+          docSelectorEl.innerHTML = '<option value="">暂无文档</option>';
+          docSelectorEl.value = '';
+          return;
+        }
+        docSelectorEl.innerHTML = docs
+          .map(
+            (doc) => `<option value="${doc.id}">${escapeHtml(doc.title)} · rev ${doc.revision}</option>`
+          )
+          .join('');
+        docSelectorEl.value = state.docId ? String(state.docId) : String(docs[0].id);
       }
 
       async function loadDocs() {
-        const docs = await api("/api/docs");
+        const docs = await api('/api/docs');
         if (!docs.length) {
-          renderEmpty(docListEl, "还没有文档。先创建一篇。");
-          docRevisionPillEl.textContent = "未选择文档";
-          resetTaskDetails();
+          clearEditor();
           return;
         }
-        docListEl.innerHTML = docs
-          .map(
-            (doc) => `
-              <button class="card ${doc.id === state.docId ? "active" : ""}" data-doc-id="${doc.id}">
-                <h4>${escapeHtml(doc.title)}</h4>
-                <div class="meta">revision ${doc.revision}</div>
-              </button>
-            `
-          )
-          .join("");
-        docListEl.querySelectorAll("[data-doc-id]").forEach((button) => {
-          button.addEventListener("click", () => selectDoc(Number(button.dataset.docId)));
-        });
+        if (!state.docId || !docs.some((doc) => doc.id === state.docId)) {
+          state.docId = docs[0].id;
+        }
+        renderDocOptions(docs);
+        await selectDoc(state.docId, { refreshDocs: false });
       }
 
-      async function selectDoc(docId) {
+      async function loadDocsOnly() {
+        const docs = await api('/api/docs');
+        if (!docs.length) {
+          clearEditor();
+          return;
+        }
+        if (!state.docId || !docs.some((doc) => doc.id === state.docId)) {
+          state.docId = docs[0].id;
+        }
+        renderDocOptions(docs);
+      }
+
+      async function selectDoc(docId, options = { refreshDocs: true }) {
+        if (!docId) {
+          clearEditor();
+          return;
+        }
         const doc = await api(`/api/docs/${docId}`);
         state.docId = doc.id;
         state.revision = doc.revision;
         state.selectedTaskId = null;
         docRevisionPillEl.textContent = `revision ${doc.revision}`;
+        docSelectorEl.value = String(doc.id);
         docTitleInput.value = doc.title;
         docBodyInput.value = doc.raw_markdown;
-        resetTaskDetails();
         updateSelectionInfo();
-        await Promise.all([loadDocs(), loadTasks(), loadVersions()]);
-        setStatus(`已加载文档 #${doc.id}，当前 revision ${doc.revision}。`, "success");
+        resetTaskDetails();
+        if (options.refreshDocs) {
+          await loadDocsOnly();
+        }
+        await Promise.all([loadTasks(), loadVersions()]);
+        setStatus(`已加载文档 #${doc.id}，当前 revision ${doc.revision}。`, 'success');
       }
 
       async function loadTasks() {
         if (!state.docId) {
-          taskCountEl.textContent = "0";
-          renderEmpty(taskListEl, "先选择文档。");
+          taskCountPillEl.textContent = '任务 0';
+          taskListEl.innerHTML = '<option value="">先选择文档</option>';
           resetTaskDetails();
           return;
         }
         const tasks = await api(`/api/tasks?doc_id=${state.docId}`);
-        taskCountEl.textContent = String(tasks.length);
+        taskCountPillEl.textContent = `任务 ${tasks.length}`;
         if (!tasks.length) {
-          renderEmpty(taskListEl, "当前文档还没有任务。");
+          taskListEl.innerHTML = '<option value="">当前文档无任务</option>';
           resetTaskDetails();
           return;
         }
@@ -846,30 +927,29 @@
           resetTaskDetails();
         }
         taskListEl.innerHTML = tasks
-          .map(
-            (task) => `
-              <button class="card ${task.id === state.selectedTaskId ? "active" : ""}" data-task-id="${task.id}">
-                <h4>#${task.id} ${escapeHtml(task.action)}</h4>
-                <div class="meta">${escapeHtml(task.status)} · ${escapeHtml(task.source_text.slice(0, 40))}</div>
-              </button>
-            `
-          )
-          .join("");
-        taskListEl.querySelectorAll("[data-task-id]").forEach((button) => {
-          button.addEventListener("click", () => selectTask(Number(button.dataset.taskId)));
-        });
+          .map((task) => {
+            const status = describeTaskStatusText(task);
+            return `<option value="${task.id}">#${task.id} ${escapeHtml(task.action)} (${status})</option>`;
+          })
+          .join('');
+
+        taskListEl.value = state.selectedTaskId ? String(state.selectedTaskId) : String(tasks[0].id);
+
+        if (!state.selectedTaskId && tasks.length > 0) {
+          await selectTask(tasks[0].id);
+        }
       }
 
       async function loadVersions() {
         if (!state.docId) {
-          versionCountEl.textContent = "0";
-          renderEmpty(versionListEl, "先选择文档。");
+          versionCountPillEl.textContent = '版本 0';
+          renderEmpty(versionListEl, '先选择文档。', '版本列表');
           return;
         }
         const versions = await api(`/api/docs/${state.docId}/versions`);
-        versionCountEl.textContent = String(versions.length);
+        versionCountPillEl.textContent = `版本 ${versions.length}`;
         if (!versions.length) {
-          renderEmpty(versionListEl, "暂无版本。");
+          renderEmpty(versionListEl, '暂无版本。', '版本列表');
           return;
         }
         versionListEl.innerHTML = versions
@@ -877,7 +957,7 @@
             (version) => `
               <div class="card">
                 <h4>revision ${version.revision}</h4>
-                <div class="meta">${escapeHtml(version.note || "无备注")}</div>
+                <div class="meta">${escapeHtml(version.note || '无备注')}</div>
                 <div class="meta">${escapeHtml(version.actor)}</div>
                 <div class="inline-actions" style="margin-top: 10px">
                   <button class="secondary" data-version-id="${version.id}">回滚到这里</button>
@@ -885,153 +965,209 @@
               </div>
             `
           )
-          .join("");
-        versionListEl.querySelectorAll("[data-version-id]").forEach((button) => {
-          button.addEventListener("click", () => rollbackVersion(Number(button.dataset.versionId)));
+          .join('');
+        versionListEl.querySelectorAll('[data-version-id]').forEach((button) => {
+          button.addEventListener('click', () => rollbackVersion(Number(button.dataset.versionId)));
         });
+      }
+
+      function buildActionButton(label, handler, className = '') {
+        const button = document.createElement('button');
+        button.textContent = label;
+        if (className) {
+          button.className = className;
+        }
+        button.addEventListener('click', handler);
+        return button;
       }
 
       async function selectTask(taskId) {
         state.selectedTaskId = taskId;
-        await loadTasks();
         const task = await api(`/api/tasks/${taskId}`);
-        taskActionsEl.innerHTML = "";
+        await loadTasks();
+        taskActionsEl.innerHTML = '';
 
-        if (["done", "accepted", "rejected"].includes(task.status) && task.result) {
+        if (['done', 'accepted', 'rejected'].includes(task.status) && task.result) {
           const diff = await api(`/api/tasks/${taskId}/diff`);
-          diffStateEl.textContent = diff.can_accept ? "可以 accept" : "当前已冲突";
-          if (diff.can_accept) {
+          if (task.status === 'done' && diff.can_accept) {
+            diffStateEl.textContent = '可以 accept';
             setTaskSummary(
-              "可以直接接受",
-              "当前正文仍与任务源文本一致，accept 会把选中区间替换成任务结果。",
-              "success",
+              '可以直接接受',
+              '当前正文仍与任务源文本一致，accept 会把选中区间替换成任务结果。',
+              'success',
               [`当前文本: ${diff.current_text}`, `任务结果: ${diff.result_text}`]
             );
-          } else {
+          } else if (task.status === 'done') {
+            diffStateEl.textContent = '存在冲突';
             setTaskSummary(
-              "需要人工处理冲突",
+              '建议先清理或重建任务',
               describeConflictReason(diff.conflict_reason),
-              "warn",
+              'warn',
               [
                 `原始文本: ${diff.source_text}`,
                 `当前文本: ${diff.current_text}`,
                 `任务结果: ${diff.result_text}`,
               ]
             );
-          }
-          diffEl.textContent = diff.diff || "source_text 与 result 只有单行差异，没有额外上下文。";
-        } else {
-          diffStateEl.textContent = `状态：${task.status}`;
-          diffEl.textContent = task.error_message || "该任务当前没有可展示的 diff。";
-          if (task.status === "failed") {
+          } else {
+            diffStateEl.textContent = `状态：${task.status}`;
             setTaskSummary(
-              "Agent 处理失败",
-              "这次任务没有产出结果。先看错误信息，确认后可以直接 retry。",
-              "error",
-              [task.error_message || "没有额外错误信息"]
+              task.status === 'accepted' ? '任务已接受' : '任务已拒绝',
+              describeResolvedTask(task),
+              task.status === 'accepted' ? 'success' : 'warn',
+              [
+                `原始文本: ${diff.source_text}`,
+                `任务结果: ${diff.result_text}`,
+              ]
             );
-          } else if (task.status === "pending" || task.status === "processing") {
+          }
+          diffEl.textContent = diff.diff || 'source_text 与 result 只有单行差异，没有额外上下文。';
+        } else {
+          diffStateEl.textContent = task.is_stale ? '任务已失效' : `状态：${task.status}`;
+          diffEl.textContent = task.error_message || '该任务当前没有可展示的 diff。';
+          if (task.status === 'failed') {
             setTaskSummary(
-              "任务仍在处理中",
-              "当前还不能 accept 或 reject。若 Agent 卡住，可以先 cancel，再决定是否 retry。",
-              "",
+              'Agent 处理失败',
+              task.is_stale
+                ? `${describeConflictReason(task.stale_reason)} 旧任务通常不值得重试，建议重新创建。`
+                : '这次任务没有产出结果。确认后可以直接 retry。',
+              'error',
+              [task.error_message || '没有额外错误信息']
+            );
+          } else if (task.status === 'pending' || task.status === 'processing') {
+            setTaskSummary(
+              task.is_stale ? '建议关闭这个失效任务' : '任务仍在处理中',
+              task.is_stale
+                ? `${describeConflictReason(task.stale_reason)} 推荐先取消，再按当前正文重新建任务。`
+                : '当前还不能 accept 或 reject。若 Agent 卡住，可以先 cancel。',
+              task.is_stale ? 'warn' : '',
               [task.source_text]
             );
-          } else if (task.status === "cancelled") {
+          } else if (task.status === 'cancelled') {
             setTaskSummary(
-              "任务已取消",
-              "当前结果不会改写正文。若原始文本仍匹配，可以 retry 重新进入待处理。",
-              "warn",
+              '任务已取消',
+              task.is_stale
+                ? '源文本已经变了，这条旧任务已安全关闭，只保留记录。'
+                : '当前结果不会改写正文。若原始文本仍匹配，可以 retry。',
+              'warn',
               [task.source_text]
             );
           } else {
             setTaskSummary(
-              "当前没有可接受结果",
-              "这个任务现在没有可直接合并到文档的结果。",
-              "",
+              task.is_stale ? '旧任务已失效' : '当前没有可接受结果',
+              task.is_stale
+                ? `${describeConflictReason(task.stale_reason)} 可以直接清理这条任务，或在当前正文上重新建一条。`
+                : '这个任务现在没有可直接合并到文档的结果。',
+              task.is_stale ? 'warn' : '',
               [task.source_text]
             );
           }
         }
 
-        if (task.status === "done") {
+        if (task.status === 'done') {
+          taskActionsEl.append(buildActionButton('接受结果', () => acceptTask(taskId), 'primary'));
           taskActionsEl.append(
-            buildActionButton("接受结果", () => acceptTask(taskId), "primary"),
-            buildActionButton("拒绝结果", () => rejectTask(taskId), "secondary")
+            buildActionButton(task.is_stale ? '标记失效' : '拒绝结果', () => rejectTask(taskId), task.is_stale ? 'warn' : 'secondary')
           );
         }
-        if (["pending", "processing"].includes(task.status)) {
-          taskActionsEl.append(buildActionButton("取消任务", () => cancelTask(taskId), "warn"));
+        if (['pending', 'processing'].includes(task.status)) {
+          taskActionsEl.append(
+            buildActionButton(task.is_stale ? '关闭失效任务' : '取消任务', () => cancelTask(taskId), task.is_stale ? 'warn' : 'secondary')
+          );
         }
-        if (["failed", "cancelled", "rejected"].includes(task.status)) {
-          taskActionsEl.append(buildActionButton("重新排队", () => retryTask(taskId), "secondary"));
+        if (['failed', 'cancelled', 'rejected'].includes(task.status) && !task.is_stale) {
+          taskActionsEl.append(buildActionButton('重新排队', () => retryTask(taskId), 'secondary'));
         }
-      }
-
-      function buildActionButton(label, handler, className = "") {
-        const button = document.createElement("button");
-        button.textContent = label;
-        if (className) {
-          button.className = className;
+        if (task.is_stale) {
+          taskActionsEl.append(buildActionButton('清理当前文档失效任务', cleanupStaleTasks, 'secondary'));
         }
-        button.addEventListener("click", handler);
-        return button;
       }
 
       async function createDoc() {
-        const title = document.getElementById("new-title").value.trim();
+        const title = document.getElementById('new-title').value.trim();
         if (!title) {
-          throw new Error("请先输入文档标题");
+          throw new Error('请先输入文档标题');
         }
-        const doc = await api("/api/docs", {
-          method: "POST",
-          body: JSON.stringify({ title, raw_markdown: `# ${title}\n`, actor: "browser" }),
+        const doc = await api('/api/docs', {
+          method: 'POST',
+          body: JSON.stringify({ title, raw_markdown: `# ${title}\n`, actor: 'browser' }),
         });
-        document.getElementById("new-title").value = "";
-        await loadDocs();
-        await selectDoc(doc.id);
+        document.getElementById('new-title').value = '';
+        await loadDocsOnly();
+        await selectDoc(doc.id, { refreshDocs: false });
       }
 
       async function saveDoc() {
         if (!state.docId) {
-          throw new Error("请先选择文档");
+          throw new Error('请先选择文档');
         }
         const previousRevision = state.revision;
         const doc = await api(`/api/docs/${state.docId}`, {
-          method: "PUT",
+          method: 'PUT',
           body: JSON.stringify({
             title: docTitleInput.value,
             raw_markdown: docBodyInput.value,
             expected_revision: state.revision,
-            actor: "browser",
-            note: "manual edit from ui",
+            actor: 'browser',
+            note: 'manual edit from ui',
           }),
         });
         state.revision = doc.revision;
         docRevisionPillEl.textContent = `revision ${doc.revision}`;
-        if (doc.revision === previousRevision) {
-          setStatus("文档没有正文变化，没有创建新版本。", "success");
-        } else {
-          setStatus(`文档已保存到 revision ${doc.revision}。`, "success");
+        setStatus(
+          doc.revision === previousRevision
+            ? '正文没有变化，没有创建新版本。'
+            : `文档已保存到 revision ${doc.revision}。`,
+          'success'
+        );
+        await Promise.all([loadDocsOnly(), loadTasks(), loadVersions()]);
+      }
+
+      async function deleteDoc() {
+        if (!state.docId) {
+          throw new Error('请先选择文档');
         }
-        await Promise.all([loadDocs(), loadTasks(), loadVersions()]);
+        const confirmed = window.confirm('删除后文档、任务和版本记录都会一并移除。确认删除吗？');
+        if (!confirmed) {
+          return;
+        }
+        const deletedId = state.docId;
+        await api(`/api/docs/${state.docId}`, { method: 'DELETE' });
+        clearEditor();
+        await loadDocs();
+        setStatus(`文档 #${deletedId} 已删除。`, 'success');
+      }
+
+      async function cleanupStaleTasks() {
+        if (!state.docId) {
+          throw new Error('请先选择文档');
+        }
+        const result = await api(`/api/docs/${state.docId}/tasks/cleanup-stale`, {
+          method: 'POST',
+        });
+        state.selectedTaskId = null;
+        await loadTasks();
+        setStatus(
+          `已清理失效任务：取消 ${result.cancelled}，关闭 ${result.rejected}，保留 ${result.unchanged}。`,
+          'success'
+        );
       }
 
       async function createTask() {
         if (!state.docId) {
-          throw new Error("请先选择文档");
+          throw new Error('请先选择文档');
         }
         const start = docBodyInput.selectionStart;
         const end = docBodyInput.selectionEnd;
         if (start === end) {
-          throw new Error("请先在编辑区选中文本");
+          throw new Error('请先在编辑区选中文本');
         }
         const sourceText = docBodyInput.value.slice(start, end);
         await api(`/api/docs/${state.docId}/tasks`, {
-          method: "POST",
+          method: 'POST',
           body: JSON.stringify({
-            action: document.getElementById("task-action").value,
-            instruction: document.getElementById("task-instruction").value || null,
+            action: document.getElementById('task-action').value,
+            instruction: document.getElementById('task-instruction').value || null,
             source_text: sourceText,
             start_offset: start,
             end_offset: end,
@@ -1039,53 +1175,53 @@
           }),
         });
         await loadTasks();
-        setStatus("任务已创建，等待 Agent 处理。", "success");
+        setStatus('任务已创建，等待 Agent 处理。', 'success');
       }
 
       async function acceptTask(taskId) {
         const task = await api(`/api/tasks/${taskId}/accept`, {
-          method: "POST",
+          method: 'POST',
           body: JSON.stringify({
             expected_revision: state.revision,
-            actor: "browser",
-            note: "accept from ui",
+            actor: 'browser',
+            note: 'accept from ui',
           }),
         });
-        setStatus(`任务 #${taskId} 已 accept。`, "success");
+        setStatus(`任务 #${taskId} 已 accept。`, 'success');
         await selectDoc(task.doc_id);
         await selectTask(taskId);
       }
 
       async function rejectTask(taskId) {
-        await api(`/api/tasks/${taskId}/reject`, { method: "POST" });
-        setStatus(`任务 #${taskId} 已 reject。`, "success");
+        await api(`/api/tasks/${taskId}/reject`, { method: 'POST' });
+        setStatus(`任务 #${taskId} 已关闭。`, 'success');
         await loadTasks();
         await selectTask(taskId);
       }
 
       async function cancelTask(taskId) {
-        await api(`/api/tasks/${taskId}/cancel`, { method: "POST" });
-        setStatus(`任务 #${taskId} 已取消。`, "success");
+        await api(`/api/tasks/${taskId}/cancel`, { method: 'POST' });
+        setStatus(`任务 #${taskId} 已取消。`, 'success');
         await loadTasks();
         await selectTask(taskId);
       }
 
       async function retryTask(taskId) {
-        await api(`/api/tasks/${taskId}/retry`, { method: "POST" });
-        setStatus(`任务 #${taskId} 已重置为 pending。`, "success");
+        await api(`/api/tasks/${taskId}/retry`, { method: 'POST' });
+        setStatus(`任务 #${taskId} 已重置为 pending。`, 'success');
         await loadTasks();
         await selectTask(taskId);
       }
 
       async function rollbackVersion(versionId) {
         if (!state.docId) {
-          throw new Error("请先选择文档");
+          throw new Error('请先选择文档');
         }
         const doc = await api(`/api/docs/${state.docId}/versions/${versionId}/rollback`, {
-          method: "POST",
+          method: 'POST',
           body: JSON.stringify({
             expected_revision: state.revision,
-            actor: "browser",
+            actor: 'browser',
             note: `rollback from ui to version ${versionId}`,
           }),
         });
@@ -1093,10 +1229,10 @@
         docRevisionPillEl.textContent = `revision ${doc.revision}`;
         docTitleInput.value = doc.title;
         docBodyInput.value = doc.raw_markdown;
-        resetTaskDetails();
         updateSelectionInfo();
-        setStatus(`已回滚到版本 #${versionId}，当前 revision ${doc.revision}。`, "success");
-        await Promise.all([loadDocs(), loadTasks(), loadVersions()]);
+        resetTaskDetails();
+        setStatus(`已回滚到版本 #${versionId}，当前 revision ${doc.revision}。`, 'success');
+        await Promise.all([loadDocsOnly(), loadTasks(), loadVersions()]);
       }
 
       async function refreshCurrent() {
@@ -1107,76 +1243,66 @@
         await loadDocs();
       }
 
-      async function refreshBoard() {
-        if (state.boardTab === "versions") {
-          await loadVersions();
-          return;
-        }
-        await loadTasks();
-      }
-
       function updateSelectionInfo() {
         const start = docBodyInput.selectionStart;
         const end = docBodyInput.selectionEnd;
         if (start === end) {
-          selectionInfoEl.textContent = "尚未选择文本";
+          selectionInfoEl.textContent = '尚未选择文本';
           return;
         }
         selectionInfoEl.textContent = `选区 ${start}-${end}，长度 ${end - start}`;
-      }
-
-      function escapeHtml(value) {
-        return String(value)
-          .replaceAll("&", "&amp;")
-          .replaceAll("<", "&lt;")
-          .replaceAll(">", "&gt;")
-          .replaceAll('"', "&quot;")
-          .replaceAll("'", "&#39;");
       }
 
       async function safeRun(callback) {
         try {
           await callback();
         } catch (error) {
-          setStatus(error.message || "发生错误", "error");
+          setStatus(error.message || '发生错误', 'error');
         }
       }
 
-      document.getElementById("open-key-modal").addEventListener("click", openKeyModal);
-      document.getElementById("close-key").addEventListener("click", closeKeyModal);
-      document.getElementById("save-key").addEventListener("click", () => {
+      document.getElementById('open-key-modal').addEventListener('click', openKeyModal);
+      document.getElementById('close-key').addEventListener('click', closeKeyModal);
+      document.getElementById('save-key').addEventListener('click', () => {
         const value = apiKeyInput.value.trim();
         if (!value) {
-          setStatus("请先输入 API Key。", "error");
+          setStatus('请先输入 API Key。', 'error');
           return;
         }
-        localStorage.setItem("agentdocs.apiKey", value);
+        localStorage.setItem('agentdocs.apiKey', value);
         syncKeyState();
-        keyModalEl.classList.add("hidden");
-        setStatus("API Key 已保存到本地浏览器。", "success");
+        keyModalEl.classList.add('hidden');
+        setStatus('API Key 已保存到本地浏览器。', 'success');
       });
-      document.getElementById("refresh-current").addEventListener("click", () => safeRun(refreshCurrent));
-      document.getElementById("refresh-docs").addEventListener("click", () => safeRun(loadDocs));
-      document.getElementById("refresh-board").addEventListener("click", () => safeRun(refreshBoard));
-      document.getElementById("create-doc").addEventListener("click", () => safeRun(createDoc));
-      document.getElementById("save-doc").addEventListener("click", () => safeRun(saveDoc));
-      document.getElementById("reload-doc").addEventListener("click", () => safeRun(() => refreshCurrent()));
-      document.getElementById("create-task").addEventListener("click", () => safeRun(createTask));
-      showTasksButton.addEventListener("click", () => setBoardTab("tasks"));
-      showVersionsButton.addEventListener("click", () => setBoardTab("versions"));
-      docBodyInput.addEventListener("select", updateSelectionInfo);
-      docBodyInput.addEventListener("keyup", updateSelectionInfo);
-      docBodyInput.addEventListener("mouseup", updateSelectionInfo);
+      document.getElementById('refresh-current').addEventListener('click', () => safeRun(refreshCurrent));
+      document.getElementById('create-doc').addEventListener('click', () => safeRun(createDoc));
+      document.getElementById('save-doc').addEventListener('click', () => safeRun(saveDoc));
+      document.getElementById('cleanup-stale').addEventListener('click', () => safeRun(cleanupStaleTasks));
+      document.getElementById('clear-instruction').addEventListener('click', () => {
+        document.getElementById('task-instruction').value = '';
+      });
+      document.getElementById('delete-doc').addEventListener('click', () => safeRun(deleteDoc));
+      document.getElementById('create-task').addEventListener('click', () => safeRun(createTask));
+      docSelectorEl.addEventListener('change', () => safeRun(() => selectDoc(Number(docSelectorEl.value))));
+      taskListEl.addEventListener('change', () => {
+        if (!taskListEl.value) {
+          resetTaskDetails();
+          return;
+        }
+        safeRun(() => selectTask(Number(taskListEl.value)));
+      });
+      docBodyInput.addEventListener('select', updateSelectionInfo);
+      docBodyInput.addEventListener('keyup', updateSelectionInfo);
+      docBodyInput.addEventListener('mouseup', updateSelectionInfo);
 
-      document.addEventListener("keydown", (event) => {
-        if (event.key === "Escape" && !keyModalEl.classList.contains("hidden")) {
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !keyModalEl.classList.contains('hidden')) {
           closeKeyModal();
         }
       });
 
       syncKeyState();
-      syncBoardTab();
-      resetTaskDetails();
+      clearEditor();
       if (!apiKeyInput.value.trim()) {
         openKeyModal();
       }

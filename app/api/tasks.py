@@ -22,16 +22,23 @@ def list_tasks(
     db: Session = Depends(get_db),
 ):
     tasks = service.list_tasks(db, status=status, doc_id=doc_id)
+    task_descriptions = service.describe_tasks(db, tasks)
     return {
         "ok": True,
-        "data": [serialize_task(task).model_dump(mode="json") for task in tasks],
+        "data": [
+            serialize_task(task, **task_descriptions[task.id]).model_dump(mode="json")
+            for task in tasks
+        ],
     }
 
 
 @router.get("/{task_id}")
 def get_task(task_id: int, db: Session = Depends(get_db)):
     task = service.get_task(db, task_id)
-    return {"ok": True, "data": serialize_task(task).model_dump(mode="json")}
+    return {
+        "ok": True,
+        "data": serialize_task(task, **service.describe_task(db, task)).model_dump(mode="json"),
+    }
 
 
 @router.get("/{task_id}/diff")

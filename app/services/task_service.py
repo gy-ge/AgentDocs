@@ -14,6 +14,8 @@ class TaskService:
     def __init__(self) -> None:
         self.document_service = DocumentService()
 
+    STALE_TRACKED_STATUSES = {"pending", "processing", "done"}
+
     def list_tasks(
         self, db: Session, status: str | None = None, doc_id: int | None = None
     ) -> list[Task]:
@@ -23,6 +25,31 @@ class TaskService:
         if doc_id is not None:
             query = query.filter(Task.doc_id == doc_id)
         return query.order_by(Task.created_at.desc(), Task.id.desc()).all()
+
+    def describe_task(self, db: Session, task: Task) -> dict[str, object]:
+        document = self.document_service.get_document(db, task.doc_id)
+        is_stale, stale_reason = self._describe_stale_state(task, document.raw_markdown)
+        return {
+            "is_stale": is_stale,
+            "stale_reason": stale_reason,
+            "recommended_action": self._recommended_action(task.status, is_stale),
+        }
+
+    def describe_tasks(self, db: Session, tasks: list[Task]) -> dict[int, dict[str, object]]:
+        documents: dict[int, str] = {}
+        descriptions: dict[int, dict[str, object]] = {}
+        for task in tasks:
+            raw_markdown = documents.get(task.doc_id)
+            if raw_markdown is None:
+                raw_markdown = self.document_service.get_document(db, task.doc_id).raw_markdown
+                documents[task.doc_id] = raw_markdown
+            is_stale, stale_reason = self._describe_stale_state(task, raw_markdown)
+            descriptions[task.id] = {
+                "is_stale": is_stale,
+                "stale_reason": stale_reason,
+                "recommended_action": self._recommended_action(task.status, is_stale),
+            }
+        return descriptions
 
     def get_task(self, db: Session, task_id: int) -> Task:
         task = db.get(Task, task_id)
@@ -36,12 +63,9 @@ class TaskService:
             raise ApiError(409, "invalid_state", "task has no result diff")
 
         document = self.document_service.get_document(db, task.doc_id)
-        current_text = document.raw_markdown[task.start_offset : task.end_offset]
-        can_accept = (
-            current_text == task.source_text
-            and self._hash_text(current_text) == task.source_hash
-        )
-        conflict_reason = None if can_accept else self._build_conflict_reason(task, document.raw_markdown)
+        current_text = self._current_text(document.raw_markdown, task)
+        is_stale, conflict_reason = self._describe_stale_state(task, document.raw_markdown)
+        can_accept = task.status == "done" and not is_stale
         diff = "\n".join(
             unified_diff(
                 task.source_text.splitlines(),
@@ -59,6 +83,7 @@ class TaskService:
             "result_text": task.result,
             "can_accept": can_accept,
             "conflict_reason": conflict_reason,
+            "recommended_action": self._recommended_action(task.status, is_stale),
             "diff": diff,
         }
 
@@ -239,6 +264,40 @@ class TaskService:
         db.refresh(task)
         return task
 
+    def cleanup_stale_tasks(self, db: Session, doc_id: int) -> dict[str, int]:
+        self.document_service.get_document(db, doc_id)
+        tasks = (
+            db.query(Task)
+            .filter(Task.doc_id == doc_id)
+            .filter(Task.status.in_(["pending", "processing", "done"]))
+            .order_by(Task.id.asc())
+            .all()
+        )
+        cancelled = 0
+        rejected = 0
+        unchanged = 0
+        raw_markdown = self.document_service.get_document(db, doc_id).raw_markdown
+        now = utcnow()
+        for task in tasks:
+            is_stale, _ = self._detect_stale(task, raw_markdown)
+            if not is_stale:
+                unchanged += 1
+                continue
+            if task.status == "done":
+                task.status = "rejected"
+                task.resolved_at = now
+                rejected += 1
+                continue
+            task.status = "cancelled"
+            task.resolved_at = now
+            cancelled += 1
+        db.commit()
+        return {
+            "cancelled": cancelled,
+            "rejected": rejected,
+            "unchanged": unchanged,
+        }
+
     def _validate_range(
         self, raw_markdown: str, source_text: str, start_offset: int, end_offset: int
     ) -> None:
@@ -261,8 +320,35 @@ class TaskService:
     def _hash_text(self, value: str) -> str:
         return sha256(value.encode("utf-8")).hexdigest()
 
+    def _current_text(self, raw_markdown: str, task: Task) -> str:
+        start = min(max(task.start_offset, 0), len(raw_markdown))
+        end = min(max(task.end_offset, start), len(raw_markdown))
+        return raw_markdown[start:end]
+
+    def _describe_stale_state(
+        self, task: Task, raw_markdown: str
+    ) -> tuple[bool, str | None]:
+        if task.status not in self.STALE_TRACKED_STATUSES:
+            return False, None
+        return self._detect_stale(task, raw_markdown)
+
+    def _detect_stale(self, task: Task, raw_markdown: str) -> tuple[bool, str | None]:
+        current_text = self._current_text(raw_markdown, task)
+        if current_text == task.source_text and self._hash_text(current_text) == task.source_hash:
+            return False, None
+        return True, self._build_conflict_reason(task, raw_markdown)
+
+    def _recommended_action(self, status: str, is_stale: bool) -> str | None:
+        if not is_stale:
+            return None
+        if status == "done":
+            return "reject"
+        if status in {"pending", "processing"}:
+            return "cancel"
+        return None
+
     def _build_conflict_reason(self, task: Task, raw_markdown: str) -> str:
-        current_text = raw_markdown[task.start_offset : task.end_offset]
+        current_text = self._current_text(raw_markdown, task)
         if task.start_offset >= len(raw_markdown):
             return "selection_removed"
         if not current_text:

@@ -45,6 +45,9 @@ class TaskRead(BaseModel):
     status: str
     agent_name: str | None = None
     error_message: str | None = None
+    is_stale: bool = False
+    stale_reason: str | None = None
+    recommended_action: str | None = None
     created_at: datetime
     started_at: datetime | None = None
     completed_at: datetime | None = None
@@ -55,5 +58,12 @@ class TaskAcceptRequest(BaseModel):
     expected_revision: int
     actor: str = "browser"
     note: str | None = None
+
+
+class CleanupStaleTasksRead(BaseModel):
+    doc_id: int
+    cancelled: int
+    rejected: int
+    unchanged: int
 
 

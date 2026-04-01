@@ -51,8 +51,13 @@ def test_root_page_is_served(client):
     assert "AgentDocs" in response.text
     assert "连接设置" in response.text
     assert "文档工作台" in response.text
+    assert "已有文档" in response.text
+    assert "新建文档" in response.text
+    assert "任务动作" in response.text
+    assert "任务处理" in response.text
     assert "创建任务" in response.text
-    assert "任务面板" in response.text
+    assert "删除文档" in response.text
+    assert "清理失效" in response.text
 
 
 def test_document_update_versions_and_rollback(client, auth_headers):
@@ -95,6 +100,23 @@ def test_document_update_versions_and_rollback(client, auth_headers):
     rollback_data = rollback_response.json()["data"]
     assert rollback_data["revision"] == 3
     assert rollback_data["raw_markdown"] == "# Title\n\nAlpha\n"
+
+
+def test_delete_document_removes_document_and_related_records(client, auth_headers):
+    raw_markdown = "# Title\n\nHello world\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+    task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "Hello")
+
+    delete_response = client.delete(f"/api/docs/{doc_id}", headers=auth_headers)
+    assert delete_response.status_code == 200
+    assert delete_response.json()["data"]["id"] == doc_id
+
+    get_doc_response = client.get(f"/api/docs/{doc_id}", headers=auth_headers)
+    assert get_doc_response.status_code == 404
+
+    get_task_response = client.get(f"/api/tasks/{task['id']}", headers=auth_headers)
+    assert get_task_response.status_code == 404
 
 
 def test_rollback_to_current_snapshot_is_noop(client, auth_headers):
@@ -480,7 +502,13 @@ def test_deleted_source_text_blocks_accept_and_retry(client, auth_headers):
 
     diff_response = client.get(f"/api/tasks/{task['id']}/diff", headers=auth_headers)
     assert diff_response.status_code == 200
-    assert diff_response.json()["data"]["conflict_reason"] == "source_changed"
+    assert diff_response.json()["data"]["conflict_reason"] is None
+    assert diff_response.json()["data"]["can_accept"] is False
+    task_response = client.get(f"/api/tasks/{task['id']}", headers=auth_headers)
+    assert task_response.status_code == 200
+    assert task_response.json()["data"]["is_stale"] is False
+    assert task_response.json()["data"]["stale_reason"] is None
+    assert task_response.json()["data"]["recommended_action"] is None
 
     retry_response = client.post(
         f"/api/tasks/{task['id']}/retry",
@@ -543,6 +571,175 @@ def test_retry_flow_still_conflicts_after_second_manual_edit(client, auth_header
     assert diff_response.status_code == 200
     diff_data = diff_response.json()["data"]
     assert diff_data["conflict_reason"] == "source_changed"
+
+
+def test_cleanup_stale_tasks_closes_outdated_pending_and_done_tasks(client, auth_headers):
+    raw_markdown = "# Title\n## Section\nHello world\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+
+    pending_task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "world")
+    done_task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "Hello")
+
+    client.post(
+        "/api/tasks/next",
+        headers=auth_headers,
+        json={"agent_name": "agent-one"},
+    )
+    client.post(
+        f"/api/tasks/{pending_task['id']}/cancel",
+        headers=auth_headers,
+    )
+    client.post(
+        f"/api/tasks/{pending_task['id']}/retry",
+        headers=auth_headers,
+    )
+
+    client.post(
+        "/api/tasks/next",
+        headers=auth_headers,
+        json={"agent_name": "agent-two"},
+    )
+    client.post(
+        "/api/tasks/next",
+        headers=auth_headers,
+        json={"agent_name": "agent-three"},
+    )
+    client.post(
+        f"/api/tasks/{done_task['id']}/complete",
+        headers=auth_headers,
+        json={"result": "Hi", "error_message": None},
+    )
+
+    client.put(
+        f"/api/docs/{doc_id}",
+        headers=auth_headers,
+        json={
+            "title": "Doc",
+            "raw_markdown": "# Title\n## Section\nChanged text\n",
+            "expected_revision": 1,
+            "actor": "browser",
+            "note": "make tasks stale",
+        },
+    )
+
+    cleanup_response = client.post(
+        f"/api/docs/{doc_id}/tasks/cleanup-stale",
+        headers=auth_headers,
+    )
+    assert cleanup_response.status_code == 200
+    cleanup_data = cleanup_response.json()["data"]
+    assert cleanup_data == {
+        "doc_id": doc_id,
+        "cancelled": 1,
+        "rejected": 1,
+        "unchanged": 0,
+    }
+
+    pending_response = client.get(f"/api/tasks/{pending_task['id']}", headers=auth_headers)
+    assert pending_response.status_code == 200
+    assert pending_response.json()["data"]["status"] == "cancelled"
+
+    done_response = client.get(f"/api/tasks/{done_task['id']}", headers=auth_headers)
+    assert done_response.status_code == 200
+    assert done_response.json()["data"]["status"] == "rejected"
+
+
+def test_accepted_task_is_not_marked_stale_after_later_document_edits(client, auth_headers):
+    raw_markdown = "# Title\n## Section\nHello world\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+    task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "Hello")
+
+    client.post(
+        "/api/tasks/next",
+        headers=auth_headers,
+        json={"agent_name": "agent-one"},
+    )
+    client.post(
+        f"/api/tasks/{task['id']}/complete",
+        headers=auth_headers,
+        json={"result": "Hi", "error_message": None},
+    )
+
+    accept_response = client.post(
+        f"/api/tasks/{task['id']}/accept",
+        headers=auth_headers,
+        json={
+            "expected_revision": 1,
+            "actor": "browser",
+            "note": "accept task",
+        },
+    )
+    assert accept_response.status_code == 200
+
+    client.put(
+        f"/api/docs/{doc_id}",
+        headers=auth_headers,
+        json={
+            "title": "Doc",
+            "raw_markdown": "# Title\n## Section\nHi universe\n",
+            "expected_revision": 2,
+            "actor": "browser",
+            "note": "edit after accept",
+        },
+    )
+
+    task_response = client.get(f"/api/tasks/{task['id']}", headers=auth_headers)
+    assert task_response.status_code == 200
+    task_data = task_response.json()["data"]
+    assert task_data["status"] == "accepted"
+    assert task_data["is_stale"] is False
+    assert task_data["stale_reason"] is None
+
+    diff_response = client.get(f"/api/tasks/{task['id']}/diff", headers=auth_headers)
+    assert diff_response.status_code == 200
+    assert diff_response.json()["data"]["can_accept"] is False
+
+
+def test_rejected_task_is_not_marked_stale_after_later_document_edits(client, auth_headers):
+    raw_markdown = "# Title\n## Section\nHello world\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+    task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "Hello")
+
+    client.post(
+        "/api/tasks/next",
+        headers=auth_headers,
+        json={"agent_name": "agent-one"},
+    )
+    client.post(
+        f"/api/tasks/{task['id']}/complete",
+        headers=auth_headers,
+        json={"result": "Hi", "error_message": None},
+    )
+    client.post(
+        f"/api/tasks/{task['id']}/reject",
+        headers=auth_headers,
+    )
+
+    client.put(
+        f"/api/docs/{doc_id}",
+        headers=auth_headers,
+        json={
+            "title": "Doc",
+            "raw_markdown": "# Title\n## Section\nHallo world\n",
+            "expected_revision": 1,
+            "actor": "browser",
+            "note": "edit after reject",
+        },
+    )
+
+    task_response = client.get(f"/api/tasks/{task['id']}", headers=auth_headers)
+    assert task_response.status_code == 200
+    task_data = task_response.json()["data"]
+    assert task_data["status"] == "rejected"
+    assert task_data["is_stale"] is False
+    assert task_data["stale_reason"] is None
+
+    diff_response = client.get(f"/api/tasks/{task['id']}/diff", headers=auth_headers)
+    assert diff_response.status_code == 200
+    assert diff_response.json()["data"]["can_accept"] is False
 
 
 def test_accept_identical_result_does_not_create_new_revision(client, auth_headers):

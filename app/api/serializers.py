@@ -1,5 +1,5 @@
 from app.schemas.docs import BlockRead, DocumentListItem, DocumentRead
-from app.schemas.tasks import TaskRead
+from app.schemas.tasks import CleanupStaleTasksRead, TaskRead
 from app.schemas.versions import VersionRead
 
 
@@ -33,7 +33,13 @@ def serialize_document(document, blocks) -> DocumentRead:
     )
 
 
-def serialize_task(task) -> TaskRead:
+def serialize_task(
+    task,
+    *,
+    is_stale: bool = False,
+    stale_reason: str | None = None,
+    recommended_action: str | None = None,
+) -> TaskRead:
     return TaskRead(
         id=task.id,
         doc_id=task.doc_id,
@@ -47,10 +53,24 @@ def serialize_task(task) -> TaskRead:
         status=task.status,
         agent_name=task.agent_name,
         error_message=task.error_message,
+        is_stale=is_stale,
+        stale_reason=stale_reason,
+        recommended_action=recommended_action,
         created_at=task.created_at,
         started_at=task.started_at,
         completed_at=task.completed_at,
         resolved_at=task.resolved_at,
+    )
+
+
+def serialize_stale_cleanup(
+    doc_id: int, *, cancelled: int, rejected: int, unchanged: int
+) -> CleanupStaleTasksRead:
+    return CleanupStaleTasksRead(
+        doc_id=doc_id,
+        cancelled=cancelled,
+        rejected=rejected,
+        unchanged=unchanged,
     )
 
 

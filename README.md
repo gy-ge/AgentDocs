@@ -104,7 +104,7 @@ uv run python scripts/simulate_agent.py --api-key change-me --mode fail
 
 ## 当前进度
 
-当前第一批后端业务代码已经落地，并已通过 21 项 pytest 集成测试：
+当前第一批后端业务代码已经落地，并已通过 23 项 pytest 集成测试：
 
 - 文档 CRUD 已实现
 - 文档 revision 校验已实现
@@ -112,9 +112,11 @@ uv run python scripts/simulate_agent.py --api-key change-me --mode fail
 - 任务创建、next、complete、accept、reject、cancel 已实现
 - 任务 retry 与 diff 预览已实现
 - 文档版本列表与 rollback 已实现
+- 文档删除已实现，并会级联删除对应任务与版本
 - Alembic 初始迁移已实现
 - 统一错误响应与单 API Key 认证已实现
-- 前端任务区已改为更简洁的单面板切换视图
+- 任务失效检测与一键清理已实现，可自动关闭过期 pending 或 processing 任务、关闭失效 done 任务
+- 前端已进一步收敛为“文档编辑 + 任务处理”双主区，版本历史折叠显示，常用动作集中在编辑区顶部
 - 无变化保存、无变化 accept、无变化 rollback 都已收紧为 no-op，不再制造多余 revision
 - pytest 集成测试已建立并覆盖核心流程
 - 本地模拟 Agent 脚本已提供，可在没有真实 Agent 时联调任务流程
@@ -135,8 +137,8 @@ uv run python scripts/simulate_agent.py --api-key change-me --mode fail
 ## 建议开发顺序
 
 1. 继续补更多异常路径和回归测试
-2. 视情况增加任务批量处理或更明确的冲突提示
-3. 为前端补更细的交互反馈和冲突提示
+2. 视情况增加任务过滤或更细的失效任务提示
+3. 为前端补更明确的任务状态分组和操作反馈
 4. 最后再考虑实时刷新或 WebSocket
 
 ## 文档分工

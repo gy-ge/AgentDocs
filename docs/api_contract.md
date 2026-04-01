@@ -130,6 +130,29 @@ Base URL:
 
 说明：删除文档及其任务、版本。
 
+### POST /api/docs/{doc_id}/tasks/cleanup-stale
+
+说明：
+
+- 按当前正文批量清理当前文档的失效任务
+- stale 的 pending 或 processing 任务会被标记为 cancelled
+- stale 的 done 任务会被标记为 rejected
+- 该接口只做安全关闭，不会自动 accept 或自动重建任务
+
+响应：
+
+```json
+{
+  "ok": true,
+  "data": {
+    "doc_id": 1,
+    "cancelled": 2,
+    "rejected": 1,
+    "unchanged": 3
+  }
+}
+```
+
 ### GET /api/docs/{doc_id}/versions
 
 响应：
@@ -195,12 +218,19 @@ Base URL:
 
 返回任务详情和当前状态。
 
+补充字段：
+
+- is_stale: 当前正文是否已与任务源文本失配
+- stale_reason: 失配原因，可能是 selection_removed、selection_shifted、source_changed
+- recommended_action: 针对 stale 任务的建议动作，第一版可能为 reject 或 cancel
+
 ### GET /api/tasks/{task_id}/diff
 
 说明：
 
 - 返回 source_text、result_text、current_text 和 unified diff
 - 当 can_accept 为 false 时，额外返回 conflict_reason，便于前端或外部 Agent 判断是文本变更、结构位移还是选区已失效
+- 当 can_accept 为 false 时，也会返回 recommended_action，便于前端直接提示“关闭旧任务”而不是只提示冲突
 - 当任务已有 result 时可用于前端预览 accept 前后的差异
 
 响应：
@@ -216,6 +246,7 @@ Base URL:
     "result_text": "改写后的内容",
     "can_accept": true,
     "conflict_reason": null,
+    "recommended_action": null,
     "diff": "--- source\n+++ result\n@@ -1 +1 @@\n-原文内容\n+改写后的内容"
   }
 }
@@ -315,6 +346,7 @@ Base URL:
 - 所有正文写操作都必须经过 revision 校验
 - blocks 始终由 raw_markdown 派生，不接受独立更新
 - 任务状态流转为 pending -> processing -> done 或 failed -> accepted 或 rejected
+- stale 检查只针对 pending、processing、done 三种仍受正文当前位置约束的任务；accepted、rejected、cancelled 只保留结果记录
 - cancel 当前允许 pending 和 processing 两种状态
 - retry 当前允许 failed、cancelled、rejected 三种状态
 - accept 时只对 source_text 对应区间执行替换
