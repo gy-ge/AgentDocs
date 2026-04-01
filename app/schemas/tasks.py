@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, StringConstraints
 
@@ -45,11 +45,20 @@ class TaskContextBlockRead(BaseModel):
     end_offset: int
 
 
+class TaskContextHeadingRead(BaseModel):
+    heading: str
+    level: int
+    position: int
+
+
 class TaskContextRead(BaseModel):
     document_title: str
     document_revision: int
+    current_selection_text: str
     block: TaskContextBlockRead | None = None
     block_markdown: str | None = None
+    heading_path: list[TaskContextHeadingRead] = Field(default_factory=list)
+    document_outline: list[TaskContextHeadingRead] = Field(default_factory=list)
     context_before: str
     context_after: str
 
@@ -116,5 +125,36 @@ class CleanupStaleTasksRead(BaseModel):
     cancelled: int
     rejected: int
     unchanged: int
+
+
+class TaskRecoveryPreviewRead(BaseModel):
+    task_id: int
+    doc_id: int
+    task_status: str
+    is_stale: bool
+    stale_reason: str | None = None
+    current_document_revision: int
+    current_start_offset: int
+    current_end_offset: int
+    current_selection_text: str
+    can_relocate: bool = False
+    relocation_strategy: str | None = None
+    can_requeue_from_current: bool = False
+    requeue_reason: str | None = None
+    recommended_mode: str | None = None
+    context: TaskContextRead | None = None
+
+
+class TaskRecoverRequest(BaseModel):
+    mode: Literal["relocate", "requeue_from_current"]
+    actor: NonEmptyText = "browser"
+
+
+class TaskRecoveryResultRead(BaseModel):
+    mode: str
+    source_task: TaskRead
+    new_task: TaskRead | None = None
+    relocation_strategy: str | None = None
+    closed_source_status: str | None = None
 
 

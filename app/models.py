@@ -14,6 +14,8 @@ class Document(Base):
     title: Mapped[str] = mapped_column(Text, nullable=False)
     raw_markdown: Mapped[str] = mapped_column(Text, nullable=False, default="")
     revision: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    default_task_action: Mapped[str | None] = mapped_column(Text, nullable=True)
+    default_task_instruction: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=utcnow, nullable=False
     )
@@ -60,5 +62,20 @@ class DocumentVersion(Base):
     actor: Mapped[str] = mapped_column(Text, nullable=False)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=utcnow, nullable=False
+    )
+
+
+class TaskTemplate(Base):
+    __tablename__ = "task_templates"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    action: Mapped[str] = mapped_column(Text, nullable=False)
+    instruction: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=utcnow, nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=utcnow, nullable=False
     )

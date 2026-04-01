@@ -42,5 +42,13 @@ class DocumentRead(BaseModel):
     title: str
     raw_markdown: str
     revision: int
+    default_task_action: str | None = None
+    default_task_instruction: str | None = None
     blocks: list[BlockRead]
     updated_at: datetime
+
+
+class TaskDefaultsUpdate(BaseModel):
+    actor: NonEmptyText = "browser"
+    default_task_action: str | None = None
+    default_task_instruction: str | None = None

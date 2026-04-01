@@ -56,6 +56,7 @@
 服务端负责：
 
 - 保存 documents、tasks、doc_versions
+- 保存 task_templates，以及文档级默认任务动作或说明
 - 在读取文档时解析 blocks 视图
 - 校验 revision 和 source_hash
 - 维护任务状态
@@ -141,11 +142,27 @@ documents.raw_markdown 是唯一真源。
 如果 Agent 异常退出，人工后续可 cancel 或 retry。
 
 当前实现中已经补充 diff 预览与 stale cleanup，作为人工处理旧任务的最小辅助工具。
-在第二阶段增强中，服务端额外补充了两条个人使用优先能力：
+在第二阶段增强中，服务端额外补充了几条个人使用优先能力：
 
 - safe batch accept：按 offset 倒序批量接受当前文档里仍然可安全合并的 done 任务，减少人肉逐条确认
 - light relocate：当正文改动导致旧任务失效时，先尝试基于原 block 或全文唯一命中的轻量重定位，而不是直接放弃旧任务
 - visible-only polling：前端只在页面可见时做短轮询刷新任务列表与当前任务详情，避免为低性能服务器维持额外连接和无意义请求
+- persisted task templates：自定义模板从浏览器本地状态提升为服务端持久化，适合个人多设备协作
+- document task defaults：文档可以保存默认任务动作和默认说明，减少重复输入
+- stale recovery workflow：旧任务除了清理和重定位，还可以先做恢复预览，再基于当前正文直接重建一条 pending 任务
+
+任务 context 也已经从“最小上下文”扩展为“仍受控的 richer context”：
+
+- 保留当前文档标题、revision、所在 block、block Markdown、选区前后文窗口
+- 新增当前选区文本，便于 Agent 在任务已 stale 时直接看到当前正文中落在该区间的文本
+- 新增 heading_path，返回当前 block 的标题链路，帮助 Agent 判断段落在整篇文档中的层级位置
+- 新增 document_outline，返回当前文档全部标题结构，帮助 Agent 在不加载整篇正文的前提下理解全文布局
+
+这一层增强仍然遵守第一版约束：
+
+- 不额外持久化 blocks
+- 不为 Agent 返回整篇正文
+- 不引入新的状态机或协作协议
 
 出于低性能服务器部署考虑，第二阶段继续遵守以下原则：
 
@@ -161,6 +178,8 @@ documents.raw_markdown 是唯一真源。
 - title
 - raw_markdown
 - revision
+- default_task_action
+- default_task_instruction
 - created_at
 - updated_at
 
@@ -194,6 +213,15 @@ documents.raw_markdown 是唯一真源。
 - note
 - created_at
 
+### task_templates
+
+- id
+- name
+- action
+- instruction
+- created_at
+- updated_at
+
 ## 六、认证方案
 
 认证保持最简：
@@ -211,6 +239,7 @@ documents.raw_markdown 是唯一真源。
 - GET /api/docs/{doc_id}
 - PUT /api/docs/{doc_id}
 - DELETE /api/docs/{doc_id}
+- POST /api/docs/{doc_id}/task-defaults
 - GET /api/docs/{doc_id}/versions
 - POST /api/docs/{doc_id}/versions/{version_id}/rollback
 
@@ -221,12 +250,21 @@ documents.raw_markdown 是唯一真源。
 - GET /api/tasks
 - GET /api/tasks/{task_id}
 - GET /api/tasks/{task_id}/diff
+- GET /api/tasks/{task_id}/recovery-preview
 - POST /api/tasks/next
 - POST /api/tasks/{task_id}/complete
 - POST /api/tasks/{task_id}/accept
 - POST /api/tasks/{task_id}/reject
 - POST /api/tasks/{task_id}/cancel
 - POST /api/tasks/{task_id}/retry
+- POST /api/tasks/{task_id}/recover
+
+模板：
+
+- GET /api/task-templates
+- POST /api/task-templates
+- PUT /api/task-templates/{template_id}
+- DELETE /api/task-templates/{template_id}
 
 ## 八、实现顺序
 

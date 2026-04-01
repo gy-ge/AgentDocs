@@ -1,8 +1,11 @@
 from app.schemas.docs import BlockRead, DocumentListItem, DocumentRead
+from app.schemas.templates import TaskTemplateRead
 from app.schemas.tasks import (
     CleanupStaleTasksRead,
     TaskBatchAcceptRead,
     TaskDiffRead,
+    TaskRecoveryPreviewRead,
+    TaskRecoveryResultRead,
     TaskRead,
     TaskRelocateRead,
 )
@@ -24,6 +27,8 @@ def serialize_document(document, blocks) -> DocumentRead:
         title=document.title,
         raw_markdown=document.raw_markdown,
         revision=document.revision,
+        default_task_action=document.default_task_action,
+        default_task_instruction=document.default_task_instruction,
         blocks=[
             BlockRead(
                 heading=block.heading,
@@ -108,6 +113,25 @@ def serialize_task_relocation(
             context=context,
         ),
         relocation_strategy=relocation_strategy,
+    )
+
+
+def serialize_task_recovery_preview(data: dict[str, object]) -> TaskRecoveryPreviewRead:
+    return TaskRecoveryPreviewRead(**data)
+
+
+def serialize_task_recovery_result(data: dict[str, object]) -> TaskRecoveryResultRead:
+    return TaskRecoveryResultRead(**data)
+
+
+def serialize_task_template(template) -> TaskTemplateRead:
+    return TaskTemplateRead(
+        id=template.id,
+        name=template.name,
+        action=template.action,
+        instruction=template.instruction,
+        created_at=template.created_at,
+        updated_at=template.updated_at,
     )
 
 

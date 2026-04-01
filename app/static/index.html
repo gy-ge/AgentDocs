@@ -3,6 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="AgentDocs 是一个面向个人使用的文档协作台，用于管理 Markdown 文档、Agent 任务、版本与恢复流程。" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2324292f'/%3E%3Ctext x='50%25' y='53%25' dominant-baseline='middle' text-anchor='middle' font-family='Segoe UI,Arial,sans-serif' font-size='30' font-weight='700' fill='white'%3EA%3C/text%3E%3C/svg%3E" />
     <title>AgentDocs</title>
     <style>
       :root {
@@ -244,8 +246,8 @@
 
       .status.success {
         border-color: rgba(26, 127, 55, 0.25);
-        background: rgba(26, 127, 55, 0.06);
-        color: var(--success);
+        background: rgba(26, 127, 55, 0.05);
+        color: #166534;
       }
 
       .status.error {
@@ -377,7 +379,7 @@
 
       .task-button-row {
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 10px;
       }
 
@@ -415,9 +417,9 @@
       }
 
       .detail-note {
-        padding: 12px;
+        padding: 9px 12px;
         background: var(--panel-soft);
-        max-height: 160px;
+        max-height: 136px;
         box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
       }
 
@@ -449,6 +451,45 @@
         background: rgba(31, 35, 40, 0.06);
         color: var(--text);
         font-family: Consolas, monospace;
+        font-size: 12px;
+        line-height: 1.45;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .task-meta {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px 12px;
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--panel-soft);
+      }
+
+      .task-meta:empty {
+        display: none;
+      }
+
+      .task-meta-row {
+        display: grid;
+        gap: 2px;
+        min-width: 0;
+      }
+
+      .task-meta-row.is-wide {
+        grid-column: 1 / -1;
+      }
+
+      .task-meta-label {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        color: var(--muted);
+        text-transform: uppercase;
+      }
+
+      .task-meta-value {
         font-size: 12px;
         line-height: 1.45;
         white-space: pre-wrap;
@@ -546,6 +587,10 @@
         display: grid;
         gap: 10px;
         margin-top: 14px;
+        max-height: min(42vh, 360px);
+        overflow: auto;
+        padding-right: 4px;
+        scrollbar-gutter: stable;
       }
 
       .template-item {
@@ -579,6 +624,10 @@
       .task-actions {
         margin-top: -2px;
         gap: 8px;
+      }
+
+      .task-panel .panel-body.stack {
+        gap: 10px;
       }
 
       .task-actions:empty {
@@ -652,6 +701,8 @@
 
       .modal-card {
         width: min(420px, 100%);
+        max-height: 88vh;
+        overflow: auto;
         border: 1px solid var(--line);
         border-radius: 14px;
         background: var(--panel);
@@ -671,16 +722,20 @@
         line-height: 1.5;
       }
 
+      #diff-state {
+        display: none;
+      }
+
       @media (max-width: 1200px) {
         .workspace {
           grid-template-columns: 1fr;
           grid-template-areas:
-            "editor"
-            "sidebar";
+            "sidebar"
+            "editor";
         }
 
         .editor-panel #doc-body {
-          height: 58vh;
+          height: 50vh;
         }
 
         .task-list,
@@ -733,6 +788,14 @@
           grid-template-columns: 1fr;
         }
 
+        .task-meta {
+          grid-template-columns: 1fr;
+        }
+
+        .task-meta-row.is-wide {
+          grid-column: auto;
+        }
+
         .selection-status {
           grid-template-columns: 1fr;
           gap: 4px;
@@ -754,12 +817,16 @@
           gap: 14px;
         }
 
+        .brand p {
+          display: none;
+        }
+
         .panel-body {
           padding: 16px;
         }
 
         .editor-panel #doc-body {
-          height: 50vh;
+          height: 42vh;
         }
       }
     </style>
@@ -788,7 +855,7 @@
       <div class="modal-card" style="width: min(720px, 100%)">
         <div class="stack">
           <h2>管理模板</h2>
-          <p>内置模板只读，自定义模板保存在当前浏览器本地，适合个人长期复用。</p>
+          <p>内置模板只保留一个格式示例，自定义模板保存在服务端，适合个人跨设备长期复用。</p>
           <div class="task-composer-grid">
             <div>
               <label for="template-name">模板名称</label>
@@ -869,17 +936,11 @@
                     <label for="task-template">快捷模板</label>
                     <select id="task-template"></select>
                   </div>
-                  <div>
-                    <label for="recent-instruction">最近说明</label>
-                    <select id="recent-instruction">
-                      <option value="">暂无最近说明</option>
-                    </select>
-                  </div>
                   <div class="task-button-row">
                     <button id="create-task" class="primary">创建任务</button>
                     <button id="manage-templates" class="secondary">管理模板</button>
+                    <button id="save-doc-defaults" class="secondary">设为文档默认</button>
                     <button id="cleanup-stale" class="secondary">清理失效</button>
-                    <button id="clear-instruction" class="secondary">清空说明</button>
                   </div>
                 </div>
               </div>
@@ -898,6 +959,7 @@
                 </div>
 
                 <div class="task-list-wrap">
+                  <label class="visually-hidden" for="task-list">当前文档任务</label>
                   <select id="task-list">
                     <option value="">先选择文档</option>
                   </select>
@@ -924,13 +986,19 @@
                   <div id="task-group-summary" class="panel-caption">按状态分组显示当前文档任务。</div>
                 </div>
 
-                <div class="section-header" style="margin-top: 8px;">
+                <div class="section-header" style="display: none; margin-top: 8px;">
                   <span id="diff-state" class="pill">未选择任务</span>
                 </div>
                 
                 <div id="task-summary" class="detail-note">
                   <strong>操作建议</strong>
                   <div>选择任务后，这里只保留当前最重要的判断和动作。</div>
+                </div>
+                <div id="task-metadata" class="task-meta">
+                  <div class="task-meta-row">
+                    <span class="task-meta-label">任务信息</span>
+                    <div class="task-meta-value">选择任务后，这里会显示任务动作、补充说明和定位信息。</div>
+                  </div>
                 </div>
                 <div id="task-actions" class="task-actions"></div>
                 <div id="task-diff" class="diff">这里会显示原始文本、当前文本、任务结果和 unified diff 对照，也可展开查看 unified diff。</div>
@@ -1011,10 +1079,13 @@
         docId: null,
         revision: null,
         docBlocks: [],
+        docTaskDefaults: null,
         selectedTaskId: null,
         selectedTaskDetail: null,
+        selectedTaskRecovery: null,
         tasks: [],
         taskSignature: "",
+        serverTemplates: [],
         taskPollMs: 15000,
         taskPollTimer: null,
         isTaskPollRunning: false,
@@ -1031,33 +1102,15 @@
       ];
 
       const BUILTIN_TEMPLATE_MAP = {
-        'builtin:formal-rewrite': {
-          id: 'builtin:formal-rewrite',
-          name: '润色为正式说明',
+        'builtin:instruction-example': {
+          id: 'builtin:instruction-example',
+          name: '模板格式示例',
           action: 'rewrite',
-          instruction: '改成更正式的项目说明，保持原意，去掉口语化表达。',
-        },
-        'builtin:brief-summary': {
-          id: 'builtin:brief-summary',
-          name: '压缩为简短摘要',
-          action: 'summarize',
-          instruction: '提炼成简短摘要，保留关键信息，控制在 3 句内。',
-        },
-        'builtin:expand-details': {
-          id: 'builtin:expand-details',
-          name: '补充细节与背景',
-          action: 'expand',
-          instruction: '在不改变事实的前提下补充背景、细节和上下文。',
-        },
-        'builtin:translate-zh-en': {
-          id: 'builtin:translate-zh-en',
-          name: '翻译成自然英文',
-          action: 'translate',
-          instruction: '翻译成自然、简洁、适合工作场景的英文表达。',
+          instruction: '示例：明确目标、风格、约束和长度，例如“改成正式项目说明，保留事实，控制在 120 字内”。',
+          meta: '格式说明',
         },
       };
 
-      const RECENT_INSTRUCTIONS_KEY = 'agentdocs.recentInstructions';
       const LAST_TASK_ACTION_KEY = 'agentdocs.lastTaskAction';
       const CUSTOM_TEMPLATES_KEY = 'agentdocs.customTemplates';
 
@@ -1075,7 +1128,6 @@
       const taskActionEl = document.getElementById("task-action");
       const taskInstructionEl = document.getElementById("task-instruction");
       const taskTemplateEl = document.getElementById("task-template");
-      const recentInstructionEl = document.getElementById("recent-instruction");
       const templateNameEl = document.getElementById("template-name");
       const templateActionEl = document.getElementById("template-action");
       const templateInstructionEl = document.getElementById("template-instruction");
@@ -1084,6 +1136,7 @@
       const taskCountPillEl = document.getElementById("task-count-pill");
       const taskGroupSummaryEl = document.getElementById("task-group-summary");
       const taskSummaryEl = document.getElementById("task-summary");
+      const taskMetadataEl = document.getElementById("task-metadata");
       const taskActionsEl = document.getElementById("task-actions");
       const diffEl = document.getElementById("task-diff");
       const diffStateEl = document.getElementById("diff-state");
@@ -1124,6 +1177,13 @@
         setTimeout(() => templateNameEl.focus(), 0);
       }
 
+      function normalizeTemplateId(value) {
+        if (value === null || value === undefined) {
+          return '';
+        }
+        return String(value);
+      }
+
       function closeTemplateModal() {
         templateModalEl.classList.add('hidden');
       }
@@ -1142,15 +1202,22 @@
         container.innerHTML = `<div class="card">${heading}<p class="hint">${escapeHtml(message)}</p></div>`;
       }
 
+      function updateDocumentTitle(docTitle = '') {
+        document.title = docTitle ? `${docTitle} · AgentDocs` : 'AgentDocs';
+      }
+
       function clearEditor() {
         state.docId = null;
         state.revision = null;
         state.docBlocks = [];
+        state.docTaskDefaults = null;
         state.selectedTaskId = null;
         state.selectedTaskDetail = null;
+        state.selectedTaskRecovery = null;
         state.tasks = [];
         state.taskSignature = "";
         docRevisionPillEl.textContent = "未选择文档";
+        updateDocumentTitle();
         docSelectorEl.innerHTML = '<option value="">请选择文档</option>';
         docSelectorEl.value = "";
         docTitleInput.value = "";
@@ -1164,23 +1231,7 @@
         versionCountPillEl.textContent = "版本 0";
       }
 
-      function loadRecentInstructions() {
-        try {
-          const raw = localStorage.getItem(RECENT_INSTRUCTIONS_KEY);
-          if (!raw) {
-            return [];
-          }
-          const value = JSON.parse(raw);
-          if (!Array.isArray(value)) {
-            return [];
-          }
-          return value.filter((item) => typeof item === 'string' && item.trim()).slice(0, 6);
-        } catch {
-          return [];
-        }
-      }
-
-      function loadCustomTemplates() {
+      function loadLegacyCustomTemplates() {
         try {
           const raw = localStorage.getItem(CUSTOM_TEMPLATES_KEY);
           if (!raw) {
@@ -1198,14 +1249,42 @@
         }
       }
 
-      function saveCustomTemplates(templates) {
+      function saveLegacyCustomTemplates(templates) {
         localStorage.setItem(CUSTOM_TEMPLATES_KEY, JSON.stringify(templates));
+      }
+
+      async function loadTaskTemplates(options = {}) {
+        const { allowLegacyImport = true } = options;
+        let templates = await api('/api/task-templates');
+        if (!templates.length && allowLegacyImport) {
+          const legacyTemplates = loadLegacyCustomTemplates();
+          if (legacyTemplates.length) {
+            for (const template of legacyTemplates) {
+              await api('/api/task-templates', {
+                method: 'POST',
+                body: JSON.stringify({
+                  name: template.name,
+                  action: template.action,
+                  instruction: template.instruction,
+                }),
+              });
+            }
+            saveLegacyCustomTemplates([]);
+            templates = await api('/api/task-templates');
+            setStatus('已将当前浏览器中的自定义模板迁移到服务端。', 'success');
+          }
+        }
+        state.serverTemplates = templates;
+        renderTaskTemplates();
+        if (!templateModalEl.classList.contains('hidden')) {
+          renderTemplateList();
+        }
       }
 
       function getTemplateCatalog() {
         return [
           ...Object.values(BUILTIN_TEMPLATE_MAP),
-          ...loadCustomTemplates(),
+          ...state.serverTemplates,
         ];
       }
 
@@ -1213,10 +1292,10 @@
         const options = [
           '<option value="">不使用模板</option>',
           ...Object.values(BUILTIN_TEMPLATE_MAP).map(
-            (template) => `<option value="${template.id}">内置 · ${escapeHtml(template.name)}</option>`
+            (template) => `<option value="${normalizeTemplateId(template.id)}">内置 · ${escapeHtml(template.name)}</option>`
           ),
-          ...loadCustomTemplates().map(
-            (template) => `<option value="${template.id}">自定义 · ${escapeHtml(template.name)}</option>`
+          ...state.serverTemplates.map(
+            (template) => `<option value="${normalizeTemplateId(template.id)}">自定义 · ${escapeHtml(template.name)}</option>`
           ),
         ];
         taskTemplateEl.innerHTML = options.join('');
@@ -1235,13 +1314,12 @@
           (template) => `
             <div class="template-item">
               <h3>${escapeHtml(template.name)}</h3>
-              <div class="meta">内置模板 · ${escapeHtml(template.action)}</div>
+              <div class="meta">内置示例 · ${escapeHtml(template.meta || template.action)}</div>
               <p>${escapeHtml(template.instruction)}</p>
             </div>
           `
         );
-        const customTemplates = loadCustomTemplates();
-        const customCards = customTemplates.map(
+        const customCards = state.serverTemplates.map(
           (template) => `
             <div class="template-item">
               <h3>${escapeHtml(template.name)}</h3>
@@ -1257,30 +1335,29 @@
         templateListEl.innerHTML = [...builtinCards, ...customCards].join('') || '<div class="card"><p class="hint">暂无模板。</p></div>';
         templateListEl.querySelectorAll('[data-template-edit]').forEach((button) => {
           button.addEventListener('click', () => {
-            const template = loadCustomTemplates().find((item) => item.id === button.dataset.templateEdit);
+            const template = state.serverTemplates.find((item) => String(item.id) === button.dataset.templateEdit);
             if (!template) {
               return;
             }
-            editingTemplateId = template.id;
+            editingTemplateId = String(template.id);
             templateNameEl.value = template.name;
             templateActionEl.value = template.action;
             templateInstructionEl.value = template.instruction;
           });
         });
         templateListEl.querySelectorAll('[data-template-delete]').forEach((button) => {
-          button.addEventListener('click', () => {
-            const templates = loadCustomTemplates().filter((item) => item.id !== button.dataset.templateDelete);
-            saveCustomTemplates(templates);
-            renderTaskTemplates();
-            renderTemplateList();
+          button.addEventListener('click', async () => {
+            await api(`/api/task-templates/${button.dataset.templateDelete}`, { method: 'DELETE' });
+            await loadTaskTemplates({ allowLegacyImport: false });
             if (editingTemplateId === button.dataset.templateDelete) {
               resetTemplateForm();
             }
+            setStatus('模板已删除。', 'success');
           });
         });
       }
 
-      function saveTemplateFromForm() {
+      async function saveTemplateFromForm() {
         const name = templateNameEl.value.trim();
         const instruction = templateInstructionEl.value.trim();
         if (!name) {
@@ -1289,48 +1366,30 @@
         if (!instruction) {
           throw new Error('模板说明不能为空');
         }
-        const templates = loadCustomTemplates();
-        const nextTemplate = {
-          id: editingTemplateId || `custom:${Date.now()}`,
-          name,
-          action: templateActionEl.value,
-          instruction,
-        };
-        const nextTemplates = editingTemplateId
-          ? templates.map((item) => (item.id === editingTemplateId ? nextTemplate : item))
-          : [nextTemplate, ...templates].slice(0, 12);
-        saveCustomTemplates(nextTemplates);
-        renderTaskTemplates();
-        renderTemplateList();
-        taskTemplateEl.value = nextTemplate.id;
+        const nextTemplate = editingTemplateId
+          ? await api(`/api/task-templates/${editingTemplateId}`, {
+              method: 'PUT',
+              body: JSON.stringify({
+                name,
+                action: templateActionEl.value,
+                instruction,
+              }),
+            })
+          : await api('/api/task-templates', {
+              method: 'POST',
+              body: JSON.stringify({
+                name,
+                action: templateActionEl.value,
+                instruction,
+              }),
+            });
+        await loadTaskTemplates({ allowLegacyImport: false });
+        taskTemplateEl.value = normalizeTemplateId(nextTemplate.id);
+        taskActionEl.value = nextTemplate.action;
+        taskInstructionEl.value = nextTemplate.instruction;
+        localStorage.setItem(LAST_TASK_ACTION_KEY, nextTemplate.action);
         resetTemplateForm();
         setStatus(`模板“${name}”已保存。`, 'success');
-      }
-
-      function renderRecentInstructions() {
-        const instructions = loadRecentInstructions();
-        if (!instructions.length) {
-          recentInstructionEl.innerHTML = '<option value="">暂无最近说明</option>';
-          recentInstructionEl.value = '';
-          return;
-        }
-        recentInstructionEl.innerHTML = [
-          '<option value="">选择最近说明</option>',
-          ...instructions.map(
-            (instruction, index) => `<option value="${index}">${escapeHtml(instruction)}</option>`
-          ),
-        ].join('');
-        recentInstructionEl.value = '';
-      }
-
-      function rememberInstruction(instruction) {
-        const trimmed = instruction.trim();
-        if (!trimmed) {
-          return;
-        }
-        const nextInstructions = [trimmed, ...loadRecentInstructions().filter((item) => item !== trimmed)].slice(0, 6);
-        localStorage.setItem(RECENT_INSTRUCTIONS_KEY, JSON.stringify(nextInstructions));
-        renderRecentInstructions();
       }
 
       function restoreTaskComposerState() {
@@ -1339,7 +1398,37 @@
           taskActionEl.value = lastAction;
         }
         renderTaskTemplates();
-        renderRecentInstructions();
+        taskInstructionEl.value = '';
+      }
+
+      function syncDocumentTaskDefaults(doc) {
+        const hasDefaultAction = typeof doc.default_task_action === 'string' && doc.default_task_action.trim();
+        const hasDefaultInstruction = typeof doc.default_task_instruction === 'string' && doc.default_task_instruction.trim();
+        state.docTaskDefaults = {
+          action: hasDefaultAction ? doc.default_task_action : '',
+          instruction: hasDefaultInstruction ? doc.default_task_instruction : '',
+        };
+      }
+
+      function applyStoredDocumentTaskDefaults() {
+        const defaults = state.docTaskDefaults;
+        const hasDefaultAction = typeof defaults?.action === 'string' && defaults.action.trim();
+        const hasDefaultInstruction = typeof defaults?.instruction === 'string' && defaults.instruction.trim();
+        if (!hasDefaultAction && !hasDefaultInstruction) {
+          restoreTaskComposerState();
+          return;
+        }
+        if (hasDefaultAction && [...taskActionEl.options].some((option) => option.value === defaults.action)) {
+          taskActionEl.value = defaults.action;
+          localStorage.setItem(LAST_TASK_ACTION_KEY, defaults.action);
+        }
+        taskInstructionEl.value = defaults.instruction || '';
+        taskTemplateEl.value = '';
+      }
+
+      function applyDocumentTaskDefaults(doc) {
+        syncDocumentTaskDefaults(doc);
+        applyStoredDocumentTaskDefaults();
       }
 
       function syncCurrentBlocks() {
@@ -1444,11 +1533,50 @@
         `;
       }
 
+      function renderTaskMetadata(task, recoveryPreview) {
+        const locationParts = [`offset ${task.start_offset}-${task.end_offset}`];
+        if (task.context?.block?.heading) {
+          locationParts.push(task.context.block.heading);
+        }
+        const headingPath = task.context?.heading_path?.length
+          ? task.context.heading_path.map((item) => item.heading).join(' / ')
+          : '';
+        const revisionText = recoveryPreview
+          ? `任务 rev ${task.doc_revision} · 当前 rev ${recoveryPreview.current_document_revision}`
+          : `任务 rev ${task.doc_revision}`;
+        const locationText = headingPath
+          ? `${locationParts.join(' · ')} · ${headingPath}`
+          : locationParts.join(' · ');
+        const rows = [
+          { label: '当前任务', value: `#${task.id} · ${task.action} · ${describeTaskOptionStatus(task)}` },
+          { label: '任务定位', value: locationText },
+          { label: '补充说明', value: task.instruction || '无', wide: true },
+          { label: '文档版本', value: revisionText },
+        ];
+        taskMetadataEl.innerHTML = rows
+          .map(
+            (row) => `
+              <div class="task-meta-row${row.wide ? ' is-wide' : ''}">
+                <span class="task-meta-label">${escapeHtml(row.label)}</span>
+                <div class="task-meta-value">${escapeHtml(row.value)}</div>
+              </div>
+            `
+          )
+          .join('');
+      }
+
       function resetTaskDetails() {
         state.selectedTaskId = null;
         state.selectedTaskDetail = null;
+        state.selectedTaskRecovery = null;
         diffStateEl.textContent = "未选择任务";
         taskActionsEl.innerHTML = "";
+        taskMetadataEl.innerHTML = `
+          <div class="task-meta-row">
+            <span class="task-meta-label">任务信息</span>
+            <div class="task-meta-value">选择任务后，这里会显示任务动作、补充说明和定位信息。</div>
+          </div>
+        `;
         renderDiffPlaceholder('这里会显示原始文本、当前文本、任务结果和 unified diff 对照。');
         setTaskSummary("操作建议", "选择任务后，这里只保留当前最重要的判断和动作。");
       }
@@ -1496,6 +1624,44 @@
         return 'closed';
       }
 
+      function describeTaskOptionStatus(task) {
+        if (task.is_stale) {
+          return '失效';
+        }
+        if (task.status === 'pending') {
+          return '待处理';
+        }
+        if (task.status === 'processing') {
+          return '处理中';
+        }
+        if (task.status === 'done') {
+          return '待确认';
+        }
+        if (task.status === 'accepted') {
+          return '已接受';
+        }
+        if (task.status === 'rejected') {
+          return '已拒绝';
+        }
+        if (task.status === 'cancelled') {
+          return '已取消';
+        }
+        if (task.status === 'failed') {
+          return '失败';
+        }
+        return task.status;
+      }
+
+      function compactTaskPreview(task, maxLength = 16) {
+        const baseText = (task.source_text || task.instruction || '')
+          .replace(/\s+/g, ' ')
+          .trim();
+        if (!baseText) {
+          return '';
+        }
+        return baseText.length > maxLength ? `${baseText.slice(0, maxLength)}…` : baseText;
+      }
+
       function buildTaskGroups(tasks) {
         const grouped = new Map(taskGroupMeta.map((item) => [item.key, { ...item, tasks: [] }]));
         tasks.forEach((task) => {
@@ -1523,7 +1689,10 @@
           .map((group) => {
             const options = group.tasks
               .map((task) => {
-                return `<option value="${task.id}">#${task.id} ${escapeHtml(task.action)}</option>`;
+                const previewLabel = compactTaskPreview(task);
+                const previewText = previewLabel ? ` · ${escapeHtml(previewLabel)}` : '';
+                const stateLabel = describeTaskOptionStatus(task);
+                return `<option value="${task.id}">#${task.id} ${escapeHtml(task.action)} · ${escapeHtml(stateLabel)}${previewText}</option>`;
               })
               .join('');
             return `<optgroup label="${escapeHtml(`${group.title} (${group.tasks.length})`)}">${options}</optgroup>`;
@@ -1579,6 +1748,22 @@
           return '当前选区仍然匹配，只同步了最新 revision';
         }
         return '已按当前正文重新定位';
+      }
+
+      function describeRecoveryRecommendation(preview) {
+        if (!preview) {
+          return '';
+        }
+        if (preview.recommended_mode === 'relocate' && preview.relocation_strategy) {
+          return `${describeRelocationStrategy(preview.relocation_strategy)}后，再决定是否继续处理。`;
+        }
+        if (preview.recommended_mode === 'requeue_from_current') {
+          return '当前区间仍可作为单一 block 任务，可直接按当前正文重建。';
+        }
+        if (preview.can_requeue_from_current) {
+          return '当前区间仍可直接按当前正文重建一条新任务。';
+        }
+        return '';
       }
 
       function canRelocateTask(task) {
@@ -1717,10 +1902,12 @@
         state.docBlocks = doc.blocks;
         state.selectedTaskId = null;
         docRevisionPillEl.textContent = `revision ${doc.revision}`;
+        updateDocumentTitle(doc.title);
         docSelectorEl.value = String(doc.id);
         docTitleInput.value = doc.title;
         docBodyInput.value = doc.raw_markdown;
         syncCurrentBlocks();
+        applyDocumentTaskDefaults(doc);
         updateSelectionInfo();
         resetTaskDetails();
         if (options.refreshDocs) {
@@ -1806,7 +1993,8 @@
         return button;
       }
 
-      function buildTaskActionConfigs(task, taskId, relocationAvailable) {
+      function buildTaskActionConfigs(task, taskId, recoveryPreview) {
+        const relocationAvailable = Boolean(recoveryPreview?.can_relocate || canRelocateTask(task));
         const actions = [];
         if (task.status === 'done' && !task.is_stale) {
           actions.push({ label: '接受', handler: () => acceptTask(taskId), className: 'primary' });
@@ -1820,6 +2008,13 @@
         }
         if (['failed', 'cancelled', 'rejected'].includes(task.status) && !task.is_stale) {
           actions.push({ label: '重试', handler: () => retryTask(taskId), className: 'secondary' });
+        }
+        if (recoveryPreview?.can_requeue_from_current) {
+          actions.push({
+            label: '按当前正文重建',
+            handler: () => recoverTask(taskId, 'requeue_from_current'),
+            className: task.is_stale ? 'primary' : 'secondary',
+          });
         }
         if (task.status === 'done') {
           actions.push({
@@ -1845,9 +2040,9 @@
         return actions;
       }
 
-      function renderTaskActions(task, taskId, relocationAvailable) {
+      function renderTaskActions(task, taskId, recoveryPreview) {
         taskActionsEl.innerHTML = '';
-        buildTaskActionConfigs(task, taskId, relocationAvailable).forEach((action) => {
+        buildTaskActionConfigs(task, taskId, recoveryPreview).forEach((action) => {
           taskActionsEl.append(buildActionButton(action.label, action.handler, action.className));
         });
       }
@@ -1872,8 +2067,15 @@
         state.selectedTaskId = taskId;
         const task = await api(`/api/tasks/${taskId}`);
         state.selectedTaskDetail = task;
+        state.selectedTaskRecovery = null;
         taskListEl.value = String(taskId);
-        const relocationAvailable = canRelocateTask(task);
+        if (task.is_stale || canRelocateTask(task)) {
+          state.selectedTaskRecovery = await api(`/api/tasks/${taskId}/recovery-preview`);
+        }
+        const recoveryPreview = state.selectedTaskRecovery;
+        const relocationAvailable = Boolean(recoveryPreview?.can_relocate || canRelocateTask(task));
+        const recoveryHint = describeRecoveryRecommendation(recoveryPreview);
+        renderTaskMetadata(task, recoveryPreview);
 
         if (['done', 'accepted', 'rejected'].includes(task.status) && task.result) {
           const diff = await api(`/api/tasks/${taskId}/diff`);
@@ -1887,10 +2089,12 @@
           } else if (task.status === 'done') {
             diffStateEl.textContent = '存在冲突';
             setTaskSummary(
-              relocationAvailable ? '建议先重定位' : '建议重建或关闭',
+              relocationAvailable ? '建议先重定位' : recoveryPreview?.can_requeue_from_current ? '建议按当前正文重建' : '建议重建或关闭',
               relocationAvailable
-                ? `${describeConflictReason(diff.conflict_reason)} 先同步定位，再决定是否接受。`
-                : describeConflictReason(diff.conflict_reason),
+                ? `${describeConflictReason(diff.conflict_reason)} ${recoveryHint}`
+                : recoveryPreview?.can_requeue_from_current
+                  ? `${describeConflictReason(diff.conflict_reason)} ${recoveryHint}`
+                  : describeConflictReason(diff.conflict_reason),
               'warn'
             );
           } else {
@@ -1921,7 +2125,7 @@
             setTaskSummary(
               'Agent 处理失败',
               task.is_stale
-                ? `${describeConflictReason(task.stale_reason)} 旧任务通常不值得重试，建议重新创建。`
+                ? `${describeConflictReason(task.stale_reason)} ${recoveryHint || '旧任务通常不值得重试，建议重新创建。'}`
                 : '这次任务没有产出结果。确认后可以直接重试。',
               'error'
             );
@@ -1929,7 +2133,7 @@
             setTaskSummary(
               task.is_stale ? '建议关闭这个失效任务' : '任务仍在处理中',
               task.is_stale
-                ? `${describeConflictReason(task.stale_reason)} 推荐先取消，再按当前正文重新建任务。`
+                ? `${describeConflictReason(task.stale_reason)} ${recoveryHint || '推荐先取消，再按当前正文重新建任务。'}`
                 : '当前还不能接受或拒绝。若 Agent 卡住，可以直接取消。',
               task.is_stale ? 'warn' : ''
             );
@@ -1937,9 +2141,9 @@
             setTaskSummary(
               '任务已取消',
               relocationAvailable
-                ? '正文已经变化，可以先同步定位，再决定是否重新排队。'
+                ? (recoveryHint ? `正文已经变化，${recoveryHint}` : '正文已经变化。可以先同步定位，再决定是否继续处理。')
                 : task.is_stale
-                  ? '源文本已经变了，这条旧任务已安全关闭，只保留记录。'
+                  ? `源文本已经变了，这条旧任务已安全关闭，只保留记录。${recoveryHint ? ` ${recoveryHint}` : ''}`
                   : '当前结果不会改写正文。若原始文本仍匹配，可以直接重试。',
               'warn'
             );
@@ -1947,15 +2151,15 @@
             setTaskSummary(
               task.is_stale ? '旧任务已失效' : '当前没有可接受结果',
               relocationAvailable
-                ? '当前文档已经变更，可以先同步定位，再决定是否重试。'
+                ? `当前文档已经变更，${recoveryHint}`
                 : task.is_stale
-                  ? `${describeConflictReason(task.stale_reason)} 可以直接清理这条任务，或在当前正文上重新建一条。`
+                  ? `${describeConflictReason(task.stale_reason)} ${recoveryHint || '可以直接清理这条任务，或在当前正文上重新建一条。'}`
                   : '这个任务现在没有可直接合并到文档的结果。',
               task.is_stale ? 'warn' : ''
             );
           }
         }
-        renderTaskActions(task, taskId, relocationAvailable);
+        renderTaskActions(task, taskId, recoveryPreview);
       }
 
       async function createDoc() {
@@ -2002,7 +2206,27 @@
             : `文档已保存到 revision ${doc.revision}。`,
           'success'
         );
-        await Promise.all([loadDocsOnly(), loadTasks(), loadVersions()]);
+        await Promise.all([loadDocsOnly(), loadTasks({ forceRefreshSelected: true }), loadVersions()]);
+      }
+
+      async function saveDocumentTaskDefaults(clear = false) {
+        if (!state.docId) {
+          throw new Error('请先选择文档');
+        }
+        const doc = await api(`/api/docs/${state.docId}/task-defaults`, {
+          method: 'POST',
+          body: JSON.stringify({
+            actor: 'browser',
+            default_task_action: clear ? null : taskActionEl.value,
+            default_task_instruction: clear ? null : (taskInstructionEl.value || null),
+          }),
+        });
+        state.revision = doc.revision;
+        state.docBlocks = doc.blocks;
+        applyDocumentTaskDefaults(doc);
+        updateSelectionInfo();
+        setStatus(clear ? '已清除当前文档的默认任务提示。' : '当前任务动作和说明已保存为文档默认值。', 'success');
+        await loadDocsOnly();
       }
 
       async function deleteDoc() {
@@ -2097,7 +2321,6 @@
           }),
         });
         localStorage.setItem(LAST_TASK_ACTION_KEY, taskActionEl.value);
-        rememberInstruction(taskInstructionEl.value);
         taskTemplateEl.value = '';
         state.selectedTaskId = task.id;
         await loadTasks({ forceRefreshSelected: true });
@@ -2139,14 +2362,26 @@
         await selectTask(taskId);
       }
 
-      async function relocateTask(taskId) {
-        const result = await api(`/api/tasks/${taskId}/relocate`, { method: 'POST' });
+      async function recoverTask(taskId, mode) {
+        const result = await api(`/api/tasks/${taskId}/recover`, {
+          method: 'POST',
+          body: JSON.stringify({ mode, actor: 'browser' }),
+        });
         await loadTasks({ forceRefreshSelected: false });
-        await selectTask(taskId);
+        const nextTaskId = result.new_task?.id || result.source_task.id;
+        await selectTask(nextTaskId);
+        if (mode === 'relocate') {
+          setStatus(`任务 #${taskId} 已${describeRelocationStrategy(result.relocation_strategy)}。`, 'success');
+          return;
+        }
         setStatus(
-          `任务 #${taskId} 已${describeRelocationStrategy(result.relocation_strategy)}。`,
+          `已基于当前正文重建任务 #${result.new_task.id}，旧任务状态为 ${result.closed_source_status || result.source_task.status}。`,
           'success'
         );
+      }
+
+      async function relocateTask(taskId) {
+        await recoverTask(taskId, 'relocate');
       }
 
       async function pollTaskPanel() {
@@ -2211,7 +2446,7 @@
         updateSelectionInfo();
         resetTaskDetails();
         setStatus(`已回滚到版本 #${versionId}，当前 revision ${doc.revision}。`, 'success');
-        await Promise.all([loadDocsOnly(), loadTasks(), loadVersions()]);
+        await Promise.all([loadDocsOnly(), loadTasks({ forceRefreshSelected: true }), loadVersions()]);
       }
 
       async function refreshCurrent() {
@@ -2260,22 +2495,25 @@
         syncKeyState();
         keyModalEl.classList.add('hidden');
         setStatus('API Key 已保存到本地浏览器。', 'success');
+        safeRun(async () => {
+          await loadTaskTemplates();
+          await loadDocs();
+        });
       });
       document.getElementById('refresh-current').addEventListener('click', () => safeRun(refreshCurrent));
       document.getElementById('create-doc').addEventListener('click', () => safeRun(createDoc));
       document.getElementById('save-doc').addEventListener('click', () => safeRun(saveDoc));
+      document.getElementById('save-doc-defaults').addEventListener('click', () => safeRun(() => saveDocumentTaskDefaults(false)));
       document.getElementById('export-doc').addEventListener('click', () => safeRun(async () => exportDoc()));
       document.getElementById('accept-ready').addEventListener('click', () => safeRun(acceptReadyTasks));
-      document.getElementById('manage-templates').addEventListener('click', openTemplateModal);
+      document.getElementById('manage-templates').addEventListener('click', () => safeRun(async () => {
+        await loadTaskTemplates({ allowLegacyImport: false });
+        openTemplateModal();
+      }));
       document.getElementById('close-template-modal').addEventListener('click', closeTemplateModal);
       document.getElementById('save-template').addEventListener('click', () => safeRun(async () => saveTemplateFromForm()));
       document.getElementById('reset-template-form').addEventListener('click', resetTemplateForm);
       document.getElementById('cleanup-stale').addEventListener('click', () => safeRun(cleanupStaleTasks));
-      document.getElementById('clear-instruction').addEventListener('click', () => {
-        taskInstructionEl.value = '';
-        taskTemplateEl.value = '';
-        recentInstructionEl.value = '';
-      });
       document.getElementById('delete-doc').addEventListener('click', () => safeRun(deleteDoc));
       document.getElementById('create-task').addEventListener('click', () => safeRun(createTask));
       docSelectorEl.addEventListener('change', () => safeRun(() => selectDoc(Number(docSelectorEl.value))));
@@ -2283,24 +2521,19 @@
         localStorage.setItem(LAST_TASK_ACTION_KEY, taskActionEl.value);
       });
       taskTemplateEl.addEventListener('change', () => {
-        const template = getTemplateCatalog().find((item) => item.id === taskTemplateEl.value);
+        if (!taskTemplateEl.value) {
+          applyStoredDocumentTaskDefaults();
+          return;
+        }
+        const template = getTemplateCatalog().find(
+          (item) => normalizeTemplateId(item.id) === taskTemplateEl.value
+        );
         if (!template) {
           return;
         }
         taskActionEl.value = template.action;
         taskInstructionEl.value = template.instruction;
         localStorage.setItem(LAST_TASK_ACTION_KEY, template.action);
-      });
-      recentInstructionEl.addEventListener('change', () => {
-        const selectedIndex = Number(recentInstructionEl.value);
-        if (Number.isNaN(selectedIndex)) {
-          return;
-        }
-        const instruction = loadRecentInstructions()[selectedIndex];
-        if (!instruction) {
-          return;
-        }
-        taskInstructionEl.value = instruction;
       });
       taskListEl.addEventListener('change', () => {
         if (!taskListEl.value) {
@@ -2344,7 +2577,10 @@
       if (!apiKeyInput.value.trim()) {
         openKeyModal();
       }
-      safeRun(loadDocs);
+      safeRun(async () => {
+        await loadTaskTemplates();
+        await loadDocs();
+      });
     </script>
   </body>
 </html>

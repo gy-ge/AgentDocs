@@ -13,6 +13,7 @@ from app.time_utils import utcnow
 class TaskService:
     TASK_CONTEXT_WINDOW = 200
     RELOCATABLE_STATUSES = {"pending", "done", "failed", "cancelled", "rejected"}
+    RECOVERABLE_STATUSES = {"pending", "processing", "done", "failed", "cancelled", "rejected"}
 
     def __init__(self) -> None:
         self.document_service = DocumentService()
@@ -277,6 +278,112 @@ class TaskService:
         db.refresh(task)
         return task, str(relocation["strategy"])
 
+    def preview_task_recovery(self, db: Session, task_id: int) -> dict[str, object]:
+        task = self.get_task(db, task_id)
+        document = self.document_service.get_document(db, task.doc_id)
+        is_stale, stale_reason = self._describe_stale_state(task, document.raw_markdown)
+        start_offset, end_offset = self._selection_bounds(document.raw_markdown, task)
+        relocation_strategy = self._detect_relocation_strategy(db, task, document.raw_markdown)
+        can_requeue, requeue_reason = self._can_requeue_from_current(
+            task,
+            raw_markdown=document.raw_markdown,
+            start_offset=start_offset,
+            end_offset=end_offset,
+            is_stale=is_stale,
+        )
+
+        return {
+            "task_id": task.id,
+            "doc_id": task.doc_id,
+            "task_status": task.status,
+            "is_stale": is_stale,
+            "stale_reason": stale_reason,
+            "current_document_revision": document.revision,
+            "current_start_offset": start_offset,
+            "current_end_offset": end_offset,
+            "current_selection_text": document.raw_markdown[start_offset:end_offset],
+            "can_relocate": relocation_strategy is not None,
+            "relocation_strategy": relocation_strategy,
+            "can_requeue_from_current": can_requeue,
+            "requeue_reason": requeue_reason,
+            "recommended_mode": self._recommended_recovery_mode(
+                is_stale=is_stale,
+                relocation_strategy=relocation_strategy,
+                can_requeue=can_requeue,
+            ),
+            "context": self._build_task_context(
+                task,
+                document_title=document.title,
+                document_revision=document.revision,
+                raw_markdown=document.raw_markdown,
+            ),
+        }
+
+    def recover_task(
+        self, db: Session, task_id: int, *, mode: str, actor: str
+    ) -> dict[str, object]:
+        if mode == "relocate":
+            task, relocation_strategy = self.relocate_task(db, task_id=task_id)
+            description = self.describe_task(db, task)
+            return {
+                "mode": mode,
+                "source_task": self._serialize_task_payload(
+                    db,
+                    task,
+                    description=description,
+                ),
+                "new_task": None,
+                "relocation_strategy": relocation_strategy,
+                "closed_source_status": None,
+            }
+
+        if mode != "requeue_from_current":
+            raise ApiError(422, "validation_error", "unsupported recovery mode")
+
+        task = self.get_task(db, task_id)
+        if task.status == "accepted":
+            raise ApiError(409, "invalid_state", "accepted task does not need recovery")
+
+        document = self.document_service.get_document(db, task.doc_id)
+        is_stale, _ = self._describe_stale_state(task, document.raw_markdown)
+        start_offset, end_offset = self._selection_bounds(document.raw_markdown, task)
+        can_requeue, requeue_reason = self._can_requeue_from_current(
+            task,
+            raw_markdown=document.raw_markdown,
+            start_offset=start_offset,
+            end_offset=end_offset,
+            is_stale=is_stale,
+        )
+        if not can_requeue:
+            raise ApiError(409, "conflict", requeue_reason or "task cannot be recovered")
+
+        now = utcnow()
+        closed_source_status = self._close_task_for_requeue(task, now=now)
+        current_selection_text = document.raw_markdown[start_offset:end_offset]
+        new_task = Task(
+            doc_id=task.doc_id,
+            doc_revision=document.revision,
+            start_offset=start_offset,
+            end_offset=end_offset,
+            source_text=current_selection_text,
+            source_hash=self._hash_text(current_selection_text),
+            action=task.action,
+            instruction=task.instruction,
+            status="pending",
+        )
+        db.add(new_task)
+        db.commit()
+        db.refresh(task)
+        db.refresh(new_task)
+
+        return {
+            "mode": mode,
+            "source_task": self._serialize_task_payload(db, task),
+            "new_task": self._serialize_task_payload(db, new_task),
+            "relocation_strategy": None,
+            "closed_source_status": closed_source_status,
+        }
+
     def reject_task(self, db: Session, task_id: int) -> Task:
         task = self.get_task(db, task_id)
         if task.status != "done":
@@ -437,24 +544,26 @@ class TaskService:
         raw_markdown: str,
     ) -> dict[str, object]:
         start, end = self._selection_bounds(raw_markdown, task)
-        block = self._find_matching_block(raw_markdown, task)
+        blocks = parse_blocks(raw_markdown)
+        block = self._find_matching_block_from_blocks(blocks, start, end)
         block_data: dict[str, object] | None = None
         block_markdown: str | None = None
         if block is not None:
-            block_data = {
-                "heading": block.heading,
-                "level": block.level,
-                "position": block.position,
-                "start_offset": block.start_offset,
-                "end_offset": block.end_offset,
-            }
+            block_data = self._serialize_context_block(block)
             block_markdown = raw_markdown[block.start_offset : block.end_offset]
 
         return {
             "document_title": document_title,
             "document_revision": document_revision,
+            "current_selection_text": raw_markdown[start:end],
             "block": block_data,
             "block_markdown": block_markdown,
+            "heading_path": self._build_heading_path(blocks, block.position if block is not None else None),
+            "document_outline": [
+                self._serialize_heading(block_item)
+                for block_item in blocks
+                if block_item.heading
+            ],
             "context_before": raw_markdown[max(0, start - self.TASK_CONTEXT_WINDOW) : start],
             "context_after": raw_markdown[end : min(len(raw_markdown), end + self.TASK_CONTEXT_WINDOW)],
         }
@@ -466,10 +575,141 @@ class TaskService:
 
     def _find_matching_block(self, raw_markdown: str, task: Task):
         start, end = self._selection_bounds(raw_markdown, task)
-        for block in parse_blocks(raw_markdown):
+        return self._find_matching_block_from_blocks(parse_blocks(raw_markdown), start, end)
+
+    def _serialize_task_payload(
+        self,
+        db: Session,
+        task: Task,
+        *,
+        description: dict[str, object] | None = None,
+    ) -> dict[str, object]:
+        if description is None:
+            description = self.describe_task(db, task)
+        return {
+            "id": task.id,
+            "doc_id": task.doc_id,
+            "doc_revision": task.doc_revision,
+            "start_offset": task.start_offset,
+            "end_offset": task.end_offset,
+            "source_text": task.source_text,
+            "action": task.action,
+            "instruction": task.instruction,
+            "result": task.result,
+            "status": task.status,
+            "agent_name": task.agent_name,
+            "error_message": task.error_message,
+            "is_stale": bool(description.get("is_stale", False)),
+            "stale_reason": description.get("stale_reason"),
+            "recommended_action": description.get("recommended_action"),
+            "context": self.build_task_context(db, task),
+            "created_at": task.created_at,
+            "started_at": task.started_at,
+            "completed_at": task.completed_at,
+            "resolved_at": task.resolved_at,
+        }
+
+    def _find_matching_block_from_blocks(self, blocks, start: int, end: int):
+        for block in blocks:
             if start >= block.start_offset and end <= block.end_offset:
                 return block
         return None
+
+    def _detect_relocation_strategy(
+        self, db: Session, task: Task, raw_markdown: str
+    ) -> str | None:
+        if task.status not in self.RELOCATABLE_STATUSES:
+            return None
+
+        current_text = self._current_text(raw_markdown, task)
+        if current_text == task.source_text and self._hash_text(current_text) == task.source_hash:
+            document = self.document_service.get_document(db, task.doc_id)
+            if task.doc_revision != document.revision:
+                return "current_selection_match"
+            return None
+
+        relocation = self._find_relocation_target(db, task, raw_markdown)
+        return None if relocation is None else str(relocation["strategy"])
+
+    def _can_requeue_from_current(
+        self,
+        task: Task,
+        *,
+        raw_markdown: str,
+        start_offset: int,
+        end_offset: int,
+        is_stale: bool,
+    ) -> tuple[bool, str | None]:
+        if task.status not in self.RECOVERABLE_STATUSES:
+            return False, "current task state does not support recovery"
+        if not is_stale:
+            return False, "task is not stale"
+        if start_offset >= len(raw_markdown) or end_offset <= start_offset:
+            return False, "current selection is empty"
+        if not raw_markdown[start_offset:end_offset]:
+            return False, "current selection is empty"
+        if not self._is_within_single_block(raw_markdown, start_offset, end_offset):
+            return False, "current selection crosses multiple blocks"
+        return True, None
+
+    def _recommended_recovery_mode(
+        self,
+        *,
+        is_stale: bool,
+        relocation_strategy: str | None,
+        can_requeue: bool,
+    ) -> str | None:
+        if not is_stale:
+            return None
+        if relocation_strategy is not None:
+            return "relocate"
+        if can_requeue:
+            return "requeue_from_current"
+        return None
+
+    def _close_task_for_requeue(self, task: Task, *, now) -> str | None:
+        if task.status in {"pending", "processing"}:
+            task.status = "cancelled"
+            task.resolved_at = now
+            return task.status
+        if task.status == "done":
+            task.status = "rejected"
+            task.resolved_at = now
+            return task.status
+        if task.status == "failed" and task.resolved_at is None:
+            task.resolved_at = now
+        return task.status
+
+    def _serialize_context_block(self, block) -> dict[str, object]:
+        return {
+            "heading": block.heading,
+            "level": block.level,
+            "position": block.position,
+            "start_offset": block.start_offset,
+            "end_offset": block.end_offset,
+        }
+
+    def _serialize_heading(self, block) -> dict[str, object]:
+        return {
+            "heading": block.heading,
+            "level": block.level,
+            "position": block.position,
+        }
+
+    def _build_heading_path(self, blocks, current_position: int | None) -> list[dict[str, object]]:
+        if current_position is None:
+            return []
+
+        heading_path: list[dict[str, object]] = []
+        for block in blocks:
+            if block.position > current_position:
+                break
+            if not block.heading:
+                continue
+            while heading_path and int(heading_path[-1]["level"]) >= block.level:
+                heading_path.pop()
+            heading_path.append(self._serialize_heading(block))
+        return heading_path
 
     def _find_relocation_target(
         self, db: Session, task: Task, raw_markdown: str

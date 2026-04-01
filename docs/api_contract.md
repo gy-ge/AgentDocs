@@ -94,6 +94,8 @@ Base URL:
     "title": "研究笔记",
     "raw_markdown": "# 研究笔记\n## 背景\n内容",
     "revision": 3,
+    "default_task_action": "rewrite",
+    "default_task_instruction": "改成更正式的项目说明",
     "blocks": [
       {
         "heading": "背景",
@@ -139,6 +141,28 @@ Base URL:
 ### DELETE /api/docs/{doc_id}
 
 说明：删除文档及其任务、版本。
+
+### POST /api/docs/{doc_id}/task-defaults
+
+说明：
+
+- 保存或清空当前文档的默认任务动作与默认说明
+- 只更新文档元信息，不增加 revision，也不生成新版本
+
+请求：
+
+```json
+{
+  "actor": "browser",
+  "default_task_action": "rewrite",
+  "default_task_instruction": "改成更正式、适合项目文档的说明"
+}
+```
+
+补充：
+
+- 当 default_task_action 和 default_task_instruction 都为空时，表示清空文档默认值
+- 当只提供 default_task_instruction 时，服务端会回退到默认 action rewrite
 
 ### POST /api/docs/{doc_id}/tasks/cleanup-stale
 
@@ -300,8 +324,11 @@ context 字段结构：
 
 - document_title: 当前文档标题
 - document_revision: 当前文档 revision，区别于任务自己的 doc_revision
+- current_selection_text: 当前正文在该选区范围内的文本，若任务已 stale，可用于判断当前区间发生了什么变化
 - block: 当前选区所在 block 的标题和范围；如果当前正文已无法定位 block，则为 null
 - block_markdown: 当前 block 的完整 Markdown 文本；如果当前正文已无法定位 block，则为 null
+- heading_path: 当前 block 的标题链路，按从上到下顺序返回，便于外部 Agent 理解当前段落在整篇文档中的层级位置
+- document_outline: 当前文档的标题大纲，只返回 heading、level、position，不返回整篇正文
 - context_before: 当前正文里选区前最多 200 个字符
 - context_after: 当前正文里选区后最多 200 个字符
 
@@ -360,6 +387,7 @@ context 字段结构：
   "context": {
     "document_title": "研究笔记",
     "document_revision": 3,
+    "current_selection_text": "原文内容",
     "block": {
       "heading": "背景",
       "level": 2,
@@ -368,6 +396,35 @@ context 字段结构：
       "end_offset": 32
     },
     "block_markdown": "## 背景\n原文内容\n",
+    "heading_path": [
+      {
+        "heading": "研究笔记",
+        "level": 1,
+        "position": 0
+      },
+      {
+        "heading": "背景",
+        "level": 2,
+        "position": 1
+      }
+    ],
+    "document_outline": [
+      {
+        "heading": "研究笔记",
+        "level": 1,
+        "position": 0
+      },
+      {
+        "heading": "背景",
+        "level": 2,
+        "position": 1
+      },
+      {
+        "heading": "结论",
+        "level": 2,
+        "position": 2
+      }
+    ],
     "context_before": "# 研究笔记\n## 背景\n",
     "context_after": "\n## 结论\n待补充"
   }
@@ -416,6 +473,7 @@ context 字段结构：
       "context": {
         "document_title": "研究笔记",
         "document_revision": 4,
+        "current_selection_text": "新的原文",
         "block": {
           "heading": "背景",
           "level": 2,
@@ -424,11 +482,154 @@ context 字段结构：
           "end_offset": 32
         },
         "block_markdown": "## 背景\n新的原文\n",
+        "heading_path": [
+          {
+            "heading": "研究笔记",
+            "level": 1,
+            "position": 0
+          },
+          {
+            "heading": "背景",
+            "level": 2,
+            "position": 1
+          }
+        ],
+        "document_outline": [
+          {
+            "heading": "研究笔记",
+            "level": 1,
+            "position": 0
+          },
+          {
+            "heading": "背景",
+            "level": 2,
+            "position": 1
+          },
+          {
+            "heading": "结论",
+            "level": 2,
+            "position": 2
+          }
+        ],
         "context_before": "# 研究笔记\n## 背景\n新的",
         "context_after": "\n## 结论\n待补充"
       }
     },
     "relocation_strategy": "same_block_position_match"
+  }
+}
+```
+
+### GET /api/tasks/{task_id}/recovery-preview
+
+说明：
+
+- 返回 stale 任务的恢复预览，帮助前端判断是先重定位，还是直接按当前正文重建
+- 该接口不会改 task 状态，也不会修改正文
+
+响应示例：
+
+```json
+{
+  "ok": true,
+  "data": {
+    "task_id": 9,
+    "doc_id": 1,
+    "task_status": "done",
+    "is_stale": true,
+    "stale_reason": "source_changed",
+    "current_document_revision": 4,
+    "current_start_offset": 26,
+    "current_end_offset": 30,
+    "current_selection_text": "新的原文",
+    "can_relocate": true,
+    "relocation_strategy": "same_block_position_match",
+    "can_requeue_from_current": true,
+    "requeue_reason": null,
+    "recommended_mode": "relocate",
+    "context": {
+      "document_title": "研究笔记",
+      "document_revision": 4,
+      "current_selection_text": "新的原文",
+      "block": {
+        "heading": "背景",
+        "level": 2,
+        "position": 1,
+        "start_offset": 7,
+        "end_offset": 32
+      },
+      "block_markdown": "## 背景\n新的原文\n",
+      "heading_path": [
+        {
+          "heading": "研究笔记",
+          "level": 1,
+          "position": 0
+        },
+        {
+          "heading": "背景",
+          "level": 2,
+          "position": 1
+        }
+      ],
+      "document_outline": [
+        {
+          "heading": "研究笔记",
+          "level": 1,
+          "position": 0
+        },
+        {
+          "heading": "背景",
+          "level": 2,
+          "position": 1
+        },
+        {
+          "heading": "结论",
+          "level": 2,
+          "position": 2
+        }
+      ],
+      "context_before": "# 研究笔记\n## 背景\n新的",
+      "context_after": "\n## 结论\n待补充"
+    }
+  }
+}
+```
+
+### POST /api/tasks/{task_id}/recover
+
+说明：
+
+- mode=relocate 时，行为与原来的 relocate 一致，但统一走恢复工作流响应
+- mode=requeue_from_current 时，会先安全关闭旧任务，再基于当前正文同一选区创建一条新的 pending 任务
+
+请求：
+
+```json
+{
+  "mode": "requeue_from_current",
+  "actor": "browser"
+}
+```
+
+响应示例：
+
+```json
+{
+  "ok": true,
+  "data": {
+    "mode": "requeue_from_current",
+    "source_task": {
+      "id": 9,
+      "status": "rejected"
+    },
+    "new_task": {
+      "id": 15,
+      "status": "pending",
+      "doc_revision": 4,
+      "source_text": "新的原文"
+    },
+    "relocation_strategy": null,
+    "closed_source_status": "rejected"
   }
 }
 ```
@@ -485,6 +686,32 @@ context 字段结构：
 ### POST /api/tasks/{task_id}/cancel
 
 ### POST /api/tasks/{task_id}/retry
+
+## 4. 模板接口
+
+### GET /api/task-templates
+
+说明：获取服务端持久化的自定义模板列表。
+
+### POST /api/task-templates
+
+请求：
+
+```json
+{
+  "name": "技术方案润色",
+  "action": "rewrite",
+  "instruction": "改成正式、克制、适合项目文档的说明。"
+}
+```
+
+### PUT /api/task-templates/{template_id}
+
+说明：更新一个已有的服务端模板。
+
+### DELETE /api/task-templates/{template_id}
+
+说明：删除一个已有的服务端模板。
 
 说明：
 

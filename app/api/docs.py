@@ -10,7 +10,7 @@ from app.api.serializers import (
     serialize_task,
 )
 from app.db import get_db
-from app.schemas.docs import DocumentCreate, DocumentUpdate
+from app.schemas.docs import DocumentCreate, DocumentUpdate, TaskDefaultsUpdate
 from app.schemas.tasks import TaskBatchActionRequest, TaskCreate
 from app.services.document_service import DocumentService
 from app.services.task_service import TaskService
@@ -68,6 +68,21 @@ def update_doc(doc_id: int, payload: DocumentUpdate, db: Session = Depends(get_d
 def delete_doc(doc_id: int, db: Session = Depends(get_db)):
     service.delete_document(db, doc_id)
     return {"ok": True, "data": {"id": doc_id}}
+
+
+@router.post("/{doc_id}/task-defaults")
+def update_doc_task_defaults(
+    doc_id: int, payload: TaskDefaultsUpdate, db: Session = Depends(get_db)
+):
+    document = service.update_task_defaults(
+        db,
+        doc_id,
+        actor=payload.actor,
+        default_task_action=payload.default_task_action,
+        default_task_instruction=payload.default_task_instruction,
+    )
+    blocks = service.parse_document(document.raw_markdown)
+    return {"ok": True, "data": serialize_document(document, blocks).model_dump(mode="json")}
 
 
 @router.post("/{doc_id}/tasks")

@@ -7,6 +7,8 @@ from app.time_utils import utcnow
 
 
 class DocumentService:
+    DEFAULT_TASK_ACTION = "rewrite"
+
     def list_documents(self, db: Session) -> list[Document]:
         return db.query(Document).order_by(Document.updated_at.desc()).all()
 
@@ -22,7 +24,12 @@ class DocumentService:
     def create_document(
         self, db: Session, title: str, raw_markdown: str, actor: str
     ) -> Document:
-        document = Document(title=title, raw_markdown=raw_markdown)
+        document = Document(
+            title=title,
+            raw_markdown=raw_markdown,
+            default_task_action=self.DEFAULT_TASK_ACTION,
+            default_task_instruction=None,
+        )
         db.add(document)
         db.flush()
         self._create_version(
@@ -33,6 +40,34 @@ class DocumentService:
             actor=actor,
             note="document created",
         )
+        db.commit()
+        db.refresh(document)
+        return document
+
+    def update_task_defaults(
+        self,
+        db: Session,
+        doc_id: int,
+        *,
+        actor: str,
+        default_task_action: str | None,
+        default_task_instruction: str | None,
+    ) -> Document:
+        document = self.get_document(db, doc_id)
+        normalized_action = self._normalize_optional_text(default_task_action)
+        normalized_instruction = self._normalize_optional_text(default_task_instruction)
+        if normalized_action is None and normalized_instruction is not None:
+            normalized_action = self.DEFAULT_TASK_ACTION
+
+        if (
+            document.default_task_action == normalized_action
+            and document.default_task_instruction == normalized_instruction
+        ):
+            return document
+
+        document.default_task_action = normalized_action
+        document.default_task_instruction = normalized_instruction
+        document.updated_at = utcnow()
         db.commit()
         db.refresh(document)
         return document
@@ -146,3 +181,9 @@ class DocumentService:
         )
         db.add(version)
         return version
+
+    def _normalize_optional_text(self, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip()
+        return normalized or None

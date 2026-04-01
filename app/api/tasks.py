@@ -2,11 +2,18 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import require_api_key
-from app.api.serializers import serialize_task, serialize_task_diff, serialize_task_relocation
+from app.api.serializers import (
+    serialize_task,
+    serialize_task_diff,
+    serialize_task_recovery_preview,
+    serialize_task_recovery_result,
+    serialize_task_relocation,
+)
 from app.db import get_db
 from app.schemas.tasks import (
     TaskAcceptRequest,
     TaskCompleteRequest,
+    TaskRecoverRequest,
     TaskNextRequest,
 )
 from app.services.task_service import TaskService
@@ -50,6 +57,12 @@ def get_task(task_id: int, db: Session = Depends(get_db)):
 def get_task_diff(task_id: int, db: Session = Depends(get_db)):
     diff_data = service.get_task_diff(db, task_id)
     return {"ok": True, "data": serialize_task_diff(diff_data).model_dump(mode="json")}
+
+
+@router.get("/{task_id}/recovery-preview")
+def get_task_recovery_preview(task_id: int, db: Session = Depends(get_db)):
+    preview = service.preview_task_recovery(db, task_id)
+    return {"ok": True, "data": serialize_task_recovery_preview(preview).model_dump(mode="json")}
 
 
 @router.post("/next")
@@ -126,3 +139,11 @@ def relocate_task(task_id: int, db: Session = Depends(get_db)):
             context=service.build_task_context(db, task),
         ).model_dump(mode="json"),
     }
+
+
+@router.post("/{task_id}/recover")
+def recover_task(
+    task_id: int, payload: TaskRecoverRequest, db: Session = Depends(get_db)
+):
+    result = service.recover_task(db, task_id=task_id, mode=payload.mode, actor=payload.actor)
+    return {"ok": True, "data": serialize_task_recovery_result(result).model_dump(mode="json")}

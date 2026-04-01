@@ -49,12 +49,15 @@ def test_root_page_is_served(client):
 
     assert response.status_code == 200
     assert "AgentDocs" in response.text
+    assert 'meta name="description"' in response.text
+    assert 'rel="icon"' in response.text
     assert "连接设置" in response.text
     assert "文档工作台" in response.text
     assert "已有文档" in response.text
     assert "新建文档" in response.text
     assert "任务动作" in response.text
     assert "任务处理" in response.text
+    assert "当前文档任务" in response.text
     assert "创建任务" in response.text
     assert "导出 Markdown" in response.text
     assert "删除文档" in response.text
@@ -63,8 +66,8 @@ def test_root_page_is_served(client):
     assert "批量接受范围" in response.text
     assert "自动刷新：前台 15s" in response.text
     assert "快捷模板" in response.text
-    assert "最近说明" in response.text
     assert "管理模板" in response.text
+    assert "设为文档默认" in response.text
     assert "查看 unified diff" in response.text
 
 
@@ -681,6 +684,7 @@ def test_pickup_next_task_includes_context_window_and_block_metadata(client, aut
     assert data["context"] == {
         "document_title": "Knowledge Base",
         "document_revision": 1,
+        "current_selection_text": "beta",
         "block": {
             "heading": "Background",
             "level": 2,
@@ -689,6 +693,15 @@ def test_pickup_next_task_includes_context_window_and_block_metadata(client, aut
             "end_offset": raw_markdown.index("## Next"),
         },
         "block_markdown": "## Background\nAlpha beta gamma\n",
+        "heading_path": [
+            {"heading": "Title", "level": 1, "position": 0},
+            {"heading": "Background", "level": 2, "position": 1},
+        ],
+        "document_outline": [
+            {"heading": "Title", "level": 1, "position": 0},
+            {"heading": "Background", "level": 2, "position": 1},
+            {"heading": "Next", "level": 2, "position": 2},
+        ],
         "context_before": "# Title\n## Background\nAlpha ",
         "context_after": " gamma\n## Next\nMore\n",
     }
@@ -727,8 +740,13 @@ def test_pickup_next_task_reports_stale_state_and_current_context(client, auth_h
     assert task_data["stale_reason"] == "source_changed"
     assert task_data["recommended_action"] == "cancel"
     assert task_data["context"]["document_revision"] == 2
+    assert task_data["context"]["current_selection_text"] == "Hallo"
     assert task_data["context"]["block"]["heading"] == "Section"
     assert task_data["context"]["block_markdown"] == "## Section\nHallo world\n"
+    assert task_data["context"]["heading_path"] == [
+        {"heading": "Title", "level": 1, "position": 0},
+        {"heading": "Section", "level": 2, "position": 1},
+    ]
 
 
 def test_get_task_includes_current_context_snapshot(client, auth_headers):
@@ -744,6 +762,7 @@ def test_get_task_includes_current_context_snapshot(client, auth_headers):
     assert data["context"] == {
         "document_title": "Doc",
         "document_revision": 1,
+        "current_selection_text": "world",
         "block": {
             "heading": "Section",
             "level": 2,
@@ -752,9 +771,226 @@ def test_get_task_includes_current_context_snapshot(client, auth_headers):
             "end_offset": len(raw_markdown),
         },
         "block_markdown": "## Section\nHello world\n",
+        "heading_path": [
+            {"heading": "Title", "level": 1, "position": 0},
+            {"heading": "Section", "level": 2, "position": 1},
+        ],
+        "document_outline": [
+            {"heading": "Title", "level": 1, "position": 0},
+            {"heading": "Section", "level": 2, "position": 1},
+        ],
         "context_before": "# Title\n## Section\nHello ",
         "context_after": "\n",
     }
+
+
+def test_get_task_context_heading_path_tracks_nested_sections(client, auth_headers):
+    raw_markdown = "# Root\n## Chapter\n### Detail\nAlpha beta\n## Tail\nDone\n"
+    created = create_document(client, auth_headers, raw_markdown, title="Outline Doc")
+    doc_id = created["id"]
+    task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "beta")
+
+    response = client.get(f"/api/tasks/{task['id']}", headers=auth_headers)
+
+    assert response.status_code == 200
+    context = response.json()["data"]["context"]
+    assert context["heading_path"] == [
+        {"heading": "Root", "level": 1, "position": 0},
+        {"heading": "Chapter", "level": 2, "position": 1},
+        {"heading": "Detail", "level": 3, "position": 2},
+    ]
+    assert context["document_outline"] == [
+        {"heading": "Root", "level": 1, "position": 0},
+        {"heading": "Chapter", "level": 2, "position": 1},
+        {"heading": "Detail", "level": 3, "position": 2},
+        {"heading": "Tail", "level": 2, "position": 3},
+    ]
+
+
+def test_document_task_defaults_can_be_saved_without_new_revision(client, auth_headers):
+    created = create_document(client, auth_headers, "# Title\n\nAlpha\n", title="Doc")
+
+    get_response = client.get(f"/api/docs/{created['id']}", headers=auth_headers)
+    assert get_response.status_code == 200
+    assert get_response.json()["data"]["default_task_action"] == "rewrite"
+    assert get_response.json()["data"]["default_task_instruction"] is None
+
+    update_response = client.post(
+        f"/api/docs/{created['id']}/task-defaults",
+        headers=auth_headers,
+        json={
+            "actor": "browser",
+            "default_task_action": "expand",
+            "default_task_instruction": "补充背景与上下文",
+        },
+    )
+
+    assert update_response.status_code == 200
+    data = update_response.json()["data"]
+    assert data["revision"] == 1
+    assert data["default_task_action"] == "expand"
+    assert data["default_task_instruction"] == "补充背景与上下文"
+
+    get_response = client.get(f"/api/docs/{created['id']}", headers=auth_headers)
+    assert get_response.status_code == 200
+    persisted = get_response.json()["data"]
+    assert persisted["default_task_action"] == "expand"
+    assert persisted["default_task_instruction"] == "补充背景与上下文"
+
+
+def test_task_templates_crud(client, auth_headers):
+    list_response = client.get("/api/task-templates", headers=auth_headers)
+    assert list_response.status_code == 200
+    assert list_response.json()["data"] == []
+
+    create_response = client.post(
+        "/api/task-templates",
+        headers=auth_headers,
+        json={
+            "name": "技术方案润色",
+            "action": "rewrite",
+            "instruction": "改成克制、正式、适合项目文档的表述。",
+        },
+    )
+    assert create_response.status_code == 200
+    created = create_response.json()["data"]
+    assert created["name"] == "技术方案润色"
+
+    update_response = client.put(
+        f"/api/task-templates/{created['id']}",
+        headers=auth_headers,
+        json={
+            "name": "技术方案精简润色",
+            "action": "summarize",
+            "instruction": "压缩成 3 句以内，保留关键事实。",
+        },
+    )
+    assert update_response.status_code == 200
+    updated = update_response.json()["data"]
+    assert updated["name"] == "技术方案精简润色"
+    assert updated["action"] == "summarize"
+
+    list_response = client.get("/api/task-templates", headers=auth_headers)
+    assert list_response.status_code == 200
+    assert [item["id"] for item in list_response.json()["data"]] == [created["id"]]
+
+    delete_response = client.delete(
+        f"/api/task-templates/{created['id']}", headers=auth_headers
+    )
+    assert delete_response.status_code == 200
+    assert delete_response.json()["data"]["id"] == created["id"]
+
+    list_response = client.get("/api/task-templates", headers=auth_headers)
+    assert list_response.status_code == 200
+    assert list_response.json()["data"] == []
+
+
+def test_task_recovery_preview_prefers_relocation_when_possible(client, auth_headers):
+    raw_markdown = "# Title\n## Section\nHello world\n"
+    created = create_document(client, auth_headers, raw_markdown, title="Doc")
+    task, _, _ = create_task(client, auth_headers, created["id"], raw_markdown, "Hello")
+
+    update_response = client.put(
+        f"/api/docs/{created['id']}",
+        headers=auth_headers,
+        json={
+            "title": "Doc",
+            "raw_markdown": "# Title\n## Section\nStart Hello world\n",
+            "expected_revision": 1,
+            "actor": "browser",
+            "note": "insert prefix",
+        },
+    )
+    assert update_response.status_code == 200
+
+    preview_response = client.get(
+        f"/api/tasks/{task['id']}/recovery-preview",
+        headers=auth_headers,
+    )
+    assert preview_response.status_code == 200
+    preview = preview_response.json()["data"]
+    assert preview["is_stale"] is True
+    assert preview["can_relocate"] is True
+    assert preview["relocation_strategy"] == "same_block_position_match"
+    assert preview["can_requeue_from_current"] is True
+    assert preview["recommended_mode"] == "relocate"
+
+
+def test_task_recover_requeue_from_current_creates_new_pending_task(client, auth_headers):
+    raw_markdown = "# Title\n## Section\nHello world\n"
+    created = create_document(client, auth_headers, raw_markdown, title="Doc")
+    task, _, _ = create_task(client, auth_headers, created["id"], raw_markdown, "Hello")
+
+    update_response = client.put(
+        f"/api/docs/{created['id']}",
+        headers=auth_headers,
+        json={
+            "title": "Doc",
+            "raw_markdown": "# Title\n## Section\nHallo world\n",
+            "expected_revision": 1,
+            "actor": "browser",
+            "note": "manual edit before recovery",
+        },
+    )
+    assert update_response.status_code == 200
+
+    recover_response = client.post(
+        f"/api/tasks/{task['id']}/recover",
+        headers=auth_headers,
+        json={"mode": "requeue_from_current", "actor": "browser"},
+    )
+    assert recover_response.status_code == 200
+    data = recover_response.json()["data"]
+    assert data["mode"] == "requeue_from_current"
+    assert data["closed_source_status"] == "cancelled"
+    assert data["source_task"]["status"] == "cancelled"
+    assert data["new_task"]["status"] == "pending"
+    assert data["new_task"]["doc_revision"] == 2
+    assert data["new_task"]["source_text"] == "Hallo"
+    assert data["new_task"]["context"]["current_selection_text"] == "Hallo"
+
+    list_response = client.get(
+        f"/api/tasks?doc_id={created['id']}", headers=auth_headers
+    )
+    assert list_response.status_code == 200
+    statuses = {item["id"]: item["status"] for item in list_response.json()["data"]}
+    assert statuses[task["id"]] == "cancelled"
+    assert data["new_task"]["id"] in statuses
+
+
+def test_task_recover_with_relocate_mode_updates_offsets(client, auth_headers):
+    raw_markdown = "# Title\n## Section\nHello world\n"
+    created = create_document(client, auth_headers, raw_markdown, title="Doc")
+    task, start_offset, end_offset = create_task(
+        client, auth_headers, created["id"], raw_markdown, "Hello"
+    )
+
+    update_response = client.put(
+        f"/api/docs/{created['id']}",
+        headers=auth_headers,
+        json={
+            "title": "Doc",
+            "raw_markdown": "# Title\n## Section\nStart Hello world\n",
+            "expected_revision": 1,
+            "actor": "browser",
+            "note": "insert prefix",
+        },
+    )
+    assert update_response.status_code == 200
+
+    recover_response = client.post(
+        f"/api/tasks/{task['id']}/recover",
+        headers=auth_headers,
+        json={"mode": "relocate", "actor": "browser"},
+    )
+    assert recover_response.status_code == 200
+    data = recover_response.json()["data"]
+    assert data["mode"] == "relocate"
+    assert data["relocation_strategy"] == "same_block_position_match"
+    assert data["new_task"] is None
+    assert data["source_task"]["start_offset"] > start_offset
+    assert data["source_task"]["end_offset"] > end_offset
+    assert data["source_task"]["doc_revision"] == 2
 
 
 def test_task_create_rejects_cross_block_range(client, auth_headers):

@@ -25,4 +25,4 @@ def test_alembic_upgrade_creates_expected_tables(tmp_path, monkeypatch):
         get_settings.cache_clear()
 
     table_names = {row[0] for row in rows}
-    assert {"alembic_version", "documents", "tasks", "doc_versions"} <= table_names
+    assert {"alembic_version", "documents", "tasks", "doc_versions", "task_templates"} <= table_names
