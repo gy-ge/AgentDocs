@@ -2277,4 +2277,4 @@ def test_ui_contains_visibilitychange_listener(client):
     """The UI page should register a visibilitychange event listener for auto-refresh."""
     response = client.get("/")
     assert response.status_code == 200
-    assert "visibilitychange" in response.text
+    assert "addEventListener('visibilitychange', updateAutoRefreshPill)" in response.text
