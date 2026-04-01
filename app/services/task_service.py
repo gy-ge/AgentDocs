@@ -160,7 +160,7 @@ class TaskService:
         task = self.get_task(db, task_id)
         if task.status != "processing":
             raise ApiError(409, "invalid_state", "task is not processing")
-        if bool(result) == bool(error_message):
+        if (result is not None) == (error_message is not None):
             raise ApiError(
                 422,
                 "validation_error",
@@ -437,7 +437,7 @@ class TaskService:
         return task
 
     def cleanup_stale_tasks(self, db: Session, doc_id: int) -> dict[str, int]:
-        self.document_service.get_document(db, doc_id)
+        document = self.document_service.get_document(db, doc_id)
         tasks = (
             db.query(Task)
             .filter(Task.doc_id == doc_id)
@@ -448,7 +448,7 @@ class TaskService:
         cancelled = 0
         rejected = 0
         unchanged = 0
-        raw_markdown = self.document_service.get_document(db, doc_id).raw_markdown
+        raw_markdown = document.raw_markdown
         now = utcnow()
         for task in tasks:
             is_stale, _ = self._detect_stale(task, raw_markdown)

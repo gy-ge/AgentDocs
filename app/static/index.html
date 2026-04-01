@@ -1571,7 +1571,6 @@
       }
 
       function refreshLocalizedRuntimeUi() {
-        syncKeyState();
         renderTaskTemplates();
         if (!templateModalEl.classList.contains('hidden')) {
           renderTemplateList();
@@ -2793,6 +2792,8 @@
         safeRun(async () => { await loadTaskTemplates(); await loadDocs(); });
       }
       
+      document.addEventListener('visibilitychange', updateAutoRefreshPill);
+
       setInterval(() => {
         if (!document.hidden && state.docId && !state.isTaskPollRunning) {
           state.isTaskPollRunning = true;

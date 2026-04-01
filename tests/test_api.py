@@ -1721,3 +1721,560 @@ def test_create_task_rejects_blank_action(client, auth_headers):
         },
     )
     assert response.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Edge-case and regression tests
+# ---------------------------------------------------------------------------
+
+
+def test_complete_task_with_empty_string_result(client, auth_headers):
+    """An empty-string result should be accepted (it may represent a deletion)."""
+    raw_markdown = "# Heading\nSome text\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+    task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "Some text")
+    task_id = task["id"]
+
+    # Pickup the task
+    pickup = client.post(
+        "/api/tasks/next",
+        headers=auth_headers,
+        json={"agent_name": "test-agent"},
+    )
+    assert pickup.status_code == 200
+
+    # Complete with empty string result
+    response = client.post(
+        f"/api/tasks/{task_id}/complete",
+        headers=auth_headers,
+        json={"result": "", "error_message": None},
+    )
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["status"] == "done"
+    assert data["result"] == ""
+
+
+def test_complete_task_rejects_both_result_and_error(client, auth_headers):
+    """Providing both result and error_message should be rejected."""
+    raw_markdown = "# Heading\nSome text\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+    task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "Some text")
+
+    client.post(
+        "/api/tasks/next",
+        headers=auth_headers,
+        json={"agent_name": "test-agent"},
+    )
+
+    response = client.post(
+        f"/api/tasks/{task['id']}/complete",
+        headers=auth_headers,
+        json={"result": "rewritten", "error_message": "also error"},
+    )
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "validation_error"
+
+
+def test_complete_task_rejects_neither_result_nor_error(client, auth_headers):
+    """Providing neither result nor error_message should be rejected."""
+    raw_markdown = "# Heading\nSome text\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+    task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "Some text")
+
+    client.post(
+        "/api/tasks/next",
+        headers=auth_headers,
+        json={"agent_name": "test-agent"},
+    )
+
+    response = client.post(
+        f"/api/tasks/{task['id']}/complete",
+        headers=auth_headers,
+        json={"result": None, "error_message": None},
+    )
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "validation_error"
+
+
+def test_task_create_rejects_revision_mismatch(client, auth_headers):
+    """Creating a task with a stale doc_revision should fail."""
+    raw_markdown = "# Heading\nAlpha\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+
+    response = client.post(
+        f"/api/docs/{doc_id}/tasks",
+        headers=auth_headers,
+        json={
+            "action": "rewrite",
+            "source_text": "Alpha",
+            "start_offset": raw_markdown.index("Alpha"),
+            "end_offset": raw_markdown.index("Alpha") + len("Alpha"),
+            "doc_revision": 999,
+        },
+    )
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "conflict"
+
+
+def test_task_create_rejects_out_of_range_offsets(client, auth_headers):
+    """Creating a task with offsets exceeding document length should fail."""
+    raw_markdown = "# Heading\nAlpha\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+
+    response = client.post(
+        f"/api/docs/{doc_id}/tasks",
+        headers=auth_headers,
+        json={
+            "action": "rewrite",
+            "source_text": "Alpha",
+            "start_offset": 0,
+            "end_offset": 10000,
+            "doc_revision": 1,
+        },
+    )
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "validation_error"
+
+
+def test_task_create_rejects_source_text_mismatch(client, auth_headers):
+    """Creating a task where source_text doesn't match the document at offsets should fail."""
+    raw_markdown = "# Heading\nAlpha\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+
+    response = client.post(
+        f"/api/docs/{doc_id}/tasks",
+        headers=auth_headers,
+        json={
+            "action": "rewrite",
+            "source_text": "wrong text",
+            "start_offset": raw_markdown.index("Alpha"),
+            "end_offset": raw_markdown.index("Alpha") + len("Alpha"),
+            "doc_revision": 1,
+        },
+    )
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "validation_error"
+
+
+def test_accept_task_rejects_already_accepted_task(client, auth_headers):
+    """An already-accepted task cannot be accepted again."""
+    raw_markdown = "# Heading\nAlpha\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+    task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "Alpha")
+    task_id = task["id"]
+
+    client.post(
+        "/api/tasks/next",
+        headers=auth_headers,
+        json={"agent_name": "test-agent"},
+    )
+    client.post(
+        f"/api/tasks/{task_id}/complete",
+        headers=auth_headers,
+        json={"result": "Beta"},
+    )
+    client.post(
+        f"/api/tasks/{task_id}/accept",
+        headers=auth_headers,
+        json={"expected_revision": 1, "actor": "browser"},
+    )
+
+    # Try to accept again
+    response = client.post(
+        f"/api/tasks/{task_id}/accept",
+        headers=auth_headers,
+        json={"expected_revision": 2, "actor": "browser"},
+    )
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "invalid_state"
+
+
+def test_reject_task_rejects_non_done_task(client, auth_headers):
+    """A pending or processing task cannot be rejected."""
+    raw_markdown = "# Heading\nAlpha\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+    task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "Alpha")
+
+    response = client.post(
+        f"/api/tasks/{task['id']}/reject",
+        headers=auth_headers,
+    )
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "invalid_state"
+
+
+def test_cancel_rejects_done_task(client, auth_headers):
+    """A done task cannot be cancelled."""
+    raw_markdown = "# Heading\nAlpha\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+    task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "Alpha")
+    task_id = task["id"]
+
+    client.post(
+        "/api/tasks/next",
+        headers=auth_headers,
+        json={"agent_name": "test-agent"},
+    )
+    client.post(
+        f"/api/tasks/{task_id}/complete",
+        headers=auth_headers,
+        json={"result": "Beta"},
+    )
+
+    response = client.post(
+        f"/api/tasks/{task_id}/cancel",
+        headers=auth_headers,
+    )
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "invalid_state"
+
+
+def test_retry_rejects_done_task(client, auth_headers):
+    """A done task cannot be retried (must be rejected or cancelled first)."""
+    raw_markdown = "# Heading\nAlpha\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+    task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "Alpha")
+    task_id = task["id"]
+
+    client.post(
+        "/api/tasks/next",
+        headers=auth_headers,
+        json={"agent_name": "test-agent"},
+    )
+    client.post(
+        f"/api/tasks/{task_id}/complete",
+        headers=auth_headers,
+        json={"result": "Beta"},
+    )
+
+    response = client.post(
+        f"/api/tasks/{task_id}/retry",
+        headers=auth_headers,
+    )
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "invalid_state"
+
+
+def test_recover_rejects_accepted_task(client, auth_headers):
+    """An already-accepted task cannot be recovered."""
+    raw_markdown = "# Heading\nAlpha\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+    task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "Alpha")
+    task_id = task["id"]
+
+    client.post(
+        "/api/tasks/next",
+        headers=auth_headers,
+        json={"agent_name": "test-agent"},
+    )
+    client.post(
+        f"/api/tasks/{task_id}/complete",
+        headers=auth_headers,
+        json={"result": "Beta"},
+    )
+    client.post(
+        f"/api/tasks/{task_id}/accept",
+        headers=auth_headers,
+        json={"expected_revision": 1, "actor": "browser"},
+    )
+
+    response = client.post(
+        f"/api/tasks/{task_id}/recover",
+        headers=auth_headers,
+        json={"mode": "requeue_from_current", "actor": "browser"},
+    )
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "invalid_state"
+
+
+def test_relocate_rejects_processing_task(client, auth_headers):
+    """A processing task cannot be relocated."""
+    raw_markdown = "# Heading\nAlpha\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+    task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "Alpha")
+    task_id = task["id"]
+
+    client.post(
+        "/api/tasks/next",
+        headers=auth_headers,
+        json={"agent_name": "test-agent"},
+    )
+
+    response = client.post(
+        f"/api/tasks/{task_id}/relocate",
+        headers=auth_headers,
+    )
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "invalid_state"
+
+
+def test_get_nonexistent_document_returns_404(client, auth_headers):
+    """Getting a document that doesn't exist returns 404."""
+    response = client.get("/api/docs/99999", headers=auth_headers)
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "not_found"
+
+
+def test_get_nonexistent_task_returns_404(client, auth_headers):
+    """Getting a task that doesn't exist returns 404."""
+    response = client.get("/api/tasks/99999", headers=auth_headers)
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "not_found"
+
+
+def test_update_nonexistent_template_returns_404(client, auth_headers):
+    """Updating a template that doesn't exist returns 404."""
+    response = client.put(
+        "/api/task-templates/99999",
+        headers=auth_headers,
+        json={"name": "Test", "action": "rewrite", "instruction": "test"},
+    )
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "not_found"
+
+
+def test_delete_nonexistent_template_returns_404(client, auth_headers):
+    """Deleting a template that doesn't exist returns 404."""
+    response = client.delete(
+        "/api/task-templates/99999",
+        headers=auth_headers,
+    )
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "not_found"
+
+
+def test_pickup_returns_null_when_no_pending_tasks(client, auth_headers):
+    """POST /api/tasks/next returns null when there are no pending tasks."""
+    response = client.post(
+        "/api/tasks/next",
+        headers=auth_headers,
+        json={"agent_name": "test-agent"},
+    )
+    assert response.status_code == 200
+    assert response.json()["data"] is None
+
+
+def test_list_tasks_filters_by_status_and_doc_id(client, auth_headers):
+    """Task list should support filtering by status and doc_id."""
+    raw_markdown = "# Heading\nAlpha\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+    create_task(client, auth_headers, doc_id, raw_markdown, "Alpha")
+
+    # Filter by status
+    response = client.get(
+        f"/api/tasks?status=pending&doc_id={doc_id}",
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert len(data) == 1
+    assert data[0]["status"] == "pending"
+
+    # Filter by different status returns empty
+    response = client.get(
+        f"/api/tasks?status=done&doc_id={doc_id}",
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+    assert len(response.json()["data"]) == 0
+
+
+def test_template_create_rejects_blank_fields(client, auth_headers):
+    """Template creation should reject blank name, action, or instruction."""
+    response = client.post(
+        "/api/task-templates",
+        headers=auth_headers,
+        json={"name": "   ", "action": "rewrite", "instruction": "test"},
+    )
+    assert response.status_code == 422
+
+    response = client.post(
+        "/api/task-templates",
+        headers=auth_headers,
+        json={"name": "Test", "action": "   ", "instruction": "test"},
+    )
+    assert response.status_code == 422
+
+    response = client.post(
+        "/api/task-templates",
+        headers=auth_headers,
+        json={"name": "Test", "action": "rewrite", "instruction": "   "},
+    )
+    assert response.status_code == 422
+
+
+def test_recovery_preview_for_non_stale_task(client, auth_headers):
+    """Recovery preview should report a non-stale task correctly."""
+    raw_markdown = "# Heading\nAlpha\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+    task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "Alpha")
+    task_id = task["id"]
+
+    response = client.get(
+        f"/api/tasks/{task_id}/recovery-preview",
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["is_stale"] is False
+    assert data["can_relocate"] is False
+    assert data["can_requeue_from_current"] is False
+    assert data["recommended_mode"] is None
+
+
+def test_recover_with_unsupported_mode_returns_422(client, auth_headers):
+    """Recover with an unsupported mode should return validation error."""
+    raw_markdown = "# Heading\nAlpha\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+    task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "Alpha")
+
+    response = client.post(
+        f"/api/tasks/{task['id']}/recover",
+        headers=auth_headers,
+        json={"mode": "invalid_mode", "actor": "browser"},
+    )
+    assert response.status_code == 422
+
+
+def test_versions_for_nonexistent_document_returns_404(client, auth_headers):
+    """Listing versions for a nonexistent document returns 404."""
+    response = client.get("/api/docs/99999/versions", headers=auth_headers)
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "not_found"
+
+
+def test_rollback_to_nonexistent_version_returns_404(client, auth_headers):
+    """Rolling back to a nonexistent version returns 404."""
+    raw_markdown = "# Title\nContent\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+
+    response = client.post(
+        f"/api/docs/{doc_id}/versions/99999/rollback",
+        headers=auth_headers,
+        json={"expected_revision": 1, "actor": "browser"},
+    )
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "not_found"
+
+
+def test_title_only_update_does_not_increment_revision(client, auth_headers):
+    """Updating only the title (not content) should not create a new revision."""
+    raw_markdown = "# Title\nContent\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+
+    response = client.put(
+        f"/api/docs/{doc_id}",
+        headers=auth_headers,
+        json={
+            "title": "New Title",
+            "raw_markdown": raw_markdown,
+            "expected_revision": 1,
+            "actor": "browser",
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["title"] == "New Title"
+    assert data["revision"] == 1
+
+    # Check only 1 version exists (the initial creation)
+    versions = client.get(
+        f"/api/docs/{doc_id}/versions",
+        headers=auth_headers,
+    )
+    assert len(versions.json()["data"]) == 1
+
+
+def test_batch_accept_validates_range_parameters(client, auth_headers):
+    """Providing only start_offset without end_offset should be rejected."""
+    raw_markdown = "# Title\nContent\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+
+    response = client.post(
+        f"/api/docs/{doc_id}/tasks/accept-ready",
+        headers=auth_headers,
+        json={"actor": "browser", "start_offset": 0},
+    )
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "validation_error"
+
+
+def test_cleanup_stale_on_document_without_tasks(client, auth_headers):
+    """Cleanup stale on a document with no tasks should return all zeros."""
+    raw_markdown = "# Title\nContent\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+
+    response = client.post(
+        f"/api/docs/{doc_id}/tasks/cleanup-stale",
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["cancelled"] == 0
+    assert data["rejected"] == 0
+    assert data["unchanged"] == 0
+
+
+def test_diff_for_pending_task_without_result_returns_409(client, auth_headers):
+    """Getting diff for a task without a result (pending) should return 409."""
+    raw_markdown = "# Title\nContent\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+    task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "Content")
+
+    response = client.get(
+        f"/api/tasks/{task['id']}/diff",
+        headers=auth_headers,
+    )
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "invalid_state"
+
+
+def test_complete_task_rejects_non_processing_task(client, auth_headers):
+    """Completing a pending (not processing) task should fail."""
+    raw_markdown = "# Title\nContent\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+    task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "Content")
+
+    response = client.post(
+        f"/api/tasks/{task['id']}/complete",
+        headers=auth_headers,
+        json={"result": "New Content"},
+    )
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "invalid_state"
+
+
+def test_ui_does_not_contain_undefined_function_references(client):
+    """The UI page should not reference undefined functions like syncKeyState."""
+    response = client.get("/")
+    assert response.status_code == 200
+    assert "syncKeyState" not in response.text
+
+
+def test_ui_contains_visibilitychange_listener(client):
+    """The UI page should register a visibilitychange event listener for auto-refresh."""
+    response = client.get("/")
+    assert response.status_code == 200
+    assert "visibilitychange" in response.text
