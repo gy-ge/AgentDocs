@@ -137,7 +137,9 @@ documents.raw_markdown 是唯一真源。
 2. 服务端取一个 pending 任务并置为 processing
 3. Agent 完成后调用 POST /api/tasks/{id}/complete
 
-如果 Agent 异常退出，人工后续可 cancel，必要时再补 reset 或 retry。
+如果 Agent 异常退出，人工后续可 cancel 或 retry。
+
+当前实现中已经补充 diff 预览与 stale cleanup，作为人工处理旧任务的最小辅助工具。
 
 ## 五、数据模型
 
@@ -203,13 +205,16 @@ documents.raw_markdown 是唯一真源。
 任务：
 
 - POST /api/docs/{doc_id}/tasks
+- POST /api/docs/{doc_id}/tasks/cleanup-stale
 - GET /api/tasks
 - GET /api/tasks/{task_id}
+- GET /api/tasks/{task_id}/diff
 - POST /api/tasks/next
 - POST /api/tasks/{task_id}/complete
 - POST /api/tasks/{task_id}/accept
 - POST /api/tasks/{task_id}/reject
 - POST /api/tasks/{task_id}/cancel
+- POST /api/tasks/{task_id}/retry
 
 ## 八、实现顺序
 

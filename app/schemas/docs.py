@@ -1,6 +1,10 @@
 from datetime import datetime
+from typing import Annotated
 
-from pydantic import BaseModel
+from pydantic import BaseModel, StringConstraints
+
+
+NonEmptyText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
 class BlockRead(BaseModel):
@@ -13,16 +17,16 @@ class BlockRead(BaseModel):
 
 
 class DocumentCreate(BaseModel):
-    title: str
+    title: NonEmptyText
     raw_markdown: str = ""
-    actor: str = "browser"
+    actor: NonEmptyText = "browser"
 
 
 class DocumentUpdate(BaseModel):
-    title: str
+    title: NonEmptyText
     raw_markdown: str
     expected_revision: int
-    actor: str = "browser"
+    actor: NonEmptyText = "browser"
     note: str | None = None
 
 

@@ -67,6 +67,11 @@ Base URL:
 
 ### POST /api/docs
 
+约束：
+
+- title 会先 trim，且不能为空字符串
+- actor 会先 trim，且不能为空字符串
+
 请求：
 
 ```json
@@ -105,6 +110,11 @@ Base URL:
 ```
 
 ### PUT /api/docs/{doc_id}
+
+约束：
+
+- title 会先 trim，且不能为空字符串
+- actor 会先 trim，且不能为空字符串
 
 请求：
 
@@ -174,6 +184,10 @@ Base URL:
 
 ### POST /api/docs/{doc_id}/versions/{version_id}/rollback
 
+约束：
+
+- actor 会先 trim，且不能为空字符串
+
 请求：
 
 ```json
@@ -187,6 +201,10 @@ Base URL:
 ## 3. 任务接口
 
 ### POST /api/docs/{doc_id}/tasks
+
+约束：
+
+- action 会先 trim，且不能为空字符串
 
 请求：
 
@@ -254,6 +272,10 @@ Base URL:
 
 ### POST /api/tasks/next
 
+约束：
+
+- agent_name 会先 trim，且不能为空字符串
+
 请求：
 
 ```json
@@ -306,6 +328,10 @@ Base URL:
 - 不自动改正文
 
 ### POST /api/tasks/{task_id}/accept
+
+约束：
+
+- actor 会先 trim，且不能为空字符串
 
 请求：
 

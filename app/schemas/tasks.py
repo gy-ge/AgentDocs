@@ -1,10 +1,14 @@
 from datetime import datetime
+from typing import Annotated
 
-from pydantic import BaseModel
+from pydantic import BaseModel, StringConstraints
+
+
+NonEmptyText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
 class TaskCreate(BaseModel):
-    action: str
+    action: NonEmptyText
     instruction: str | None = None
     source_text: str
     start_offset: int
@@ -13,7 +17,7 @@ class TaskCreate(BaseModel):
 
 
 class TaskNextRequest(BaseModel):
-    agent_name: str
+    agent_name: NonEmptyText
 
 
 class TaskCompleteRequest(BaseModel):
@@ -56,7 +60,7 @@ class TaskRead(BaseModel):
 
 class TaskAcceptRequest(BaseModel):
     expected_revision: int
-    actor: str = "browser"
+    actor: NonEmptyText = "browser"
     note: str | None = None
 
 

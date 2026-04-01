@@ -60,6 +60,51 @@ def test_root_page_is_served(client):
     assert "清理失效" in response.text
 
 
+def test_create_document_rejects_blank_title(client, auth_headers):
+    response = client.post(
+        "/api/docs",
+        headers=auth_headers,
+        json={
+            "title": "   ",
+            "raw_markdown": "# Title\n",
+            "actor": "browser",
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "validation_error"
+
+
+def test_update_document_rejects_blank_title(client, auth_headers):
+    created = create_document(client, auth_headers, "# Title\n\nAlpha\n", title="Doc")
+
+    response = client.put(
+        f"/api/docs/{created['id']}",
+        headers=auth_headers,
+        json={
+            "title": "   ",
+            "raw_markdown": "# Title\n\nAlpha\n",
+            "expected_revision": 1,
+            "actor": "browser",
+            "note": "blank title",
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "validation_error"
+
+
+def test_pickup_next_task_rejects_blank_agent_name(client, auth_headers):
+    response = client.post(
+        "/api/tasks/next",
+        headers=auth_headers,
+        json={"agent_name": "   "},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "validation_error"
+
+
 def test_document_update_versions_and_rollback(client, auth_headers):
     created = create_document(client, auth_headers, "# Title\n\nAlpha\n")
     doc_id = created["id"]
