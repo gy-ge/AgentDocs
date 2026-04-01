@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="AgentDocs 是一个面向个人使用的文档协作台，用于管理 Markdown 文档、Agent 任务、版本与恢复流程。" />
+    <meta name="description" data-i18n="app_description" content="AgentDocs is a personal document workbench for managing Markdown, Agent tasks, versions, and recovery." />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2324292f'/%3E%3Ctext x='50%25' y='53%25' dominant-baseline='middle' text-anchor='middle' font-family='Segoe UI,Arial,sans-serif' font-size='30' font-weight='700' fill='white'%3EA%3C/text%3E%3C/svg%3E" />
     <title>AgentDocs</title>
     <style>
@@ -144,6 +144,7 @@
       .stack {
         flex-direction: column;
         align-items: stretch;
+        flex-wrap: nowrap;
       }
 
       .app-header,
@@ -287,8 +288,32 @@
         width: auto;
       }
 
-      .doc-toolbar .pill {
-        margin-right: auto;
+      .doc-title-toolbar,
+      .doc-title-actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .doc-title-toolbar {
+        min-width: 0;
+      }
+
+      .doc-title-toolbar input {
+        flex: 1 1 320px;
+        min-width: 0;
+      }
+
+      .doc-title-actions {
+        flex: 0 0 auto;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      .doc-title-actions button {
+        width: auto;
+        flex: 0 0 auto;
+        white-space: nowrap;
       }
 
       .doc-switcher {
@@ -311,12 +336,41 @@
         gap: 12px;
       }
 
+      .task-composer-panel .panel-body {
+        padding: 16px;
+      }
+
+      .task-composer-panel .panel-body.stack {
+        gap: 10px;
+      }
+
+      .task-composer-panel .task-composer-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        align-items: start;
+      }
+
+      .task-composer-panel .task-composer-grid > :nth-child(2),
+      .task-composer-panel .task-composer-grid > :nth-child(4) {
+        grid-column: 1 / -1;
+      }
+
       .task-composer-grid > div {
         min-width: 0;
       }
 
       .task-composer-grid textarea {
         min-height: 40px;
+      }
+
+      .task-composer-panel label {
+        margin-bottom: 4px;
+        font-size: 12px;
+      }
+
+      .task-composer-panel textarea {
+        min-height: 46px;
+        line-height: 1.45;
       }
 
       .selection-status {
@@ -329,6 +383,12 @@
         border: 1px solid var(--line);
         border-radius: 10px;
         background: linear-gradient(180deg, #ffffff 0%, #f9fafb 100%);
+      }
+
+      .task-composer-panel .selection-status {
+        min-height: 36px;
+        padding: 8px 10px;
+        gap: 8px;
       }
 
       .selection-status-label {
@@ -383,6 +443,14 @@
         gap: 10px;
       }
 
+      .task-composer-panel .task-button-row {
+        gap: 8px;
+      }
+
+      .task-composer-panel .task-button-row button {
+        min-height: 38px;
+      }
+
       .editor-panel #doc-body {
         height: 56vh;
         min-height: 120px;
@@ -413,13 +481,12 @@
       .diff {
         border: 1px solid var(--line);
         border-radius: 10px;
-        overflow: auto;
       }
 
       .detail-note {
         padding: 9px 12px;
         background: var(--panel-soft);
-        max-height: 136px;
+        overflow: visible;
         box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
       }
 
@@ -440,7 +507,39 @@
 
       .detail-note strong {
         display: block;
-        margin-bottom: 6px;
+        margin-bottom: 4px;
+        line-height: 1.35;
+      }
+
+      .detail-note > div {
+        line-height: 1.45;
+      }
+
+      .detail-note-inline {
+        display: grid;
+        gap: 4px;
+      }
+
+      .detail-note-extra {
+        display: grid;
+        gap: 8px;
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid rgba(31, 35, 40, 0.08);
+      }
+
+      .detail-note-inline-label {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        color: var(--muted);
+        text-transform: uppercase;
+      }
+
+      .detail-note-inline-value {
+        font-size: 12px;
+        line-height: 1.45;
+        word-break: break-word;
       }
 
       .detail-note code {
@@ -497,17 +596,32 @@
       }
 
       .diff {
-        min-height: 120px;
-        max-height: 240px;
-        overflow: auto;
-        background: #f6f8fa;
+        overflow: visible;
+        background: transparent;
         color: #1f2328;
-        padding: 14px;
+        padding: 0;
+      }
+
+      .diff-toggle {
+        border: 0;
+        border-radius: 10px;
+        background: #f6f8fa;
+      }
+
+      .diff-toggle summary {
+        padding: 12px 14px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .diff-toggle[open] summary {
+        border-bottom: 1px solid var(--line);
       }
 
       .diff-preview {
         display: grid;
         gap: 12px;
+        padding: 14px;
       }
 
       .diff-columns {
@@ -628,6 +742,15 @@
 
       .task-panel .panel-body.stack {
         gap: 10px;
+        max-height: min(68vh, 680px);
+        overflow-y: auto;
+        overflow-x: hidden;
+        overscroll-behavior: contain;
+        scrollbar-gutter: stable;
+      }
+
+      .task-panel .panel-body.stack > * {
+        min-width: 0;
       }
 
       .task-actions:empty {
@@ -752,7 +875,6 @@
         }
 
         .doc-switcher,
-        .doc-toolbar,
         .task-list-tools,
         .diff-columns,
         .task-actions,
@@ -776,7 +898,6 @@
 
         .doc-switcher .doc-switcher-actions,
         .doc-switcher > div,
-        .doc-toolbar button,
         .task-actions button,
         .inline-actions button,
         .modal-actions button {
@@ -788,12 +909,25 @@
           grid-template-columns: 1fr;
         }
 
+        .task-composer-panel .task-composer-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .task-composer-panel .task-composer-grid > :nth-child(2),
+        .task-composer-panel .task-composer-grid > :nth-child(4) {
+          grid-column: auto;
+        }
+
         .task-meta {
           grid-template-columns: 1fr;
         }
 
         .task-meta-row.is-wide {
           grid-column: auto;
+        }
+
+        .task-panel .panel-body.stack {
+          max-height: min(62vh, 620px);
         }
 
         .selection-status {
@@ -825,9 +959,30 @@
           padding: 16px;
         }
 
+        .doc-title-toolbar {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .doc-title-actions {
+          width: 100%;
+          align-items: stretch;
+        }
+
+        .doc-title-actions button {
+          width: 100%;
+          min-width: 0;
+        }
+
         .editor-panel #doc-body {
           height: 42vh;
         }
+      }
+
+      #lang-toggle {
+        width: auto;
+        min-width: 80px;
+        font-weight: 600;
       }
     </style>
   </head>
@@ -836,16 +991,16 @@
       <section class="modal-card" aria-labelledby="key-modal-title" aria-modal="true" role="dialog">
         <div class="stack" style="gap: 14px">
           <div>
-            <h2 id="key-modal-title">连接设置</h2>
-            <p>输入共享 API Key。页面只会保存在当前浏览器本地。</p>
+            <h2 id="key-modal-title" data-i18n="connection_settings">Connection Settings</h2>
+            <p data-i18n="key_modal_hint">Enter your shared API Key. It will be stored locally in your browser.</p>
           </div>
           <div>
-            <label for="api-key">API Key</label>
-            <input id="api-key" type="password" placeholder="输入共享 API Key" />
+            <label for="api-key" data-i18n="api_key">API Key</label>
+            <input id="api-key" type="password" data-i18n="api_key_placeholder" placeholder="Enter shared API Key" />
           </div>
           <div class="modal-actions">
-            <button id="save-key" class="primary">保存并继续</button>
-            <button id="close-key" class="secondary">稍后再说</button>
+            <button id="save-key" class="primary" data-i18n="save_and_continue">Save and Continue</button>
+            <button id="close-key" class="secondary" data-i18n="later">Later</button>
           </div>
         </div>
       </section>
@@ -854,15 +1009,15 @@
     <section id="template-modal" class="modal-backdrop hidden" aria-modal="true" role="dialog">
       <div class="modal-card" style="width: min(720px, 100%)">
         <div class="stack">
-          <h2>管理模板</h2>
-          <p>内置模板只保留一个格式示例，自定义模板保存在服务端，适合个人跨设备长期复用。</p>
+          <h2 data-i18n="manage_templates">Manage Templates</h2>
+          <p data-i18n="template_modal_hint">Builtin templates serve as examples. Custom templates are stored on the server.</p>
           <div class="task-composer-grid">
             <div>
-              <label for="template-name">模板名称</label>
-              <input id="template-name" placeholder="例如：技术方案润色" />
+              <label for="template-name" data-i18n="template_name">Template Name</label>
+              <input id="template-name" data-i18n="template_name_placeholder" placeholder="e.g. Technical Polish" />
             </div>
             <div>
-              <label for="template-action">模板动作</label>
+              <label for="template-action" data-i18n="template_action">Template Action</label>
               <select id="template-action">
                 <option value="rewrite">rewrite</option>
                 <option value="summarize">summarize</option>
@@ -872,14 +1027,14 @@
               </select>
             </div>
             <div>
-              <label for="template-instruction">模板说明</label>
-              <textarea id="template-instruction" rows="3" placeholder="例如：改成正式、克制、适合项目文档的说明"></textarea>
+              <label for="template-instruction" data-i18n="template_instruction">Template Instruction</label>
+              <textarea id="template-instruction" rows="3" data-i18n="template_instruction_placeholder" placeholder="e.g. Use formal and professional tone..."></textarea>
             </div>
           </div>
           <div class="modal-actions">
-            <button id="save-template" class="primary">保存模板</button>
-            <button id="reset-template-form" class="secondary">清空表单</button>
-            <button id="close-template-modal" class="secondary">关闭</button>
+            <button id="save-template" class="primary" data-i18n="save_template">Save Template</button>
+            <button id="reset-template-form" class="secondary" data-i18n="reset_form">Reset Form</button>
+            <button id="close-template-modal" class="secondary" data-i18n="close">Close</button>
           </div>
           <div id="template-list" class="template-list"></div>
         </div>
@@ -891,16 +1046,16 @@
         <header class="app-header">
           <div class="brand">
             <h1>AgentDocs</h1>
-            <p>主区域只保留文档工作台，左侧集中处理任务和版本。</p>
+            <p data-i18n="brand_hint">Focused document workspace with side panels for tasks and versions.</p>
           </div>
           <div class="inline-actions">
-            <span id="key-state" class="pill">未设置 API Key</span>
-            <button id="open-key-modal">连接设置</button>
-            <button id="refresh-current">刷新当前</button>
+            <button id="open-key-modal" data-i18n="connection_settings">Connection Settings</button>
+            <button id="refresh-current" data-i18n="refresh_current">Refresh Current</button>
+            <button id="lang-toggle" class="secondary">EN / 中文</button>
           </div>
         </header>
 
-        <div id="status" class="status">等待连接。</div>
+        <div id="status" class="status" data-i18n="waiting_connection">Waiting for connection.</div>
 
         <section class="workspace">
           <aside class="sidebar">
@@ -908,18 +1063,18 @@
               <div class="panel-body stack">
                 <div class="section-header">
                   <div class="section-title">
-                    <h2>任务动作</h2>
+                    <h2 data-i18n="task_actions">Task Actions</h2>
                   </div>
                 </div>
 
                 <div id="selection-status" class="selection-status" aria-live="polite">
-                  <span class="selection-status-label">当前选区</span>
-                  <span id="selection-info" class="selection-status-value">尚未选择文本</span>
+                  <span class="selection-status-label" data-i18n="current_selection">Current Selection</span>
+                  <span id="selection-info" class="selection-status-value" data-i18n="no_selection">No text selected</span>
                 </div>
 
                 <div class="task-composer-grid">
                   <div>
-                    <label for="task-action">任务动作</label>
+                    <label for="task-action" data-i18n="task_action">Task Action</label>
                     <select id="task-action">
                       <option value="rewrite">rewrite</option>
                       <option value="summarize">summarize</option>
@@ -929,18 +1084,18 @@
                     </select>
                   </div>
                   <div>
-                    <label for="task-instruction">补充说明</label>
-                    <textarea id="task-instruction" rows="1" placeholder="例如：改成更正式的项目说明"></textarea>
+                    <label for="task-instruction" data-i18n="additional_instructions">Additional Instructions</label>
+                    <textarea id="task-instruction" rows="1" data-i18n="task_instruction_placeholder" placeholder="e.g. Make it more formal..."></textarea>
                   </div>
                   <div>
-                    <label for="task-template">快捷模板</label>
+                    <label for="task-template" data-i18n="quick_templates">Quick Templates</label>
                     <select id="task-template"></select>
                   </div>
                   <div class="task-button-row">
-                    <button id="create-task" class="primary">创建任务</button>
-                    <button id="manage-templates" class="secondary">管理模板</button>
-                    <button id="save-doc-defaults" class="secondary">设为文档默认</button>
-                    <button id="cleanup-stale" class="secondary">清理失效</button>
+                    <button id="create-task" class="primary" data-i18n="create_task">Create Task</button>
+                    <button id="manage-templates" class="secondary" data-i18n="manage_templates">Manage Templates</button>
+                    <button id="save-doc-defaults" class="secondary" data-i18n="set_as_defaults">Set as Defaults</button>
+                    <button id="cleanup-stale" class="secondary" data-i18n="cleanup_stale">Cleanup Stale</button>
                   </div>
                 </div>
               </div>
@@ -950,72 +1105,72 @@
               <div class="panel-body stack">
                 <div class="section-header">
                   <div class="section-title">
-                    <h2>任务处理</h2>
+                    <h2 data-i18n="task_processing">Task Processing</h2>
                   </div>
                   <div class="inline-actions">
-                    <button id="accept-ready" class="secondary">批量接受可合并结果</button>
-                    <span id="task-count-pill" class="pill">任务 0</span>
+                    <button id="accept-ready" class="secondary" data-i18n="bulk_accept">Bulk Accept</button>
+                    <span id="task-count-pill" class="pill" data-i18n="tasks_count_initial">Tasks 0</span>
                   </div>
                 </div>
 
                 <div class="task-list-wrap">
-                  <label class="visually-hidden" for="task-list">当前文档任务</label>
+                  <label class="visually-hidden" for="task-list" data-i18n="current_doc_tasks">Current Document Tasks</label>
                   <select id="task-list">
-                    <option value="">先选择文档</option>
+                    <option value="" data-i18n="select_doc_first">Select document first</option>
                   </select>
                   <div class="task-list-tools">
                     <div class="compact-field">
-                      <label for="accept-ready-scope">批量接受范围</label>
+                      <label for="accept-ready-scope" data-i18n="bulk_accept_scope">Bulk Accept Scope</label>
                       <select id="accept-ready-scope">
-                        <option value="all">当前文档全部可合并结果</option>
-                        <option value="selected-action">仅所选任务同动作</option>
-                        <option value="current-block">仅当前 block</option>
+                        <option value="all" data-i18n="scope_all">All ready in current doc</option>
+                        <option value="selected-action" data-i18n="scope_action">Same action only</option>
+                        <option value="current-block" data-i18n="scope_block">Current block only</option>
                       </select>
                     </div>
                     <div class="compact-field">
-                      <label for="accept-ready-limit">单次上限</label>
+                      <label for="accept-ready-limit" data-i18n="max_limit">Limit</label>
                       <select id="accept-ready-limit">
                         <option value="10">10</option>
                         <option value="20" selected>20</option>
                         <option value="50">50</option>
-                        <option value="all">不限</option>
+                        <option value="all" data-i18n="unlimited">Unlimited</option>
                       </select>
                     </div>
-                    <span id="auto-refresh-pill" class="pill">自动刷新：前台 15s</span>
+                    <span id="auto-refresh-pill" class="pill">Auto refresh: Active 15s</span>
                   </div>
-                  <div id="task-group-summary" class="panel-caption">按状态分组显示当前文档任务。</div>
+                  <div id="task-group-summary" class="panel-caption" data-i18n="task_group_hint">Tasks grouped by status.</div>
                 </div>
 
                 <div class="section-header" style="display: none; margin-top: 8px;">
-                  <span id="diff-state" class="pill">未选择任务</span>
+                  <span id="diff-state" class="pill" data-i18n="no_task_selected">No task selected</span>
                 </div>
                 
                 <div id="task-summary" class="detail-note">
-                  <strong>操作建议</strong>
-                  <div>选择任务后，这里只保留当前最重要的判断和动作。</div>
+                  <strong data-i18n="action_recommendation">Recommendation</strong>
+                  <div data-i18n="task_summary_placeholder">Insights and actions will appear here when a task is selected.</div>
                 </div>
                 <div id="task-metadata" class="task-meta">
                   <div class="task-meta-row">
-                    <span class="task-meta-label">任务信息</span>
-                    <div class="task-meta-value">选择任务后，这里会显示任务动作、补充说明和定位信息。</div>
+                    <span class="task-meta-label" data-i18n="task_info">Task Info</span>
+                    <div class="task-meta-value" data-i18n="task_meta_placeholder">Metadata will be shown here.</div>
                   </div>
                 </div>
                 <div id="task-actions" class="task-actions"></div>
-                <div id="task-diff" class="diff">这里会显示原始文本、当前文本、任务结果和 unified diff 对照，也可展开查看 unified diff。</div>
+                <div id="task-diff" class="diff" data-i18n="diff_placeholder">Comparison of sources and results will appear here.</div>
               </div>
             </section>
 
             <section class="panel version-panel">
               <div class="panel-body stack">
                 <details id="version-details">
-                  <summary>版本历史</summary>
+                  <summary data-i18n="version_history">Version History</summary>
                   <div class="details-body stack">
                     <div class="section-header">
                       <div class="section-title">
-                        <h3>历史版本</h3>
-                        <p>只在需要回滚时展开。</p>
+                        <h3 data-i18n="historical_versions">Historical Versions</h3>
+                        <p data-i18n="version_panel_hint">Expand only when rollback is needed.</p>
                       </div>
-                      <span id="version-count-pill" class="pill">版本 0</span>
+                      <span id="version-count-pill" class="pill" data-i18n="versions_count_initial">Versions 0</span>
                     </div>
                     <div id="version-list" class="version-list"></div>
                   </div>
@@ -1029,43 +1184,41 @@
               <div class="panel-body stack">
                 <div class="panel-header">
                   <div class="section-title">
-                    <h2>文档工作台</h2>
-                    <p>这是核心写作区，文档选择和新建也在这里完成。</p>
+                    <h2 data-i18n="doc_editor">Document Workbench</h2>
+                    <p data-i18n="doc_editor_hint">Write and manage documents here.</p>
                   </div>
-                  <span id="doc-revision-pill" class="pill">未选择文档</span>
+                  <span id="doc-revision-pill" class="pill" data-i18n="no_doc_selected">No document selected</span>
                 </div>
 
                 <div class="doc-switcher">
                   <div class="compact-field">
-                    <label class="visually-hidden" for="doc-selector">已有文档</label>
+                    <label class="visually-hidden" for="doc-selector" data-i18n="existing_docs">Existing Docs</label>
                     <select id="doc-selector">
-                      <option value="">请选择文档</option>
+                      <option value="" data-i18n="please_select_doc">Please select document</option>
                     </select>
                   </div>
                   <div class="compact-field">
-                    <label class="visually-hidden" for="new-title">新建文档</label>
-                    <input id="new-title" placeholder="输入新文档标题后创建" />
+                    <label class="visually-hidden" for="new-title" data-i18n="new_doc_title">New Title</label>
+                    <input id="new-title" data-i18n="new_doc_placeholder" placeholder="Enter title to create" />
                   </div>
                   <div class="doc-switcher-actions inline-actions">
-                    <button id="create-doc" class="primary">新建</button>
+                    <button id="create-doc" class="primary" data-i18n="create">Create</button>
                   </div>
                 </div>
 
-                <div>
-                  <label for="doc-title">标题</label>
-                  <input id="doc-title" placeholder="未选择文档" />
-                </div>
-
-                <div class="doc-toolbar">
-                  <span class="pill">常用动作</span>
-                  <button id="save-doc" class="primary">保存文档</button>
-                  <button id="export-doc" class="secondary">导出 Markdown</button>
-                  <button id="delete-doc" class="danger">删除文档</button>
+                <div class="doc-title-toolbar">
+                  <label class="visually-hidden" for="doc-title" data-i18n="title">Title</label>
+                  <input id="doc-title" data-i18n="no_doc_selected" placeholder="No document selected" />
+                  <div class="doc-title-actions">
+                    <button id="save-doc" class="primary" data-i18n="save_doc">Save Document</button>
+                    <button id="export-doc" class="secondary" data-i18n="export_markdown">Export Markdown</button>
+                    <button id="delete-doc" class="danger" data-i18n="delete_doc">Delete Document</button>
+                  </div>
                 </div>
 
                 <div>
                   <label for="doc-body">Markdown</label>
-                  <textarea id="doc-body" placeholder="# 开始写文档"></textarea>
+                  <textarea id="doc-body" data-i18n="doc_body_placeholder" placeholder="# Start writing..."></textarea>
                 </div>
               </div>
             </section>
@@ -1075,6 +1228,382 @@
     </main>
 
     <script>
+      const i18n = {
+        en: {
+          app_description: "AgentDocs is a personal document workbench for managing Markdown, Agent tasks, versions, and recovery.",
+          connection_settings: "Connection Settings",
+          key_modal_hint: "Enter your shared API Key. It will be stored locally in your browser.",
+          api_key: "API Key",
+          api_key_placeholder: "Enter shared API Key",
+          save_and_continue: "Save and Continue",
+          later: "Later",
+          manage_templates: "Manage Templates",
+          template_modal_hint: "Builtin templates serve as examples. Custom templates are stored on the server.",
+          template_name: "Template Name",
+          template_name_placeholder: "e.g. Technical Polish",
+          template_action: "Template Action",
+          template_instruction: "Template Instruction",
+          template_instruction_placeholder: "e.g. Use formal and professional tone...",
+          save_template: "Save Template",
+          reset_form: "Reset Form",
+          close: "Close",
+          brand_hint: "Focused document workspace with side panels for tasks and versions.",
+          key_not_set: "API Key not set",
+          key_saved: "API Key saved",
+          refresh_current: "Refresh Current",
+          waiting_connection: "Waiting for connection.",
+          task_actions: "Task Actions",
+          current_selection: "Current Selection",
+          no_selection: "No text selected",
+          task_action: "Task Action",
+          additional_instructions: "Additional Instructions",
+          task_instruction_placeholder: "e.g. Make it more formal...",
+          quick_templates: "Quick Templates",
+          create_task: "Create Task",
+          set_as_defaults: "Set as Defaults",
+          cleanup_stale: "Cleanup Stale",
+          task_processing: "Task Processing",
+          bulk_accept: "Bulk Accept",
+          tasks_count_initial: "Total 0",
+          tasks_count_pattern: "Total {count}",
+          current_doc_tasks: "Current Document Tasks",
+          select_doc_first: "Select document first",
+          no_tasks_in_doc: "No tasks in current document",
+          bulk_accept_scope: "Bulk Accept Scope",
+          scope_all: "All ready in current doc",
+          scope_action: "Same action only",
+          scope_block: "Current block only",
+          max_limit: "Limit",
+          unlimited: "Unlimited",
+          auto_refresh_hint: "Auto refresh: {mode} {sec}s",
+          auto_refresh_paused: "Auto refresh: Paused (hidden)",
+          auto_refresh_active_mode: "Active",
+          task_group_hint: "Tasks grouped by status.",
+          no_task_selected: "No task selected",
+          action_recommendation: "Recommendation",
+          task_summary_placeholder: "Insights and actions will appear here when a task is selected.",
+          task_info: "Task Info",
+          task_meta_placeholder: "Metadata will be shown here.",
+          diff_placeholder: "Comparison of sources and results will appear here.",
+          diff_panel_summary: "Diff Details",
+          version_history: "Version History",
+          historical_versions: "Historical Versions",
+          versions_count_initial: "Versions 0",
+          versions_count_pattern: "Versions {count}",
+          version_panel_hint: "Expand only when rollback is needed.",
+          doc_editor: "Document Workbench",
+          doc_editor_hint: "Write and manage documents here.",
+          no_doc_selected: "No document selected",
+          existing_docs: "Existing Docs",
+          please_select_doc: "Please select document",
+          new_doc_title: "New Title",
+          new_doc_placeholder: "Enter title to create",
+          create: "Create",
+          title: "Title",
+          common_actions: "Common Actions",
+          save_doc: "Save Document",
+          export_markdown: "Export Markdown",
+          delete_doc: "Delete Document",
+          doc_body_placeholder: "# Start writing...",
+          api_key_saved_msg: "API Key saved to browser.",
+          api_key_required: "API Key required. Open Connection Settings to continue.",
+          template_deleted: "Template deleted.",
+          no_templates: "No templates.",
+          template_saved: "Template \"{name}\" saved.",
+          import_legacy_success: "Imported custom templates from browser to server.",
+          no_doc_selected_pill: "No document selected",
+          revision_pill: "revision {rev}",
+          loaded_doc_msg: "Loaded document #{id}, revision {rev}.",
+          rollback_to_this: "Rollback to here",
+          no_remarks: "No remarks",
+          rollback_success: "Rolled back to version #{id}, revision {rev}.",
+          accept: "Accept",
+          reject: "Reject",
+          cancel: "Cancel",
+          retry: "Retry",
+          relocate: "Relocate",
+          sync_location: "Sync Location",
+          requeue_from_current: "Recreate from current",
+          mark_stale: "Mark Stale",
+          close_stale: "Close Stale",
+          cleanup_stale_actions: "Cleanup Stale Tasks",
+          diff_can_accept: "Ready to accept",
+          diff_can_accept_msg: "Current text matches source, can confirm directly.",
+          diff_conflict: "Conflicts exist",
+          diff_done: "Completed",
+          diff_accepted: "Accepted",
+          diff_rejected: "Rejected",
+          diff_processing: "Processing",
+          diff_pending: "Pending",
+          diff_failed: "Failed",
+          diff_cancelled: "Cancelled",
+          diff_stale: "Stale",
+          task_accepted_msg: "Task #{id} accepted.",
+          task_closed_msg: "Task #{id} closed.",
+          task_cancelled_msg: "Task #{id} cancelled.",
+          task_retried_msg: "Task #{id} set to pending.",
+          task_recreated_msg: "Recreated task #{newId} based on current text.",
+          cleanup_summary: "Cleaned up: cancelled {cancelled}, closed {rejected}, kept {unchanged}.",
+          bulk_accept_success: "Bulk accepted {count} tasks, skipped {skipped}, current revision {rev}.",
+          bulk_accept_none: "No tasks could be safely merged, skipped {skipped}.",
+          task_created_msg: "Task created, waiting for Agent.",
+          selection_at: "Selection {start}-{end}, length {len}",
+          current_block: "Current block: {block}",
+          defaults_saved: "Current actions saved as defaults.",
+          defaults_cleared: "Default actions cleared.",
+          delete_confirm: "Document, tasks, and versions will be removed. Delete?",
+          doc_deleted: "Document #{id} deleted.",
+          export_success: "Exported {name}.",
+          builtin_example: "Builtin · {name}",
+          custom_template: "Custom · {name}",
+          no_template_opt: "No template",
+          edit: "Edit",
+          delete: "Delete",
+          source_text_label: "Original Text",
+          current_text_label: "Current Text",
+          result_text_label: "Task Result",
+          unified_diff_link: "View unified diff",
+          diff_no_extra_context: "Only single line difference between source and result.",
+          builtin_template_name: "Template Format Example",
+          builtin_template_instruction: "Example: Define goals, style, constraints, and length, e.g., \"Rewrite as a formal project description, keep facts, under 120 words.\"",
+          builtin_template_meta: "Format Description",
+          field_required: "{field} is required.",
+          empty_value: "None",
+          location_label: "Location",
+          revision_label: "Revision",
+          offset_label: "offset {start}-{end}",
+          task_revision_single: "task rev {taskRev}",
+          task_revision_current: "task rev {taskRev} · current rev {currentRev}",
+          version_entry_title: "revision {rev}",
+          doc_option_label: "{title} · rev {rev}",
+          unauthorized_invalid_key: "Unauthorized: Invalid API Key.",
+          request_failed: "Request failed",
+          selection_removed_reason: "Source selection removed.",
+          selection_shifted_reason: "Source selection length changed.",
+          source_changed_reason: "Source content changed.",
+          document_changed_reason: "Document content changed.",
+          requeue_recommendation: "Current range can be recreated as a single block task.",
+          select_task_first: "Select a task first",
+          no_block_context: "No block context",
+        },
+        zh: {
+          app_description: "AgentDocs 是一个面向个人使用的文档工作台，用于管理 Markdown 文档、Agent 任务、版本和恢复流程。",
+          connection_settings: "连接设置",
+          key_modal_hint: "输入共享 API Key。它只会保存在当前浏览器本地。",
+          api_key: "API Key",
+          api_key_placeholder: "输入共享 API Key",
+          save_and_continue: "保存并继续",
+          later: "稍后再说",
+          manage_templates: "管理模板",
+          template_modal_hint: "内置模板只提供格式示例，自定义模板保存在服务端，适合个人跨设备长期复用。",
+          template_name: "模板名称",
+          template_name_placeholder: "例如：技术方案润色",
+          template_action: "模板动作",
+          template_instruction: "模板说明",
+          template_instruction_placeholder: "例如：改成正式、克制、适合项目文档的说法。",
+          save_template: "保存模板",
+          reset_form: "清空表单",
+          close: "关闭",
+          brand_hint: "主区域保留文档工作台，左侧集中处理任务和版本。",
+          key_not_set: "未设置 API Key",
+          key_saved: "API Key 已保存",
+          refresh_current: "刷新当前",
+          waiting_connection: "等待连接。",
+          task_actions: "任务动作",
+          current_selection: "当前选区",
+          no_selection: "尚未选择文本",
+          task_action: "任务动作",
+          additional_instructions: "补充说明",
+          task_instruction_placeholder: "例如：改成更正式的项目说法。",
+          quick_templates: "快捷模板",
+          create_task: "创建任务",
+          set_as_defaults: "设为文档默认",
+          cleanup_stale: "清理失效",
+          task_processing: "任务处理",
+          bulk_accept: "批量接受可合并结果",
+          tasks_count_initial: "总计 0",
+          tasks_count_pattern: "总计 {count}",
+          current_doc_tasks: "当前文档任务",
+          select_doc_first: "先选择文档",
+          no_tasks_in_doc: "当前文档没有任务",
+          bulk_accept_scope: "批量接受范围",
+          scope_all: "当前文档全部可合并结果",
+          scope_action: "仅所选任务同动作",
+          scope_block: "仅当前 block",
+          max_limit: "单次上限",
+          unlimited: "不限",
+          auto_refresh_hint: "自动刷新：{mode} {sec}s",
+          auto_refresh_paused: "自动刷新：页面隐藏时暂停",
+          auto_refresh_active_mode: "前台",
+          task_group_hint: "按状态分组显示当前文档任务。",
+          no_task_selected: "未选择任务",
+          action_recommendation: "操作建议",
+          task_summary_placeholder: "选择任务后，这里会显示当前最重要的判断和动作。",
+          task_info: "任务信息",
+          task_meta_placeholder: "选择任务后，这里会显示任务动作、补充说明和定位信息。",
+          diff_placeholder: "这里会显示原始文本、当前文本、任务结果和 unified diff 对照。",
+          diff_panel_summary: "任务对比",
+          version_history: "版本历史",
+          historical_versions: "历史版本",
+          versions_count_initial: "版本 0",
+          versions_count_pattern: "版本 {count}",
+          version_panel_hint: "只在需要回滚时展开。",
+          doc_editor: "文档工作台",
+          doc_editor_hint: "这是核心写作区，文档选择和新建也在这里完成。",
+          no_doc_selected: "未选择文档",
+          existing_docs: "已有文档",
+          please_select_doc: "请选择文档",
+          new_doc_title: "新建文档",
+          new_doc_placeholder: "输入新文档标题后创建",
+          create: "新建",
+          title: "标题",
+          common_actions: "常用动作",
+          save_doc: "保存文档",
+          export_markdown: "导出 Markdown",
+          delete_doc: "删除文档",
+          doc_body_placeholder: "# 开始写文档...",
+          api_key_saved_msg: "API Key 已保存到当前浏览器。",
+          api_key_required: "需要先设置 API Key，请在连接设置中填写。",
+          template_deleted: "模板已删除。",
+          no_templates: "暂无模板。",
+          template_saved: "模板“{name}”已保存。",
+          import_legacy_success: "已将当前浏览器中的自定义模板迁移到服务端。",
+          no_doc_selected_pill: "未选择文档",
+          revision_pill: "修订 {rev}",
+          loaded_doc_msg: "已加载文档 #{id}，当前修订 {rev}。",
+          rollback_to_this: "回滚到这里",
+          no_remarks: "无备注",
+          rollback_success: "已回滚到版本 #{id}，当前修订 {rev}。",
+          accept: "接受",
+          reject: "拒绝",
+          cancel: "取消",
+          retry: "重试",
+          relocate: "重新定位",
+          sync_location: "同步定位",
+          requeue_from_current: "按当前正文重建",
+          mark_stale: "标记失效",
+          close_stale: "关闭失效任务",
+          cleanup_stale_actions: "清理失效任务",
+          diff_can_accept: "可直接接受",
+          diff_can_accept_msg: "当前正文仍与任务源文本一致，可以直接确认。",
+          diff_conflict: "存在冲突",
+          diff_done: "待确认",
+          diff_accepted: "已接受",
+          diff_rejected: "已拒绝",
+          diff_processing: "处理中",
+          diff_pending: "待处理",
+          diff_failed: "处理失败",
+          diff_cancelled: "已取消",
+          diff_stale: "已失效",
+          task_accepted_msg: "任务 #{id} 已接受。",
+          task_closed_msg: "任务 #{id} 已关闭。",
+          task_cancelled_msg: "任务 #{id} 已取消。",
+          task_retried_msg: "任务 #{id} 已重置为待处理。",
+          task_recreated_msg: "已基于当前正文重建任务 #{newId}。",
+          cleanup_summary: "已清理失效任务：取消 {cancelled}，关闭 {rejected}，保留 {unchanged}。",
+          bulk_accept_success: "已批量接受 {count} 条任务，跳过 {skipped} 条，当前修订 {rev}。",
+          bulk_accept_none: "当前没有可安全合并的任务，跳过 {skipped} 条。",
+          task_created_msg: "任务已创建，等待 Agent 处理。",
+          selection_at: "选中区域 {start}-{end}，长度 {len}",
+          current_block: "当前 block：{block}",
+          defaults_saved: "当前任务动作和说明已保存为文档默认值。",
+          defaults_cleared: "已清除当前文档的默认任务提示。",
+          delete_confirm: "删除后文档、任务和版本记录都会一并移除。确认删除吗？",
+          doc_deleted: "文档 #{id} 已删除。",
+          export_success: "已导出 {name}。",
+          builtin_example: "内置 · {name}",
+          custom_template: "自定义 · {name}",
+          no_template_opt: "不使用模板",
+          edit: "编辑",
+          delete: "删除",
+          source_text_label: "原始文本",
+          current_text_label: "当前文本",
+          result_text_label: "任务结果",
+          unified_diff_link: "查看 unified diff",
+          diff_no_extra_context: "source_text 与 result 只有单行差异，没有额外上下文。",
+          builtin_template_name: "模板格式示例",
+          builtin_template_instruction: "示例：明确目标、风格、约束和长度，例如“改成正式项目说明，保留事实，控制在 120 字内”。",
+          builtin_template_meta: "格式说明",
+          field_required: "请填写{field}。",
+          empty_value: "无",
+          location_label: "位置",
+          revision_label: "修订",
+          offset_label: "偏移 {start}-{end}",
+          task_revision_single: "任务修订 {taskRev}",
+          task_revision_current: "任务修订 {taskRev} · 当前修订 {currentRev}",
+          version_entry_title: "修订 {rev}",
+          doc_option_label: "{title} · rev {rev}",
+          unauthorized_invalid_key: "认证失败：API Key 无效。",
+          request_failed: "请求失败",
+          selection_removed_reason: "原始选区已经被删除，旧任务不能再直接合并。",
+          selection_shifted_reason: "原始选区长度已经变化，说明正文结构被修改过。",
+          source_changed_reason: "原始选区内容已经变化，旧任务结果需要重新核对。",
+          document_changed_reason: "当前正文已经变化，旧任务结果不能直接套用。",
+          requeue_recommendation: "当前区间仍可作为单一 block 任务，可直接按当前正文重建。",
+          select_task_first: "请先选择一个任务",
+          no_block_context: "当前任务没有 block 上下文",
+        }
+      };
+
+      let currentLang = localStorage.getItem("agentdocs.lang") || "en";
+
+      function t(key, args = {}) {
+        let text = i18n[currentLang][key] || i18n["en"][key] || key;
+        for (const [k, v] of Object.entries(args)) {
+          text = text.replace(`{${k}}`, v);
+        }
+        return text;
+      }
+
+      function renderI18n() {
+        document.querySelectorAll("[data-i18n]").forEach(el => {
+          const key = el.getAttribute("data-i18n");
+          const text = t(key);
+          if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
+            el.placeholder = text;
+          } else if (el.tagName === "META") {
+            el.content = text;
+          } else {
+            el.textContent = text;
+          }
+        });
+        document.documentElement.lang = currentLang;
+      }
+
+      function refreshLocalizedRuntimeUi() {
+        syncKeyState();
+        renderTaskTemplates();
+        if (!templateModalEl.classList.contains('hidden')) {
+          renderTemplateList();
+        }
+        updateAutoRefreshPill();
+
+        if (!apiKeyInput.value.trim()) {
+          setStatus(t("api_key_required"), 'warn');
+        } else if (state.docId && state.revision !== null) {
+          docRevisionPillEl.textContent = t("revision_pill", { rev: state.revision });
+          setStatus(t("loaded_doc_msg", { id: state.docId, rev: state.revision }), 'success');
+        } else {
+          docRevisionPillEl.textContent = t("no_doc_selected_pill");
+          setStatus(t("waiting_connection"));
+        }
+      }
+
+      document.getElementById("lang-toggle").addEventListener("click", () => {
+        currentLang = currentLang === "en" ? "zh" : "en";
+        localStorage.setItem("agentdocs.lang", currentLang);
+        renderI18n();
+        refreshLocalizedRuntimeUi();
+        if (state.docId) {
+          updateSelectionInfo();
+          renderTaskList(state.tasks);
+          loadVersions();
+          if (state.selectedTaskId) {
+            selectTask(state.selectedTaskId);
+          }
+        }
+      });
+
       const state = {
         docId: null,
         revision: null,
@@ -1092,24 +1621,26 @@
       };
 
       const taskGroupMeta = [
-        { key: 'processing', title: '处理中' },
-        { key: 'pending', title: '待处理' },
-        { key: 'done', title: '待确认' },
-        { key: 'stale', title: '已失效' },
-        { key: 'failed', title: '失败' },
-        { key: 'accepted', title: '已接受' },
-        { key: 'closed', title: '已关闭' },
+        { key: 'processing', title_key: 'diff_processing' },
+        { key: 'pending', title_key: 'diff_pending' },
+        { key: 'done', title_key: 'diff_done' },
+        { key: 'stale', title_key: 'diff_stale' },
+        { key: 'failed', title_key: 'diff_failed' },
+        { key: 'accepted', title_key: 'diff_accepted' },
+        { key: 'closed', title_key: 'diff_cancelled' },
       ];
 
-      const BUILTIN_TEMPLATE_MAP = {
-        'builtin:instruction-example': {
-          id: 'builtin:instruction-example',
-          name: '模板格式示例',
-          action: 'rewrite',
-          instruction: '示例：明确目标、风格、约束和长度，例如“改成正式项目说明，保留事实，控制在 120 字内”。',
-          meta: '格式说明',
-        },
-      };
+      function getBuiltinTemplates() {
+        return [
+          {
+            id: 'builtin:instruction-example',
+            name: t('builtin_template_name'),
+            action: 'rewrite',
+            instruction: t('builtin_template_instruction'),
+            meta: t('builtin_template_meta'),
+          },
+        ];
+      }
 
       const LAST_TASK_ACTION_KEY = 'agentdocs.lastTaskAction';
       const CUSTOM_TEMPLATES_KEY = 'agentdocs.customTemplates';
@@ -1118,7 +1649,6 @@
       const apiKeyInput = document.getElementById("api-key");
       const keyModalEl = document.getElementById("key-modal");
       const templateModalEl = document.getElementById("template-modal");
-      const keyStateEl = document.getElementById("key-state");
       const docRevisionPillEl = document.getElementById("doc-revision-pill");
       const docSelectorEl = document.getElementById("doc-selector");
       const selectionInfoEl = document.getElementById("selection-info");
@@ -1153,10 +1683,6 @@
       function setStatus(message, mode = "") {
         statusEl.textContent = message;
         statusEl.className = `status ${mode}`.trim();
-      }
-
-      function syncKeyState() {
-        keyStateEl.textContent = apiKeyInput.value.trim() ? "API Key 已保存" : "未设置 API Key";
       }
 
       function openKeyModal() {
@@ -1216,19 +1742,19 @@
         state.selectedTaskRecovery = null;
         state.tasks = [];
         state.taskSignature = "";
-        docRevisionPillEl.textContent = "未选择文档";
+        docRevisionPillEl.textContent = t("no_doc_selected_pill");
         updateDocumentTitle();
-        docSelectorEl.innerHTML = '<option value="">请选择文档</option>';
+        docSelectorEl.innerHTML = `<option value="">${escapeHtml(t("please_select_doc"))}</option>`;
         docSelectorEl.value = "";
         docTitleInput.value = "";
         docBodyInput.value = "";
         updateSelectionInfo();
-        taskListEl.innerHTML = '<option value="">先选择文档</option>';
-        renderEmpty(versionListEl, "先选择文档。", "版本列表");
+        taskListEl.innerHTML = `<option value="">${escapeHtml(t("select_doc_first"))}</option>`;
+        renderEmpty(versionListEl, t("select_doc_first"), t("historical_versions"));
         resetTaskDetails();
-        taskCountPillEl.textContent = "任务 0";
+        taskCountPillEl.textContent = t("tasks_count_initial");
         taskGroupSummaryEl.textContent = "";
-        versionCountPillEl.textContent = "版本 0";
+        versionCountPillEl.textContent = t("versions_count_initial");
       }
 
       function loadLegacyCustomTemplates() {
@@ -1271,7 +1797,7 @@
             }
             saveLegacyCustomTemplates([]);
             templates = await api('/api/task-templates');
-            setStatus('已将当前浏览器中的自定义模板迁移到服务端。', 'success');
+            setStatus(t("import_legacy_success"), 'success');
           }
         }
         state.serverTemplates = templates;
@@ -1282,20 +1808,17 @@
       }
 
       function getTemplateCatalog() {
-        return [
-          ...Object.values(BUILTIN_TEMPLATE_MAP),
-          ...state.serverTemplates,
-        ];
+        return [...getBuiltinTemplates(), ...state.serverTemplates];
       }
 
       function renderTaskTemplates() {
         const options = [
-          '<option value="">不使用模板</option>',
-          ...Object.values(BUILTIN_TEMPLATE_MAP).map(
-            (template) => `<option value="${normalizeTemplateId(template.id)}">内置 · ${escapeHtml(template.name)}</option>`
+          `<option value="">${escapeHtml(t("no_template_opt"))}</option>`,
+          ...getBuiltinTemplates().map(
+            (template) => `<option value="${normalizeTemplateId(template.id)}">${escapeHtml(t("builtin_example", { name: template.name }))}</option>`
           ),
           ...state.serverTemplates.map(
-            (template) => `<option value="${normalizeTemplateId(template.id)}">自定义 · ${escapeHtml(template.name)}</option>`
+            (template) => `<option value="${normalizeTemplateId(template.id)}">${escapeHtml(t("custom_template", { name: template.name }))}</option>`
           ),
         ];
         taskTemplateEl.innerHTML = options.join('');
@@ -1310,11 +1833,11 @@
       }
 
       function renderTemplateList() {
-        const builtinCards = Object.values(BUILTIN_TEMPLATE_MAP).map(
+        const builtinCards = getBuiltinTemplates().map(
           (template) => `
             <div class="template-item">
               <h3>${escapeHtml(template.name)}</h3>
-              <div class="meta">内置示例 · ${escapeHtml(template.meta || template.action)}</div>
+              <div class="meta">${escapeHtml(t("builtin_example", { name: template.meta || template.action }))}</div>
               <p>${escapeHtml(template.instruction)}</p>
             </div>
           `
@@ -1323,16 +1846,16 @@
           (template) => `
             <div class="template-item">
               <h3>${escapeHtml(template.name)}</h3>
-              <div class="meta">自定义模板 · ${escapeHtml(template.action)}</div>
+              <div class="meta">${escapeHtml(t("custom_template", { name: template.action }))}</div>
               <p>${escapeHtml(template.instruction)}</p>
               <div class="template-item-actions">
-                <button class="secondary" data-template-edit="${template.id}">编辑</button>
-                <button class="danger" data-template-delete="${template.id}">删除</button>
+                <button class="secondary" data-template-edit="${template.id}">${escapeHtml(t("edit"))}</button>
+                <button class="danger" data-template-delete="${template.id}">${escapeHtml(t("delete"))}</button>
               </div>
             </div>
           `
         );
-        templateListEl.innerHTML = [...builtinCards, ...customCards].join('') || '<div class="card"><p class="hint">暂无模板。</p></div>';
+        templateListEl.innerHTML = [...builtinCards, ...customCards].join('') || `<div class="card"><p class="hint">${escapeHtml(t("no_templates"))}</p></div>`;
         templateListEl.querySelectorAll('[data-template-edit]').forEach((button) => {
           button.addEventListener('click', () => {
             const template = state.serverTemplates.find((item) => String(item.id) === button.dataset.templateEdit);
@@ -1352,7 +1875,7 @@
             if (editingTemplateId === button.dataset.templateDelete) {
               resetTemplateForm();
             }
-            setStatus('模板已删除。', 'success');
+            setStatus(t("template_deleted"), 'success');
           });
         });
       }
@@ -1361,10 +1884,10 @@
         const name = templateNameEl.value.trim();
         const instruction = templateInstructionEl.value.trim();
         if (!name) {
-          throw new Error('模板名称不能为空');
+          throw new Error(t("field_required", { field: t("template_name") }));
         }
         if (!instruction) {
-          throw new Error('模板说明不能为空');
+          throw new Error(t("field_required", { field: t("template_instruction") }));
         }
         const nextTemplate = editingTemplateId
           ? await api(`/api/task-templates/${editingTemplateId}`, {
@@ -1389,7 +1912,7 @@
         taskInstructionEl.value = nextTemplate.instruction;
         localStorage.setItem(LAST_TASK_ACTION_KEY, nextTemplate.action);
         resetTemplateForm();
-        setStatus(`模板“${name}”已保存。`, 'success');
+        setStatus(t("template_saved", { name }), 'success');
       }
 
       function restoreTaskComposerState() {
@@ -1487,104 +2010,114 @@
 
       function renderDiffPlaceholder(message) {
         diffEl.innerHTML = `
-          <div class="diff-preview">
-            <div class="panel-caption">${escapeHtml(message)}</div>
-          </div>
+          <details class="diff-toggle">
+            <summary>${escapeHtml(t("diff_panel_summary"))}</summary>
+            <div class="diff-preview">
+              <div class="panel-caption">${escapeHtml(message)}</div>
+            </div>
+          </details>
         `;
       }
 
       function renderDiffPreview(task, diff) {
         diffEl.innerHTML = `
-          <div class="diff-preview">
-            <div class="diff-columns">
-              <div class="diff-column">
-                <span class="diff-label">原始文本</span>
-                <div class="diff-snippet source">${escapeHtml(diff.source_text || '无')}</div>
+          <details class="diff-toggle">
+            <summary>${escapeHtml(t("diff_panel_summary"))}</summary>
+            <div class="diff-preview">
+              <div class="diff-columns">
+                <div class="diff-column">
+                  <span class="diff-label">${escapeHtml(t("source_text_label"))}</span>
+                  <div class="diff-snippet source">${escapeHtml(diff.source_text || t("empty_value"))}</div>
+                </div>
+                <div class="diff-column">
+                  <span class="diff-label">${escapeHtml(t("current_text_label"))}</span>
+                  <div class="diff-snippet current">${escapeHtml(diff.current_text || t("empty_value"))}</div>
+                </div>
+                <div class="diff-column">
+                  <span class="diff-label">${escapeHtml(t("result_text_label"))}</span>
+                  <div class="diff-snippet result">${escapeHtml(diff.result_text || t("empty_value"))}</div>
+                </div>
               </div>
-              <div class="diff-column">
-                <span class="diff-label">当前文本</span>
-                <div class="diff-snippet current">${escapeHtml(diff.current_text || '无')}</div>
-              </div>
-              <div class="diff-column">
-                <span class="diff-label">任务结果</span>
-                <div class="diff-snippet result">${escapeHtml(diff.result_text || '无')}</div>
-              </div>
+              <details>
+                <summary>${escapeHtml(t("unified_diff_link"))}</summary>
+                <div class="details-body">
+                  <div class="diff-unified">${escapeHtml(diff.diff || t("diff_no_extra_context"))}</div>
+                </div>
+              </details>
             </div>
-            <details>
-              <summary>查看 unified diff</summary>
-              <div class="details-body">
-                <div class="diff-unified">${escapeHtml(diff.diff || 'source_text 与 result 只有单行差异，没有额外上下文。')}</div>
-              </div>
-            </details>
-          </div>
+          </details>
         `;
       }
 
-      function setTaskSummary(title, message, mode = "", details = []) {
+      function setTaskSummary(title, message, mode = "", details = [], extras = []) {
         const detailHtml = details
           .filter(Boolean)
           .map((value) => `<code>${escapeHtml(value)}</code>`)
           .join("");
+        const extraHtml = extras.length
+          ? `
+            <div class="detail-note-extra">
+              ${extras
+                .filter((item) => item && item.value)
+                .map(
+                  (item) => `
+                    <div class="detail-note-inline">
+                      <span class="detail-note-inline-label">${escapeHtml(item.label)}</span>
+                      <div class="detail-note-inline-value">${escapeHtml(item.value)}</div>
+                    </div>
+                  `
+                )
+                .join("")}
+            </div>
+          `
+          : "";
         taskSummaryEl.className = `detail-note ${mode}`.trim();
         taskSummaryEl.innerHTML = `
           <strong>${escapeHtml(title)}</strong>
           <div>${escapeHtml(message)}</div>
+          ${extraHtml}
           ${detailHtml}
         `;
       }
 
-      function renderTaskMetadata(task, recoveryPreview) {
-        const locationParts = [`offset ${task.start_offset}-${task.end_offset}`];
+      function buildTaskSummaryExtras(task) {
+        const locationParts = [t("offset_label", { start: task.start_offset, end: task.end_offset })];
         if (task.context?.block?.heading) {
           locationParts.push(task.context.block.heading);
         }
         const headingPath = task.context?.heading_path?.length
           ? task.context.heading_path.map((item) => item.heading).join(' / ')
           : '';
-        const revisionText = recoveryPreview
-          ? `任务 rev ${task.doc_revision} · 当前 rev ${recoveryPreview.current_document_revision}`
-          : `任务 rev ${task.doc_revision}`;
         const locationText = headingPath
           ? `${locationParts.join(' · ')} · ${headingPath}`
           : locationParts.join(' · ');
-        const rows = [
-          { label: '当前任务', value: `#${task.id} · ${task.action} · ${describeTaskOptionStatus(task)}` },
-          { label: '任务定位', value: locationText },
-          { label: '补充说明', value: task.instruction || '无', wide: true },
-          { label: '文档版本', value: revisionText },
-        ];
-        taskMetadataEl.innerHTML = rows
-          .map(
-            (row) => `
-              <div class="task-meta-row${row.wide ? ' is-wide' : ''}">
-                <span class="task-meta-label">${escapeHtml(row.label)}</span>
-                <div class="task-meta-value">${escapeHtml(row.value)}</div>
-              </div>
-            `
-          )
-          .join('');
+        const extras = [{ label: t("location_label"), value: locationText }];
+        if (task.instruction) {
+          extras.push({ label: t("additional_instructions"), value: task.instruction });
+        }
+        return extras;
       }
 
       function resetTaskDetails() {
         state.selectedTaskId = null;
         state.selectedTaskDetail = null;
         state.selectedTaskRecovery = null;
-        diffStateEl.textContent = "未选择任务";
+        diffStateEl.textContent = t("no_task_selected");
         taskActionsEl.innerHTML = "";
-        taskMetadataEl.innerHTML = `
-          <div class="task-meta-row">
-            <span class="task-meta-label">任务信息</span>
-            <div class="task-meta-value">选择任务后，这里会显示任务动作、补充说明和定位信息。</div>
-          </div>
-        `;
-        renderDiffPlaceholder('这里会显示原始文本、当前文本、任务结果和 unified diff 对照。');
-        setTaskSummary("操作建议", "选择任务后，这里只保留当前最重要的判断和动作。");
+        taskMetadataEl.innerHTML = "";
+        renderDiffPlaceholder(t("diff_placeholder"));
+        setTaskSummary(t("action_recommendation"), t("task_summary_placeholder"));
       }
 
       function updateAutoRefreshPill() {
-        autoRefreshPillEl.textContent = document.hidden
-          ? '自动刷新：页面隐藏时暂停'
-          : `自动刷新：前台 ${Math.floor(state.taskPollMs / 1000)}s`;
+        if (document.hidden) {
+          autoRefreshPillEl.textContent = t("auto_refresh_paused");
+        } else {
+          autoRefreshPillEl.textContent = t("auto_refresh_hint", { 
+            mode: t("auto_refresh_active_mode"), 
+            sec: Math.floor(state.taskPollMs / 1000) 
+          });
+        }
       }
 
       function buildTaskSignature(tasks) {
@@ -1626,40 +2159,30 @@
 
       function describeTaskOptionStatus(task) {
         if (task.is_stale) {
-          return '失效';
+          return t("diff_stale");
         }
         if (task.status === 'pending') {
-          return '待处理';
+          return t("diff_pending");
         }
         if (task.status === 'processing') {
-          return '处理中';
+          return t("diff_processing");
         }
         if (task.status === 'done') {
-          return '待确认';
+          return t("diff_done");
         }
         if (task.status === 'accepted') {
-          return '已接受';
+          return t("diff_accepted");
         }
         if (task.status === 'rejected') {
-          return '已拒绝';
+          return t("diff_rejected");
         }
         if (task.status === 'cancelled') {
-          return '已取消';
+          return t("diff_cancelled");
         }
         if (task.status === 'failed') {
-          return '失败';
+          return t("diff_failed");
         }
         return task.status;
-      }
-
-      function compactTaskPreview(task, maxLength = 16) {
-        const baseText = (task.source_text || task.instruction || '')
-          .replace(/\s+/g, ' ')
-          .trim();
-        if (!baseText) {
-          return '';
-        }
-        return baseText.length > maxLength ? `${baseText.slice(0, maxLength)}…` : baseText;
       }
 
       function buildTaskGroups(tasks) {
@@ -1679,23 +2202,21 @@
       }
 
       function renderTaskList(tasks) {
-        taskCountPillEl.textContent = `任务 ${tasks.length}`;
+        taskCountPillEl.textContent = t("tasks_count_pattern", { count: tasks.length });
         renderTaskGroupSummary(tasks);
         if (!tasks.length) {
-          taskListEl.innerHTML = '<option value="">当前文档无任务</option>';
+          taskListEl.innerHTML = `<option value="">${escapeHtml(t("no_tasks_in_doc"))}</option>`;
           return;
         }
         taskListEl.innerHTML = buildTaskGroups(tasks)
           .map((group) => {
             const options = group.tasks
               .map((task) => {
-                const previewLabel = compactTaskPreview(task);
-                const previewText = previewLabel ? ` · ${escapeHtml(previewLabel)}` : '';
                 const stateLabel = describeTaskOptionStatus(task);
-                return `<option value="${task.id}">#${task.id} ${escapeHtml(task.action)} · ${escapeHtml(stateLabel)}${previewText}</option>`;
+                return `<option value="${task.id}">#${task.id} · ${escapeHtml(task.action)} · ${escapeHtml(stateLabel)}</option>`;
               })
               .join('');
-            return `<optgroup label="${escapeHtml(`${group.title} (${group.tasks.length})`)}">${options}</optgroup>`;
+            return `<optgroup label="${escapeHtml(`${t(group.title_key)} (${group.tasks.length})`)}">${options}</optgroup>`;
           })
           .join('');
         if (state.selectedTaskId && tasks.some((task) => task.id === state.selectedTaskId)) {
@@ -1704,64 +2225,42 @@
       }
 
       function buildFriendlyError(code, message) {
-        const detail = message ? ` 细节：${message}` : "";
-        if (code === "conflict") {
-          return `正文和任务源文本已经不一致。可以先清理失效任务，或手动检查后再决定是否重建任务。${detail}`;
-        }
-        if (code === "validation_error") {
-          return `请求未通过校验。请检查当前选区、revision 或任务状态。${detail}`;
-        }
-        if (code === "invalid_state") {
-          return `当前状态不允许这个操作。请先刷新当前文档和任务状态。${detail}`;
-        }
         if (code === "unauthorized") {
           openKeyModal();
-          return "API Key 无效，请重新输入并保存。";
+          return t("unauthorized_invalid_key");
         }
-        return message || "请求失败";
+        return message || t("request_failed");
       }
 
       function describeConflictReason(reason) {
-        if (reason === "selection_removed") {
-          return "原始选区已经被删掉，旧任务不能再直接合并。";
-        }
-        if (reason === "selection_shifted") {
-          return "原始选区长度已经变化，说明正文结构被改过。";
-        }
-        if (reason === "source_changed") {
-          return "原始选区内容已经变化，旧任务结果需要重新核对。";
-        }
-        return "当前正文已经变化，旧任务结果不能直接套用。";
+        if (reason === "selection_removed") return t("selection_removed_reason");
+        if (reason === "selection_shifted") return t("selection_shifted_reason");
+        if (reason === "source_changed") return t("source_changed_reason");
+        return t("document_changed_reason");
       }
 
       function describeRelocationStrategy(strategy) {
-        if (strategy === 'same_block_position_match') {
-          return '按原 block 位置重新定位';
+        if (currentLang === 'zh') {
+           if (strategy === 'same_block_position_match') return '按原 block 位置重新定位';
+           if (strategy === 'same_heading_unique_match') return '按同标题 block 重新定位';
+           if (strategy === 'document_unique_match') return '按全文唯一命中重新定位';
+           if (strategy === 'current_selection_match') return '当前选区仍然匹配';
+           return '已按当前正文重新定位';
         }
-        if (strategy === 'same_heading_unique_match') {
-          return '按同标题 block 重新定位';
-        }
-        if (strategy === 'document_unique_match') {
-          return '按全文唯一命中重新定位';
-        }
-        if (strategy === 'current_selection_match') {
-          return '当前选区仍然匹配，只同步了最新 revision';
-        }
-        return '已按当前正文重新定位';
+        if (strategy === 'same_block_position_match') return 'Relocated via block position';
+        if (strategy === 'same_heading_unique_match') return 'Relocated via heading match';
+        if (strategy === 'document_unique_match') return 'Relocated via unique document match';
+        if (strategy === 'current_selection_match') return 'Current selection still matches';
+        return 'Relocated based on document text';
       }
 
       function describeRecoveryRecommendation(preview) {
-        if (!preview) {
-          return '';
-        }
+        if (!preview) return '';
         if (preview.recommended_mode === 'relocate' && preview.relocation_strategy) {
-          return `${describeRelocationStrategy(preview.relocation_strategy)}后，再决定是否继续处理。`;
+          return `${describeRelocationStrategy(preview.relocation_strategy)}.`;
         }
         if (preview.recommended_mode === 'requeue_from_current') {
-          return '当前区间仍可作为单一 block 任务，可直接按当前正文重建。';
-        }
-        if (preview.can_requeue_from_current) {
-          return '当前区间仍可直接按当前正文重建一条新任务。';
+          return t("requeue_recommendation");
         }
         return '';
       }
@@ -1774,61 +2273,27 @@
       }
 
       function buildAcceptReadyPayload() {
-        const payload = {
-          actor: 'browser',
-          note: 'bulk accept from ui',
-        };
+        const payload = { actor: 'browser', note: 'bulk accept from ui' };
         const limit = acceptReadyLimitEl.value;
-        if (limit !== 'all') {
-          payload.limit = Number(limit);
-        }
-
+        if (limit !== 'all') payload.limit = Number(limit);
         if (acceptReadyScopeEl.value === 'selected-action') {
-          if (!state.selectedTaskDetail) {
-            throw new Error('请先选择一个任务，再按动作筛选批量接受范围');
-          }
+          if (!state.selectedTaskDetail) throw new Error(t("select_task_first"));
           payload.action = state.selectedTaskDetail.action;
         }
-
         if (acceptReadyScopeEl.value === 'current-block') {
           const block = state.selectedTaskDetail?.context?.block;
-          if (!block) {
-            throw new Error('当前任务无法定位 block，不能按当前 block 批量接受');
-          }
+          if (!block) throw new Error(t("no_block_context"));
           payload.start_offset = block.start_offset;
           payload.end_offset = block.end_offset;
         }
         return payload;
       }
 
-      function describeTaskStatusText(task) {
-        if (task.is_stale && task.status === "rejected") {
-          return "失效任务已关闭";
-        }
-        if (task.is_stale && task.status === "cancelled") {
-          return "失效任务已取消";
-        }
-        if (task.is_stale) {
-          return `失效任务 · 建议 ${task.recommended_action || "重建"}`;
-        }
-        return `状态：${task.status}`;
-      }
-
-      function describeResolvedTask(task) {
-        if (task.status === 'accepted') {
-          return '该任务已经接受完成，仅保留结果对照。';
-        }
-        if (task.status === 'rejected') {
-          return '该任务已经明确拒绝，不会再自动影响正文。';
-        }
-        return '该任务已结束，仅展示当前结果记录。';
-      }
-
       function getHeaders() {
         const apiKey = apiKeyInput.value.trim();
         if (!apiKey) {
           openKeyModal();
-          throw new Error("请先设置 API Key");
+          throw new Error(t("api_key_required"));
         }
         return {
           'Content-Type': 'application/json',
@@ -1854,13 +2319,13 @@
 
       function renderDocOptions(docs) {
         if (!docs.length) {
-          docSelectorEl.innerHTML = '<option value="">暂无文档</option>';
+          docSelectorEl.innerHTML = `<option value="">${escapeHtml(t("no_doc_selected"))}</option>`;
           docSelectorEl.value = '';
           return;
         }
         docSelectorEl.innerHTML = docs
           .map(
-            (doc) => `<option value="${doc.id}">${escapeHtml(doc.title)} · rev ${doc.revision}</option>`
+            (doc) => `<option value="${doc.id}">${escapeHtml(t("doc_option_label", { title: doc.title, rev: doc.revision }))}</option>`
           )
           .join('');
         docSelectorEl.value = state.docId ? String(state.docId) : String(docs[0].id);
@@ -1901,7 +2366,7 @@
         state.revision = doc.revision;
         state.docBlocks = doc.blocks;
         state.selectedTaskId = null;
-        docRevisionPillEl.textContent = `revision ${doc.revision}`;
+        docRevisionPillEl.textContent = t("revision_pill", { rev: doc.revision });
         updateDocumentTitle(doc.title);
         docSelectorEl.value = String(doc.id);
         docTitleInput.value = doc.title;
@@ -1914,7 +2379,7 @@
           await loadDocsOnly();
         }
         await Promise.all([loadTasks(), loadVersions()]);
-        setStatus(`已加载文档 #${doc.id}，当前 revision ${doc.revision}。`, 'success');
+        setStatus(t("loaded_doc_msg", { id: doc.id, rev: doc.revision }), 'success');
       }
 
       async function loadTasks(options = {}) {
@@ -1922,9 +2387,8 @@
         if (!state.docId) {
           state.tasks = [];
           state.taskSignature = '';
-          taskCountPillEl.textContent = '任务 0';
-          taskGroupSummaryEl.textContent = '按状态分组显示当前文档任务。';
-          taskListEl.innerHTML = '<option value="">先选择文档</option>';
+          taskCountPillEl.textContent = t("tasks_count_initial");
+          taskListEl.innerHTML = `<option value="">${escapeHtml(t("select_doc_first"))}</option>`;
           resetTaskDetails();
           return { tasks: [], changed: false };
         }
@@ -1954,25 +2418,25 @@
 
       async function loadVersions() {
         if (!state.docId) {
-          versionCountPillEl.textContent = '版本 0';
-          renderEmpty(versionListEl, '先选择文档。', '版本列表');
+          versionCountPillEl.textContent = t("versions_count_initial");
+          renderEmpty(versionListEl, t("select_doc_first"), t("historical_versions"));
           return;
         }
         const versions = await api(`/api/docs/${state.docId}/versions`);
-        versionCountPillEl.textContent = `版本 ${versions.length}`;
+        versionCountPillEl.textContent = t("versions_count_pattern", { count: versions.length });
         if (!versions.length) {
-          renderEmpty(versionListEl, '暂无版本。', '版本列表');
+          renderEmpty(versionListEl, t("no_remarks"), t("historical_versions"));
           return;
         }
         versionListEl.innerHTML = versions
           .map(
             (version) => `
               <div class="card">
-                <h4>revision ${version.revision}</h4>
-                <div class="meta">${escapeHtml(version.note || '无备注')}</div>
+                <h4>${escapeHtml(t("version_entry_title", { rev: version.revision }))}</h4>
+                <div class="meta">${escapeHtml(version.note || t("no_remarks"))}</div>
                 <div class="meta">${escapeHtml(version.actor)}</div>
                 <div class="inline-actions" style="margin-top: 10px">
-                  <button class="secondary" data-version-id="${version.id}">回滚到这里</button>
+                  <button class="secondary" data-version-id="${version.id}">${escapeHtml(t("rollback_to_this"))}</button>
                 </div>
               </div>
             `
@@ -1997,42 +2461,42 @@
         const relocationAvailable = Boolean(recoveryPreview?.can_relocate || canRelocateTask(task));
         const actions = [];
         if (task.status === 'done' && !task.is_stale) {
-          actions.push({ label: '接受', handler: () => acceptTask(taskId), className: 'primary' });
+          actions.push({ label: t("accept"), handler: () => acceptTask(taskId), className: 'primary' });
         }
         if (relocationAvailable) {
           actions.push({
-            label: task.is_stale ? '重定位' : '同步定位',
+            label: task.is_stale ? t("relocate") : t("sync_location"),
             handler: () => relocateTask(taskId),
             className: 'secondary',
           });
         }
         if (['failed', 'cancelled', 'rejected'].includes(task.status) && !task.is_stale) {
-          actions.push({ label: '重试', handler: () => retryTask(taskId), className: 'secondary' });
+          actions.push({ label: t("retry"), handler: () => retryTask(taskId), className: 'secondary' });
         }
         if (recoveryPreview?.can_requeue_from_current) {
           actions.push({
-            label: '按当前正文重建',
+            label: t("requeue_from_current"),
             handler: () => recoverTask(taskId, 'requeue_from_current'),
             className: task.is_stale ? 'primary' : 'secondary',
           });
         }
         if (task.status === 'done') {
           actions.push({
-            label: task.is_stale ? '标记失效' : '拒绝',
+            label: task.is_stale ? t("mark_stale") : t("reject"),
             handler: () => rejectTask(taskId),
             className: task.is_stale ? 'warn' : 'secondary',
           });
         }
         if (['pending', 'processing'].includes(task.status)) {
           actions.push({
-            label: task.is_stale ? '关闭失效任务' : '取消',
+            label: task.is_stale ? t("close_stale") : t("cancel"),
             handler: () => cancelTask(taskId),
             className: task.is_stale ? 'warn' : 'secondary',
           });
         }
         if (task.is_stale) {
           actions.push({
-            label: '清理失效任务',
+            label: t("cleanup_stale_actions"),
             handler: cleanupStaleTasks,
             className: 'secondary',
           });
@@ -2047,22 +2511,6 @@
         });
       }
 
-      function buildExportFileName() {
-        const safeTitle = (docTitleInput.value.trim() || `doc-${state.docId}`)
-          .replace(/[\\/:*?"<>|]/g, '-')
-          .replace(/\s+/g, '-')
-          .replace(/-+/g, '-')
-          .replace(/^-|-$/g, '');
-        const revisionPart = Number.isFinite(state.revision) ? `r${state.revision}` : `doc-${state.docId}`;
-        const now = new Date();
-        const datePart = [
-          now.getFullYear(),
-          String(now.getMonth() + 1).padStart(2, '0'),
-          String(now.getDate()).padStart(2, '0'),
-        ].join('-');
-        return `${safeTitle || 'document'}-${revisionPart}-${datePart}.md`;
-      }
-
       async function selectTask(taskId) {
         state.selectedTaskId = taskId;
         const task = await api(`/api/tasks/${taskId}`);
@@ -2075,98 +2523,45 @@
         const recoveryPreview = state.selectedTaskRecovery;
         const relocationAvailable = Boolean(recoveryPreview?.can_relocate || canRelocateTask(task));
         const recoveryHint = describeRecoveryRecommendation(recoveryPreview);
-        renderTaskMetadata(task, recoveryPreview);
+        const summaryExtras = buildTaskSummaryExtras(task);
+        taskMetadataEl.innerHTML = '';
 
         if (['done', 'accepted', 'rejected'].includes(task.status) && task.result) {
           const diff = await api(`/api/tasks/${taskId}/diff`);
           if (task.status === 'done' && diff.can_accept) {
-            diffStateEl.textContent = '可直接接受';
-            setTaskSummary(
-              '可直接接受',
-              '当前正文仍与任务源文本一致，可以直接确认。',
-              'success'
-            );
+            diffStateEl.textContent = t("diff_can_accept");
+            setTaskSummary(t("diff_can_accept"), t("diff_can_accept_msg"), 'success', [], summaryExtras);
           } else if (task.status === 'done') {
-            diffStateEl.textContent = '存在冲突';
+            diffStateEl.textContent = t("diff_conflict");
             setTaskSummary(
-              relocationAvailable ? '建议先重定位' : recoveryPreview?.can_requeue_from_current ? '建议按当前正文重建' : '建议重建或关闭',
-              relocationAvailable
-                ? `${describeConflictReason(diff.conflict_reason)} ${recoveryHint}`
-                : recoveryPreview?.can_requeue_from_current
-                  ? `${describeConflictReason(diff.conflict_reason)} ${recoveryHint}`
-                  : describeConflictReason(diff.conflict_reason),
-              'warn'
+              relocationAvailable ? t("relocate") : recoveryPreview?.can_requeue_from_current ? t("requeue_from_current") : t("action_recommendation"),
+              describeConflictReason(diff.conflict_reason) + " " + recoveryHint,
+              'warn',
+              [],
+              summaryExtras
             );
           } else {
-            diffStateEl.textContent = task.status === 'accepted' ? '已接受' : '已拒绝';
+            diffStateEl.textContent = task.status === 'accepted' ? t("diff_accepted") : t("diff_rejected");
             setTaskSummary(
-              task.status === 'accepted' ? '任务已接受' : '任务已拒绝',
-              describeResolvedTask(task),
-              task.status === 'accepted' ? 'success' : 'warn'
+              task.status === 'accepted' ? t("diff_accepted") : t("diff_rejected"),
+              task.status === 'accepted' ? t("task_accepted_msg", { id: taskId }) : t("task_closed_msg", { id: taskId }),
+              task.status === 'accepted' ? 'success' : 'warn',
+              [],
+              summaryExtras
             );
           }
           renderDiffPreview(task, diff);
         } else {
-          if (task.is_stale) {
-            diffStateEl.textContent = '已失效';
-          } else if (task.status === 'processing') {
-            diffStateEl.textContent = '处理中';
-          } else if (task.status === 'pending') {
-            diffStateEl.textContent = '待处理';
-          } else if (task.status === 'failed') {
-            diffStateEl.textContent = '处理失败';
-          } else if (task.status === 'cancelled') {
-            diffStateEl.textContent = '已取消';
-          } else {
-            diffStateEl.textContent = task.status;
-          }
-          renderDiffPlaceholder(task.error_message || '该任务当前没有可展示的 diff。');
-          if (task.status === 'failed') {
-            setTaskSummary(
-              'Agent 处理失败',
-              task.is_stale
-                ? `${describeConflictReason(task.stale_reason)} ${recoveryHint || '旧任务通常不值得重试，建议重新创建。'}`
-                : '这次任务没有产出结果。确认后可以直接重试。',
-              'error'
-            );
-          } else if (task.status === 'pending' || task.status === 'processing') {
-            setTaskSummary(
-              task.is_stale ? '建议关闭这个失效任务' : '任务仍在处理中',
-              task.is_stale
-                ? `${describeConflictReason(task.stale_reason)} ${recoveryHint || '推荐先取消，再按当前正文重新建任务。'}`
-                : '当前还不能接受或拒绝。若 Agent 卡住，可以直接取消。',
-              task.is_stale ? 'warn' : ''
-            );
-          } else if (task.status === 'cancelled') {
-            setTaskSummary(
-              '任务已取消',
-              relocationAvailable
-                ? (recoveryHint ? `正文已经变化，${recoveryHint}` : '正文已经变化。可以先同步定位，再决定是否继续处理。')
-                : task.is_stale
-                  ? `源文本已经变了，这条旧任务已安全关闭，只保留记录。${recoveryHint ? ` ${recoveryHint}` : ''}`
-                  : '当前结果不会改写正文。若原始文本仍匹配，可以直接重试。',
-              'warn'
-            );
-          } else {
-            setTaskSummary(
-              task.is_stale ? '旧任务已失效' : '当前没有可接受结果',
-              relocationAvailable
-                ? `当前文档已经变更，${recoveryHint}`
-                : task.is_stale
-                  ? `${describeConflictReason(task.stale_reason)} ${recoveryHint || '可以直接清理这条任务，或在当前正文上重新建一条。'}`
-                  : '这个任务现在没有可直接合并到文档的结果。',
-              task.is_stale ? 'warn' : ''
-            );
-          }
+          diffStateEl.textContent = t("diff_" + task.status) || task.status;
+          renderDiffPlaceholder(task.error_message || t("diff_placeholder"));
+          setTaskSummary(t("diff_" + task.status), recoveryHint || "", task.status === 'failed' ? 'error' : 'warn', [], summaryExtras);
         }
         renderTaskActions(task, taskId, recoveryPreview);
       }
 
       async function createDoc() {
         const title = document.getElementById('new-title').value.trim();
-        if (!title) {
-          throw new Error('请先输入文档标题');
-        }
+        if (!title) throw new Error(t("field_required", { field: t("new_doc_title") }));
         const doc = await api('/api/docs', {
           method: 'POST',
           body: JSON.stringify({ title, raw_markdown: `# ${title}\n`, actor: 'browser' }),
@@ -2177,13 +2572,8 @@
       }
 
       async function saveDoc() {
-        if (!state.docId) {
-          throw new Error('请先选择文档');
-        }
+        if (!state.docId) throw new Error(t("please_select_doc"));
         const title = docTitleInput.value.trim();
-        if (!title) {
-          throw new Error('文档标题不能为空');
-        }
         const previousRevision = state.revision;
         const doc = await api(`/api/docs/${state.docId}`, {
           method: 'PUT',
@@ -2197,22 +2587,14 @@
         });
         state.revision = doc.revision;
         state.docBlocks = doc.blocks;
-        docTitleInput.value = doc.title;
-        docRevisionPillEl.textContent = `revision ${doc.revision}`;
+        docRevisionPillEl.textContent = t("revision_pill", { rev: doc.revision });
         syncCurrentBlocks();
-        setStatus(
-          doc.revision === previousRevision
-            ? '正文没有变化，没有创建新版本。'
-            : `文档已保存到 revision ${doc.revision}。`,
-          'success'
-        );
+        setStatus(t("loaded_doc_msg", { id: doc.id, rev: doc.revision }), 'success');
         await Promise.all([loadDocsOnly(), loadTasks({ forceRefreshSelected: true }), loadVersions()]);
       }
 
       async function saveDocumentTaskDefaults(clear = false) {
-        if (!state.docId) {
-          throw new Error('请先选择文档');
-        }
+        if (!state.docId) return;
         const doc = await api(`/api/docs/${state.docId}/task-defaults`, {
           method: 'POST',
           body: JSON.stringify({
@@ -2221,143 +2603,100 @@
             default_task_instruction: clear ? null : (taskInstructionEl.value || null),
           }),
         });
-        state.revision = doc.revision;
-        state.docBlocks = doc.blocks;
         applyDocumentTaskDefaults(doc);
-        updateSelectionInfo();
-        setStatus(clear ? '已清除当前文档的默认任务提示。' : '当前任务动作和说明已保存为文档默认值。', 'success');
+        setStatus(clear ? t("defaults_cleared") : t("defaults_saved"), 'success');
         await loadDocsOnly();
       }
 
       async function deleteDoc() {
-        if (!state.docId) {
-          throw new Error('请先选择文档');
-        }
-        const confirmed = window.confirm('删除后文档、任务和版本记录都会一并移除。确认删除吗？');
-        if (!confirmed) {
-          return;
-        }
+        if (!state.docId) return;
+        if (!window.confirm(t("delete_confirm"))) return;
         const deletedId = state.docId;
         await api(`/api/docs/${state.docId}`, { method: 'DELETE' });
         clearEditor();
         await loadDocs();
-        setStatus(`文档 #${deletedId} 已删除。`, 'success');
+        setStatus(t("doc_deleted", { id: deletedId }), 'success');
       }
 
       function exportDoc() {
-        if (!state.docId) {
-          throw new Error('请先选择文档');
-        }
-        const fileName = buildExportFileName();
+        if (!state.docId) return;
+        const fileName = (docTitleInput.value.trim() || `doc-${state.docId}`) + ".md";
         const blob = new Blob([docBodyInput.value], { type: 'text/markdown;charset=utf-8' });
         const url = window.URL.createObjectURL(blob);
         const anchor = document.createElement('a');
         anchor.href = url;
         anchor.download = fileName;
-        document.body.append(anchor);
         anchor.click();
-        anchor.remove();
-        window.URL.revokeObjectURL(url);
-        setStatus(`已导出 ${fileName}。`, 'success');
+        setStatus(t("export_success", { name: fileName }), 'success');
       }
 
       async function cleanupStaleTasks() {
-        if (!state.docId) {
-          throw new Error('请先选择文档');
-        }
-        const result = await api(`/api/docs/${state.docId}/tasks/cleanup-stale`, {
-          method: 'POST',
-        });
+        if (!state.docId) return;
+        const result = await api(`/api/docs/${state.docId}/tasks/cleanup-stale`, { method: 'POST' });
         state.selectedTaskId = null;
         await loadTasks();
-        setStatus(
-          `已清理失效任务：取消 ${result.cancelled}，关闭 ${result.rejected}，保留 ${result.unchanged}。`,
-          'success'
-        );
+        setStatus(t("cleanup_summary", result), 'success');
       }
 
       async function acceptReadyTasks() {
-        if (!state.docId) {
-          throw new Error('请先选择文档');
-        }
-        const payload = buildAcceptReadyPayload();
+        if (!state.docId) return;
         const result = await api(`/api/docs/${state.docId}/tasks/accept-ready`, {
           method: 'POST',
-          body: JSON.stringify(payload),
+          body: JSON.stringify(buildAcceptReadyPayload()),
         });
         await selectDoc(state.docId, { refreshDocs: true });
-        if (result.accepted_task_ids.length > 0) {
-          await selectTask(result.accepted_task_ids[0]);
-        }
-        if (result.accepted === 0) {
-          setStatus(`当前没有可安全合并的任务，跳过 ${result.skipped} 条。`, '');
-          return;
-        }
-        setStatus(
-          `已批量接受 ${result.accepted} 条任务，跳过 ${result.skipped} 条，当前 revision ${result.document_revision}。`,
-          'success'
-        );
+        if (result.accepted_task_ids.length > 0) await selectTask(result.accepted_task_ids[0]);
+        setStatus(result.accepted === 0 ? t("bulk_accept_none", { skipped: result.skipped }) : t("bulk_accept_success", { count: result.accepted, skipped: result.skipped, rev: result.document_revision }), 'success');
       }
 
       async function createTask() {
-        if (!state.docId) {
-          throw new Error('请先选择文档');
-        }
+        if (!state.docId) return;
         const start = docBodyInput.selectionStart;
         const end = docBodyInput.selectionEnd;
-        if (start === end) {
-          throw new Error('请先在编辑区选中文本');
-        }
-        const sourceText = docBodyInput.value.slice(start, end);
+        if (start === end) throw new Error(t("no_selection"));
         const task = await api(`/api/docs/${state.docId}/tasks`, {
           method: 'POST',
           body: JSON.stringify({
             action: taskActionEl.value,
             instruction: taskInstructionEl.value || null,
-            source_text: sourceText,
+            source_text: docBodyInput.value.slice(start, end),
             start_offset: start,
             end_offset: end,
             doc_revision: state.revision,
           }),
         });
-        localStorage.setItem(LAST_TASK_ACTION_KEY, taskActionEl.value);
-        taskTemplateEl.value = '';
         state.selectedTaskId = task.id;
         await loadTasks({ forceRefreshSelected: true });
-        setStatus('任务已创建，等待 Agent 处理。', 'success');
+        setStatus(t("task_created_msg"), 'success');
       }
 
       async function acceptTask(taskId) {
         const task = await api(`/api/tasks/${taskId}/accept`, {
           method: 'POST',
-          body: JSON.stringify({
-            expected_revision: state.revision,
-            actor: 'browser',
-            note: 'accept from ui',
-          }),
+          body: JSON.stringify({ expected_revision: state.revision, actor: 'browser', note: 'accept from ui' }),
         });
-        setStatus(`任务 #${taskId} 已 accept。`, 'success');
+        setStatus(t("task_accepted_msg", { id: taskId }), 'success');
         await selectDoc(task.doc_id);
         await selectTask(taskId);
       }
 
       async function rejectTask(taskId) {
         await api(`/api/tasks/${taskId}/reject`, { method: 'POST' });
-        setStatus(`任务 #${taskId} 已关闭。`, 'success');
+        setStatus(t("task_closed_msg", { id: taskId }), 'success');
         await loadTasks();
         await selectTask(taskId);
       }
 
       async function cancelTask(taskId) {
         await api(`/api/tasks/${taskId}/cancel`, { method: 'POST' });
-        setStatus(`任务 #${taskId} 已取消。`, 'success');
+        setStatus(t("task_cancelled_msg", { id: taskId }), 'success');
         await loadTasks();
         await selectTask(taskId);
       }
 
       async function retryTask(taskId) {
         await api(`/api/tasks/${taskId}/retry`, { method: 'POST' });
-        setStatus(`任务 #${taskId} 已重置为 pending。`, 'success');
+        setStatus(t("task_retried_msg", { id: taskId }), 'success');
         await loadTasks();
         await selectTask(taskId);
       }
@@ -2368,137 +2707,58 @@
           body: JSON.stringify({ mode, actor: 'browser' }),
         });
         await loadTasks({ forceRefreshSelected: false });
-        const nextTaskId = result.new_task?.id || result.source_task.id;
-        await selectTask(nextTaskId);
-        if (mode === 'relocate') {
-          setStatus(`任务 #${taskId} 已${describeRelocationStrategy(result.relocation_strategy)}。`, 'success');
-          return;
-        }
-        setStatus(
-          `已基于当前正文重建任务 #${result.new_task.id}，旧任务状态为 ${result.closed_source_status || result.source_task.status}。`,
-          'success'
-        );
+        await selectTask(result.new_task?.id || result.source_task.id);
+        setStatus(mode === 'relocate' ? describeRelocationStrategy(result.relocation_strategy) : t("task_recreated_msg", { newId: result.new_task.id }), 'success');
       }
 
       async function relocateTask(taskId) {
         await recoverTask(taskId, 'relocate');
       }
 
-      async function pollTaskPanel() {
-        if (document.hidden || !state.docId || state.isTaskPollRunning || !apiKeyInput.value.trim()) {
-          updateAutoRefreshPill();
-          return;
-        }
-        state.isTaskPollRunning = true;
-        try {
-          const previousSelectedTaskId = state.selectedTaskId;
-          const { tasks, changed } = await loadTasks({ autoSelect: false, forceRefreshSelected: false });
-          if (!tasks.length) {
-            return;
-          }
-          if (!changed) {
-            if (previousSelectedTaskId && tasks.some((task) => task.id === previousSelectedTaskId)) {
-              taskListEl.value = String(previousSelectedTaskId);
-            }
-            return;
-          }
-          if (previousSelectedTaskId && tasks.some((task) => task.id === previousSelectedTaskId)) {
-            await selectTask(previousSelectedTaskId);
-            return;
-          }
-          await selectTask(tasks[0].id);
-        } catch (error) {
-          console.error('task polling failed', error);
-        } finally {
-          state.isTaskPollRunning = false;
-          updateAutoRefreshPill();
-        }
-      }
-
-      function startTaskAutoRefresh() {
-        if (state.taskPollTimer !== null) {
-          window.clearInterval(state.taskPollTimer);
-        }
-        updateAutoRefreshPill();
-        state.taskPollTimer = window.setInterval(() => {
-          void pollTaskPanel();
-        }, state.taskPollMs);
-      }
-
       async function rollbackVersion(versionId) {
-        if (!state.docId) {
-          throw new Error('请先选择文档');
-        }
+        if (!state.docId) return;
         const doc = await api(`/api/docs/${state.docId}/versions/${versionId}/rollback`, {
           method: 'POST',
-          body: JSON.stringify({
-            expected_revision: state.revision,
-            actor: 'browser',
-            note: `rollback from ui to version ${versionId}`,
-          }),
+          body: JSON.stringify({ expected_revision: state.revision, actor: 'browser', note: `rollback to ${versionId}` }),
         });
-        state.revision = doc.revision;
-        state.docBlocks = doc.blocks;
-        docRevisionPillEl.textContent = `revision ${doc.revision}`;
-        docTitleInput.value = doc.title;
-        docBodyInput.value = doc.raw_markdown;
-        syncCurrentBlocks();
-        updateSelectionInfo();
-        resetTaskDetails();
-        setStatus(`已回滚到版本 #${versionId}，当前 revision ${doc.revision}。`, 'success');
-        await Promise.all([loadDocsOnly(), loadTasks({ forceRefreshSelected: true }), loadVersions()]);
+        setStatus(t("rollback_success", { id: versionId, rev: doc.revision }), 'success');
+        await selectDoc(state.docId);
       }
 
       async function refreshCurrent() {
-        if (state.docId) {
-          await selectDoc(state.docId);
-          return;
-        }
-        await loadDocs();
+        if (state.docId) await selectDoc(state.docId); else await loadDocs();
       }
 
       function updateSelectionInfo() {
         syncCurrentBlocks();
         const start = docBodyInput.selectionStart;
         const end = docBodyInput.selectionEnd;
-        const anchorOffset = start === end ? start : Math.min(start, end);
-        const block = findBlockForOffset(anchorOffset);
-        const blockLabel = block
-          ? ` · 当前 block：${block.heading || '未命名段落'}`
-          : '';
+        const block = findBlockForOffset(start);
+        const blockText = block ? t("current_block", { block: block.heading || '...' }) : '';
         if (start === end) {
-          selectionInfoEl.textContent = `尚未选择文本${blockLabel}`;
+          selectionInfoEl.textContent = t("no_selection") + (blockText ? " · " + blockText : "");
           selectionStatusEl.classList.remove('is-active');
-          return;
+        } else {
+          selectionInfoEl.textContent = t("selection_at", { start, end, len: end - start }) + (blockText ? " · " + blockText : "");
+          selectionStatusEl.classList.add('is-active');
         }
-        selectionInfoEl.textContent = `选中区域 ${start}-${end}，长度 ${end - start}${blockLabel}`;
-        selectionStatusEl.classList.add('is-active');
       }
 
       async function safeRun(callback) {
         try {
           await callback();
         } catch (error) {
-          setStatus(error.message || '发生错误', 'error');
+          setStatus(error.message || t("request_failed"), 'error');
         }
       }
 
       document.getElementById('open-key-modal').addEventListener('click', openKeyModal);
       document.getElementById('close-key').addEventListener('click', closeKeyModal);
       document.getElementById('save-key').addEventListener('click', () => {
-        const value = apiKeyInput.value.trim();
-        if (!value) {
-          setStatus('请先输入 API Key。', 'error');
-          return;
-        }
-        localStorage.setItem('agentdocs.apiKey', value);
-        syncKeyState();
+        localStorage.setItem('agentdocs.apiKey', apiKeyInput.value.trim());
         keyModalEl.classList.add('hidden');
-        setStatus('API Key 已保存到本地浏览器。', 'success');
-        safeRun(async () => {
-          await loadTaskTemplates();
-          await loadDocs();
-        });
+        setStatus(t("api_key_saved_msg"), 'success');
+        safeRun(async () => { await loadTaskTemplates(); await loadDocs(); });
       });
       document.getElementById('refresh-current').addEventListener('click', () => safeRun(refreshCurrent));
       document.getElementById('create-doc').addEventListener('click', () => safeRun(createDoc));
@@ -2506,10 +2766,7 @@
       document.getElementById('save-doc-defaults').addEventListener('click', () => safeRun(() => saveDocumentTaskDefaults(false)));
       document.getElementById('export-doc').addEventListener('click', () => safeRun(async () => exportDoc()));
       document.getElementById('accept-ready').addEventListener('click', () => safeRun(acceptReadyTasks));
-      document.getElementById('manage-templates').addEventListener('click', () => safeRun(async () => {
-        await loadTaskTemplates({ allowLegacyImport: false });
-        openTemplateModal();
-      }));
+      document.getElementById('manage-templates').addEventListener('click', () => safeRun(async () => { await loadTaskTemplates({ allowLegacyImport: false }); openTemplateModal(); }));
       document.getElementById('close-template-modal').addEventListener('click', closeTemplateModal);
       document.getElementById('save-template').addEventListener('click', () => safeRun(async () => saveTemplateFromForm()));
       document.getElementById('reset-template-form').addEventListener('click', resetTemplateForm);
@@ -2517,70 +2774,31 @@
       document.getElementById('delete-doc').addEventListener('click', () => safeRun(deleteDoc));
       document.getElementById('create-task').addEventListener('click', () => safeRun(createTask));
       docSelectorEl.addEventListener('change', () => safeRun(() => selectDoc(Number(docSelectorEl.value))));
-      taskActionEl.addEventListener('change', () => {
-        localStorage.setItem(LAST_TASK_ACTION_KEY, taskActionEl.value);
-      });
       taskTemplateEl.addEventListener('change', () => {
-        if (!taskTemplateEl.value) {
-          applyStoredDocumentTaskDefaults();
-          return;
-        }
-        const template = getTemplateCatalog().find(
-          (item) => normalizeTemplateId(item.id) === taskTemplateEl.value
-        );
-        if (!template) {
-          return;
-        }
-        taskActionEl.value = template.action;
-        taskInstructionEl.value = template.instruction;
-        localStorage.setItem(LAST_TASK_ACTION_KEY, template.action);
+        const template = getTemplateCatalog().find(t => normalizeTemplateId(t.id) === taskTemplateEl.value);
+        if (template) { taskActionEl.value = template.action; taskInstructionEl.value = template.instruction; }
       });
-      taskListEl.addEventListener('change', () => {
-        if (!taskListEl.value) {
-          resetTaskDetails();
-          return;
-        }
-        safeRun(() => selectTask(Number(taskListEl.value)));
-      });
+      taskListEl.addEventListener('change', () => { if (taskListEl.value) safeRun(() => selectTask(Number(taskListEl.value))); });
       docBodyInput.addEventListener('input', updateSelectionInfo);
       docBodyInput.addEventListener('select', updateSelectionInfo);
-      docBodyInput.addEventListener('keyup', updateSelectionInfo);
-      docBodyInput.addEventListener('mouseup', updateSelectionInfo);
-
-      document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape' && !keyModalEl.classList.contains('hidden')) {
-          closeKeyModal();
-        }
-        if (event.key === 'Escape' && !templateModalEl.classList.contains('hidden')) {
-          closeTemplateModal();
-        }
-      });
-
-      document.addEventListener('visibilitychange', () => {
-        updateAutoRefreshPill();
-        if (!document.hidden) {
-          void pollTaskPanel();
-        }
-      });
-
-      templateModalEl.addEventListener('click', (event) => {
-        if (event.target === templateModalEl) {
-          closeTemplateModal();
-        }
-      });
-
-      syncKeyState();
+      
+      renderI18n();
       restoreTaskComposerState();
-      startTaskAutoRefresh();
       clearEditor();
       updateAutoRefreshPill();
       if (!apiKeyInput.value.trim()) {
         openKeyModal();
+        setStatus(t("api_key_required"), 'warn');
+      } else {
+        safeRun(async () => { await loadTaskTemplates(); await loadDocs(); });
       }
-      safeRun(async () => {
-        await loadTaskTemplates();
-        await loadDocs();
-      });
+      
+      setInterval(() => {
+        if (!document.hidden && state.docId && !state.isTaskPollRunning) {
+          state.isTaskPollRunning = true;
+          loadTasks({ autoSelect: false }).finally(() => { state.isTaskPollRunning = false; });
+        }
+      }, state.taskPollMs);
     </script>
   </body>
 </html>

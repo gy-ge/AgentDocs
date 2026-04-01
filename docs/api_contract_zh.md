@@ -1,18 +1,18 @@
-# API Contract
+# API 契约
 
-This document describes the API shape implemented by the current FastAPI application.
+本文档描述当前 FastAPI 应用实际实现出来的接口形状。
 
-## Common Rules
+## 通用约定
 
-Base URL:
+Base URL：
 
 - /api
 
-Authentication:
+认证：
 
-- Every /api route requires Authorization: Bearer <API_KEY>
+- 所有 /api 路由都要求 Authorization: Bearer <API_KEY>
 
-Success envelope:
+成功响应包装：
 
 ```json
 {
@@ -21,7 +21,7 @@ Success envelope:
 }
 ```
 
-Error envelope:
+失败响应包装：
 
 ```json
 {
@@ -33,7 +33,7 @@ Error envelope:
 }
 ```
 
-Common error codes:
+常见错误码：
 
 - unauthorized
 - not_found
@@ -41,11 +41,11 @@ Common error codes:
 - conflict
 - invalid_state
 
-## Documents
+## 文档接口
 
 ### GET /api/docs
 
-Returns document list items:
+返回文档列表项：
 
 - id
 - title
@@ -54,7 +54,7 @@ Returns document list items:
 
 ### POST /api/docs
 
-Request:
+请求：
 
 ```json
 {
@@ -64,20 +64,20 @@ Request:
 }
 ```
 
-Response data contains:
+响应 data 包含：
 
 - id
 - title
 - revision
 
-Notes:
+说明：
 
-- title is trimmed and must not be blank
-- a version snapshot is created immediately when the document is created
+- title 会先 trim，不能为空
+- 文档创建时会立即生成一条版本快照
 
 ### GET /api/docs/{doc_id}
 
-Returns a full document payload:
+返回完整文档：
 
 - id
 - title
@@ -88,7 +88,7 @@ Returns a full document payload:
 - blocks
 - updated_at
 
-Each block contains:
+每个 block 包含：
 
 - heading
 - level
@@ -99,7 +99,7 @@ Each block contains:
 
 ### PUT /api/docs/{doc_id}
 
-Request:
+请求：
 
 ```json
 {
@@ -111,20 +111,20 @@ Request:
 }
 ```
 
-Behavior:
+行为：
 
-- expected_revision must match the current document revision
-- if only the title changes, revision does not increase
-- if title and body are unchanged, the request is a no-op
-- if raw_markdown changes, revision increases and a new version snapshot is created
+- expected_revision 必须匹配当前文档 revision
+- 如果只改标题，不增加 revision
+- 如果标题和正文都没变，视为 no-op
+- 如果 raw_markdown 变化，会增加 revision 并创建新版本快照
 
 ### DELETE /api/docs/{doc_id}
 
-Deletes the document and cascades to its tasks and versions.
+删除文档，并级联删除相关任务和版本。
 
 ### POST /api/docs/{doc_id}/task-defaults
 
-Request:
+请求：
 
 ```json
 {
@@ -134,15 +134,15 @@ Request:
 }
 ```
 
-Notes:
+说明：
 
-- this updates document metadata only
-- it does not increase revision
-- if action is null and instruction is present, the backend falls back to rewrite
+- 只更新文档元信息
+- 不增加 revision
+- 如果 action 为空但 instruction 不为空，后端会回退为 rewrite
 
 ### POST /api/docs/{doc_id}/tasks
 
-Request:
+请求：
 
 ```json
 {
@@ -155,20 +155,20 @@ Request:
 }
 ```
 
-Rules:
+规则：
 
-- doc_revision must match the current document revision
-- source_text must match the current document slice exactly
-- the range must stay within a single parsed block
+- doc_revision 必须匹配当前文档 revision
+- source_text 必须与当前文档切片完全一致
+- 任务区间必须落在同一个解析后的 block 内
 
 ### POST /api/docs/{doc_id}/tasks/cleanup-stale
 
-Closes stale tasks for the current document.
+清理当前文档的 stale 任务。
 
-- stale pending and processing tasks become cancelled
-- stale done tasks become rejected
+- stale 的 pending 和 processing 任务会变成 cancelled
+- stale 的 done 任务会变成 rejected
 
-Response data contains:
+响应 data 包含：
 
 - doc_id
 - cancelled
@@ -177,9 +177,9 @@ Response data contains:
 
 ### POST /api/docs/{doc_id}/tasks/accept-ready
 
-Batch-accepts safe done tasks for one document.
+批量接受当前文档里可以安全合并的 done 任务。
 
-Request:
+请求：
 
 ```json
 {
@@ -192,13 +192,13 @@ Request:
 }
 ```
 
-Optional filters:
+可选筛选：
 
 - action
-- start_offset and end_offset together
-- limit from 1 to 50
+- start_offset 和 end_offset 一起提供
+- limit，范围 1 到 50
 
-Response data contains:
+响应 data 包含：
 
 - doc_id
 - document_revision
@@ -207,22 +207,22 @@ Response data contains:
 - accepted_task_ids
 - skipped_tasks
 
-## Tasks
+## 任务接口
 
 ### GET /api/tasks
 
-Optional query parameters:
+可选查询参数：
 
 - status
 - doc_id
 
-Returns task list items with stale metadata.
+返回带 stale 元数据的任务列表。
 
 ### GET /api/tasks/{task_id}
 
-Returns the full task payload plus context.
+返回完整任务以及 context。
 
-Task fields include:
+任务字段包括：
 
 - id
 - doc_id
@@ -241,7 +241,7 @@ Task fields include:
 - recommended_action
 - context
 
-context fields include:
+context 字段包括：
 
 - document_title
 - document_revision
@@ -255,9 +255,9 @@ context fields include:
 
 ### GET /api/tasks/{task_id}/diff
 
-Available only when the task already has a result.
+只有任务已经有 result 时才能调用。
 
-Response data contains:
+响应 data 包含：
 
 - task_id
 - doc_id
@@ -271,9 +271,9 @@ Response data contains:
 
 ### GET /api/tasks/{task_id}/recovery-preview
 
-Returns a preview of stale-task recovery options.
+返回 stale 任务的恢复预览。
 
-Response data contains:
+响应 data 包含：
 
 - task_id
 - doc_id
@@ -293,7 +293,7 @@ Response data contains:
 
 ### POST /api/tasks/next
 
-Request:
+请求：
 
 ```json
 {
@@ -301,16 +301,16 @@ Request:
 }
 ```
 
-Behavior:
+行为：
 
-- picks the oldest pending task
-- changes its status to processing
-- stores agent_name and started_at
-- returns null data when the queue is empty
+- 领取最早的一条 pending 任务
+- 把状态改成 processing
+- 记录 agent_name 和 started_at
+- 如果队列为空，返回 data: null
 
 ### POST /api/tasks/{task_id}/complete
 
-Request with success result:
+成功回写：
 
 ```json
 {
@@ -319,7 +319,7 @@ Request with success result:
 }
 ```
 
-Request with failure:
+失败回写：
 
 ```json
 {
@@ -328,16 +328,16 @@ Request with failure:
 }
 ```
 
-Rules:
+规则：
 
-- the task must be processing
-- exactly one of result or error_message must be provided
-- result moves the task to done
-- error_message moves the task to failed
+- 任务必须处于 processing
+- result 和 error_message 必须二选一
+- result 会把任务改成 done
+- error_message 会把任务改成 failed
 
 ### POST /api/tasks/{task_id}/accept
 
-Request:
+请求：
 
 ```json
 {
@@ -347,44 +347,44 @@ Request:
 }
 ```
 
-Rules:
+规则：
 
-- the task must be done and have a result
-- expected_revision must match the current document revision
-- the current document slice must still match source_text and source_hash
-- if result equals source_text, the task becomes accepted without creating a new revision
+- 任务必须是 done 且有 result
+- expected_revision 必须匹配当前文档 revision
+- 当前文档切片必须仍然匹配 source_text 和 source_hash
+- 如果 result 与 source_text 完全相同，任务会变成 accepted，但不会创建新 revision
 
 ### POST /api/tasks/{task_id}/reject
 
-Rules:
+规则：
 
-- the task must be done
-- the task becomes rejected
-- the document is not modified
+- 任务必须是 done
+- 任务会变成 rejected
+- 不会改动文档正文
 
 ### POST /api/tasks/{task_id}/cancel
 
-Rules:
+规则：
 
-- only pending and processing tasks can be cancelled
-- the document is not modified
+- 只有 pending 和 processing 任务可以取消
+- 不会改动文档正文
 
 ### POST /api/tasks/{task_id}/retry
 
-Rules:
+规则：
 
-- only failed, cancelled, and rejected tasks can be retried
-- the current document range must still match source_text
-- the range must still stay within a single block
-- the task returns to pending and clears previous execution fields
+- 只有 failed、cancelled 和 rejected 任务可以重试
+- 当前文档区间必须仍然匹配 source_text
+- 区间仍必须位于单个 block 内
+- 任务会回到 pending，并清空上一次执行信息
 
 ### POST /api/tasks/{task_id}/relocate
 
-Rules:
+规则：
 
-- processing tasks cannot be relocated
-- accepted tasks do not need relocation
-- relocation may return one of these strategies:
+- processing 任务不能重定位
+- accepted 任务不需要重定位
+- 可能返回以下策略之一：
   - current_selection_match
   - same_block_position_match
   - same_heading_unique_match
@@ -392,12 +392,12 @@ Rules:
 
 ### POST /api/tasks/{task_id}/recover
 
-Supported modes:
+支持的 mode：
 
 - relocate
 - requeue_from_current
 
-Request:
+请求：
 
 ```json
 {
@@ -406,16 +406,16 @@ Request:
 }
 ```
 
-Behavior:
+行为：
 
-- relocate delegates to the same relocation workflow and returns the source task plus strategy
-- requeue_from_current closes the old task and creates a new pending task from the current document range
+- relocate 会走同一套重定位流程，并返回 source task 和策略
+- requeue_from_current 会先关闭旧任务，再按当前文档区间创建一条新的 pending 任务
 
-## Templates
+## 模板接口
 
 ### GET /api/task-templates
 
-Returns all persisted server-side templates.
+返回所有服务端持久化模板。
 
 ### POST /api/task-templates
 
@@ -429,17 +429,17 @@ Returns all persisted server-side templates.
 
 ### PUT /api/task-templates/{template_id}
 
-Same request schema as create.
+请求结构与创建一致。
 
 ### DELETE /api/task-templates/{template_id}
 
-Deletes one template.
+删除一条模板。
 
-## Versions
+## 版本接口
 
 ### GET /api/docs/{doc_id}/versions
 
-Returns version list items:
+返回版本列表项：
 
 - id
 - revision
@@ -449,7 +449,7 @@ Returns version list items:
 
 ### POST /api/docs/{doc_id}/versions/{version_id}/rollback
 
-Request:
+请求：
 
 ```json
 {
@@ -459,8 +459,8 @@ Request:
 }
 ```
 
-Rules:
+规则：
 
-- expected_revision must match the current document revision
-- if the target snapshot already matches the current document body, rollback is a no-op
-- otherwise the document body is restored, revision increases, and a new version snapshot is created
+- expected_revision 必须匹配当前文档 revision
+- 如果目标快照和当前正文完全一致，rollback 是 no-op
+- 否则会恢复正文、增加 revision，并生成新的版本快照

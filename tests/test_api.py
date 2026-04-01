@@ -48,11 +48,13 @@ def test_root_page_is_served(client):
     response = client.get("/")
 
     assert response.status_code == 200
+    assert "�" not in response.text
     assert "AgentDocs" in response.text
     assert 'meta name="description"' in response.text
     assert 'rel="icon"' in response.text
     assert "连接设置" in response.text
     assert "文档工作台" in response.text
+    assert "模板格式示例" in response.text
     assert "已有文档" in response.text
     assert "新建文档" in response.text
     assert "任务动作" in response.text
@@ -64,7 +66,8 @@ def test_root_page_is_served(client):
     assert "清理失效" in response.text
     assert "批量接受可合并结果" in response.text
     assert "批量接受范围" in response.text
-    assert "自动刷新：前台 15s" in response.text
+    assert "自动刷新：{mode} {sec}s" in response.text
+    assert "前台" in response.text
     assert "快捷模板" in response.text
     assert "管理模板" in response.text
     assert "设为文档默认" in response.text
