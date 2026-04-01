@@ -2,6 +2,7 @@ from app.schemas.docs import BlockRead, DocumentListItem, DocumentRead
 from app.schemas.tasks import (
     CleanupStaleTasksRead,
     TaskBatchAcceptRead,
+    TaskDiffRead,
     TaskRead,
     TaskRelocateRead,
 )
@@ -79,6 +80,10 @@ def serialize_stale_cleanup(
         rejected=rejected,
         unchanged=unchanged,
     )
+
+
+def serialize_task_diff(data: dict[str, object]) -> TaskDiffRead:
+    return TaskDiffRead(**data)
 
 
 def serialize_batch_accept(result: dict[str, object]) -> TaskBatchAcceptRead:

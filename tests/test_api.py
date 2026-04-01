@@ -1350,3 +1350,135 @@ def test_rollback_keeps_old_done_task_blocked_when_source_no_longer_matches(
     )
     assert accept_response.status_code == 409
     assert accept_response.json()["error"]["code"] == "conflict"
+
+
+def test_diff_returns_recommended_action_for_stale_done_task(client, auth_headers):
+    raw_markdown = "# Title\n## Section\nHello world\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+    task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "Hello")
+
+    client.post("/api/tasks/next", headers=auth_headers, json={"agent_name": "agent-one"})
+    client.post(
+        f"/api/tasks/{task['id']}/complete",
+        headers=auth_headers,
+        json={"result": "Hi", "error_message": None},
+    )
+
+    client.put(
+        f"/api/docs/{doc_id}",
+        headers=auth_headers,
+        json={
+            "title": "Doc",
+            "raw_markdown": "# Title\n## Section\nBye world\n",
+            "expected_revision": 1,
+            "actor": "browser",
+            "note": "manual edit",
+        },
+    )
+
+    diff_response = client.get(f"/api/tasks/{task['id']}/diff", headers=auth_headers)
+    assert diff_response.status_code == 200
+    diff_data = diff_response.json()["data"]
+    assert diff_data["can_accept"] is False
+    assert diff_data["recommended_action"] == "reject"
+    assert diff_data["conflict_reason"] is not None
+
+
+def test_diff_returns_no_recommended_action_for_clean_done_task(client, auth_headers):
+    raw_markdown = "# Title\n## Section\nHello world\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+    task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "Hello")
+
+    client.post("/api/tasks/next", headers=auth_headers, json={"agent_name": "agent-one"})
+    client.post(
+        f"/api/tasks/{task['id']}/complete",
+        headers=auth_headers,
+        json={"result": "Hi", "error_message": None},
+    )
+
+    diff_response = client.get(f"/api/tasks/{task['id']}/diff", headers=auth_headers)
+    assert diff_response.status_code == 200
+    diff_data = diff_response.json()["data"]
+    assert diff_data["can_accept"] is True
+    assert diff_data["recommended_action"] is None
+    assert diff_data["conflict_reason"] is None
+
+
+def test_diff_rejects_task_without_result(client, auth_headers):
+    raw_markdown = "# Title\n## Section\nHello world\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+    task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "Hello")
+
+    diff_response = client.get(f"/api/tasks/{task['id']}/diff", headers=auth_headers)
+    assert diff_response.status_code == 409
+    assert diff_response.json()["error"]["code"] == "invalid_state"
+
+
+def test_batch_accept_returns_empty_result_when_no_tasks_match(client, auth_headers):
+    raw_markdown = "# Title\n## Section\nHello world\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+
+    response = client.post(
+        f"/api/docs/{doc_id}/tasks/accept-ready",
+        headers=auth_headers,
+        json={"actor": "browser"},
+    )
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["accepted"] == 0
+    assert data["skipped"] == 0
+    assert data["accepted_task_ids"] == []
+    assert data["skipped_tasks"] == []
+
+
+def test_document_parse_blocks_with_no_headings(client, auth_headers):
+    raw_markdown = "Just plain text without any headings.\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+
+    response = client.get(f"/api/docs/{doc_id}", headers=auth_headers)
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert len(data["blocks"]) == 1
+    assert data["blocks"][0]["heading"] == ""
+    assert data["blocks"][0]["level"] == 0
+    assert data["blocks"][0]["start_offset"] == 0
+    assert data["blocks"][0]["end_offset"] == len(raw_markdown)
+
+
+def test_document_parse_blocks_with_empty_content(client, auth_headers):
+    raw_markdown = ""
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+
+    response = client.get(f"/api/docs/{doc_id}", headers=auth_headers)
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["blocks"] == []
+
+
+def test_create_task_rejects_empty_action(client, auth_headers):
+    raw_markdown = "# Title\nContent\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+    needle = "Content"
+    start_offset = raw_markdown.index(needle)
+    end_offset = start_offset + len(needle)
+
+    response = client.post(
+        f"/api/docs/{doc_id}/tasks",
+        headers=auth_headers,
+        json={
+            "action": "   ",
+            "instruction": "rewrite text",
+            "source_text": needle,
+            "start_offset": start_offset,
+            "end_offset": end_offset,
+            "doc_revision": 1,
+        },
+    )
+    assert response.status_code == 422

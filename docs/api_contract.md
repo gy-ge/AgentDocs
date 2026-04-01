@@ -378,6 +378,14 @@ context 字段结构：
 
 - agent_name 会先 trim，且不能为空字符串
 
+请求：
+
+```json
+{
+  "agent_name": "picoclaw"
+}
+```
+
 ### POST /api/tasks/{task_id}/relocate
 
 说明：
@@ -421,30 +429,6 @@ context 字段结构：
       }
     },
     "relocation_strategy": "same_block_position_match"
-  }
-}
-```
-
-请求：
-
-```json
-{
-  "agent_name": "picoclaw"
-}
-```
-
-响应：
-
-```json
-{
-  "ok": true,
-  "data": {
-    "id": 9,
-    "doc_id": 1,
-    "action": "rewrite",
-    "instruction": "改成简历语气，控制在 180 字内",
-    "source_text": "原文内容",
-    "status": "processing"
   }
 }
 ```
