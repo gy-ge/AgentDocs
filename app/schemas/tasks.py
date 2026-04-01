@@ -33,6 +33,7 @@ class TaskDiffRead(BaseModel):
     result_text: str
     can_accept: bool
     conflict_reason: str | None = None
+    recommended_action: str | None = None
     diff: str
 
 

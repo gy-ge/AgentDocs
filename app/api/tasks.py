@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import require_api_key
-from app.api.serializers import serialize_task, serialize_task_relocation
+from app.api.serializers import serialize_task, serialize_task_diff, serialize_task_relocation
 from app.db import get_db
 from app.schemas.tasks import (
     TaskAcceptRequest,
@@ -49,7 +49,7 @@ def get_task(task_id: int, db: Session = Depends(get_db)):
 @router.get("/{task_id}/diff")
 def get_task_diff(task_id: int, db: Session = Depends(get_db)):
     diff_data = service.get_task_diff(db, task_id)
-    return {"ok": True, "data": diff_data}
+    return {"ok": True, "data": serialize_task_diff(diff_data).model_dump(mode="json")}
 
 
 @router.post("/next")
