@@ -3,6 +3,6 @@ set -eu
 
 mkdir -p /app/data
 
-uv run alembic upgrade head
+/app/.venv/bin/alembic upgrade head
 
 exec "$@"

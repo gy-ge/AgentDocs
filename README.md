@@ -101,6 +101,37 @@ If you want to rebuild after dependency or code changes:
 docker compose up --build -d
 ```
 
+## GitHub Container Registry
+
+The repository now includes [docker-publish.yml](.github/workflows/docker-publish.yml), which publishes images to GitHub Container Registry instead of Docker Hub.
+
+Recommended setup:
+
+- Keep the package public in GitHub Packages if you want anonymous `docker pull` access.
+- Use pushes to `main` for rolling delivery and Git tags like `v0.1.0` for immutable releases.
+- Rely on the built-in `GITHUB_TOKEN`; no extra registry secret is required for the workflow.
+
+Workflow behavior:
+
+- Pull requests build and test the image but do not publish it.
+- Pushes to `main` publish a rolling image with tags such as `latest`, `main`, and `sha-<commit>`.
+- Version tags like `v0.1.0` publish semver tags.
+
+After the first successful publish, the image will be available under:
+
+```text
+ghcr.io/<owner>/<repository>:latest
+```
+
+Example usage:
+
+```bash
+docker pull ghcr.io/<owner>/<repository>:latest
+docker run --rm -p 8000:8000 --env-file .env ghcr.io/<owner>/<repository>:latest
+```
+
+If the package stays private, users can still pull it after logging in with a GitHub personal access token that has `read:packages`.
+
 ## Authentication
 
 All API routes under /api require this header:

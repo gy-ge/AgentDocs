@@ -7,6 +7,7 @@ authors = [
 ]
 requires-python = ">=3.14"
 dependencies = [
+    "alembic>=1.18.4",
     "fastapi>=0.116.0",
     "pydantic>=2.11.0",
     "pydantic-settings>=2.8.0",
@@ -16,7 +17,6 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "alembic>=1.18.4",
     "httpx>=0.28.1",
     "pytest>=9.0.2",
 ]
