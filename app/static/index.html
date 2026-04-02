@@ -761,6 +761,62 @@
         min-width: 116px;
       }
 
+      .batch-preview-list {
+        display: grid;
+        gap: 8px;
+        margin-top: 8px;
+      }
+
+      .batch-preview-section {
+        display: grid;
+        gap: 8px;
+      }
+
+      .batch-preview-item {
+        display: grid;
+        gap: 6px;
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #ffffff;
+      }
+
+      .batch-preview-item-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+
+      .batch-preview-item-title {
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1.4;
+      }
+
+      .batch-preview-item-meta {
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.4;
+      }
+
+      .batch-preview-item-code {
+        padding: 8px 10px;
+        border-radius: 8px;
+        background: rgba(31, 35, 40, 0.06);
+        color: var(--text);
+        font-family: Consolas, monospace;
+        font-size: 12px;
+        line-height: 1.45;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      #accept-ready-undo:empty {
+        display: none;
+      }
+
       .task-panel .diff,
       .task-panel .detail-note {
         background-clip: padding-box;
@@ -1139,6 +1195,11 @@
                     <span id="auto-refresh-pill" class="pill">Auto refresh: Active 15s</span>
                   </div>
                   <div id="task-group-summary" class="panel-caption" data-i18n="task_group_hint">Tasks grouped by status.</div>
+                  <div id="accept-ready-preview" class="detail-note">
+                    <strong data-i18n="bulk_accept_preview">Batch Accept Preview</strong>
+                    <div data-i18n="bulk_accept_preview_placeholder">Choose a scope to preview which done tasks can be merged safely.</div>
+                  </div>
+                  <div id="accept-ready-undo" class="inline-actions"></div>
                 </div>
 
                 <div class="section-header" style="display: none; margin-top: 8px;">
@@ -1273,11 +1334,34 @@
           scope_all: "All ready in current doc",
           scope_action: "Same action only",
           scope_block: "Current block only",
+          bulk_accept_preview: "Batch Accept Preview",
+          bulk_accept_preview_placeholder: "Choose a scope to preview which done tasks can be merged safely.",
+          bulk_accept_preview_summary: "Matched {matched} tasks. Ready {accept}, skipped {skip}.",
+          bulk_accept_preview_none: "No safe done tasks match the current filters.",
+          bulk_accept_preview_scope_label: "Scope",
+          bulk_accept_preview_limit_label: "Limit",
+          bulk_accept_preview_matches_label: "Matched",
+          bulk_accept_preview_accept_label: "Ready",
+          bulk_accept_preview_skip_label: "Skipped",
+          bulk_accept_preview_candidates: "Will Accept",
+          bulk_accept_preview_skipped: "Will Skip",
+          bulk_accept_preview_needs_task: "Select a task first for this scope.",
+          bulk_accept_preview_more: "And {count} more...",
+          bulk_accept_skip_missing_result: "Task has no result yet.",
+          bulk_accept_skip_task_stale: "Task became stale under the current document state.",
+          bulk_accept_skip_conflict: "Task can no longer be applied safely.",
+          bulk_accept_skip_invalid_state: "Task state no longer allows batch accept.",
+          bulk_accept_skip_unknown: "Skipped during batch review.",
+          undo_last_bulk_accept: "Undo Last Bulk Accept",
+          undo_last_bulk_accept_hint: "Undo target: revision {rev}",
           max_limit: "Limit",
           unlimited: "Unlimited",
           auto_refresh_hint: "Auto refresh: {mode} {sec}s",
           auto_refresh_paused: "Auto refresh: Paused (hidden)",
           auto_refresh_active_mode: "Active",
+          auto_refresh_stream_mode: "Live stream",
+          auto_refresh_connecting_mode: "Connecting",
+          auto_refresh_poll_mode: "Polling fallback",
           task_group_hint: "Tasks grouped by status.",
           no_task_selected: "No task selected",
           action_recommendation: "Recommendation",
@@ -1430,11 +1514,34 @@
           scope_all: "当前文档全部可合并结果",
           scope_action: "仅所选任务同动作",
           scope_block: "仅当前 block",
+          bulk_accept_preview: "批量接受预览",
+          bulk_accept_preview_placeholder: "先选择范围，预览哪些已完成任务可以安全合并。",
+          bulk_accept_preview_summary: "命中 {matched} 条任务，可接受 {accept} 条，跳过 {skip} 条。",
+          bulk_accept_preview_none: "当前筛选下没有可安全接受的已完成任务。",
+          bulk_accept_preview_scope_label: "范围",
+          bulk_accept_preview_limit_label: "上限",
+          bulk_accept_preview_matches_label: "命中",
+          bulk_accept_preview_accept_label: "可接受",
+          bulk_accept_preview_skip_label: "将跳过",
+          bulk_accept_preview_candidates: "将接受",
+          bulk_accept_preview_skipped: "将跳过",
+          bulk_accept_preview_needs_task: "当前范围需要先选择一个任务。",
+          bulk_accept_preview_more: "其余 {count} 条未展开…",
+          bulk_accept_skip_missing_result: "任务结果尚未生成。",
+          bulk_accept_skip_task_stale: "按当前正文状态，该任务已失效。",
+          bulk_accept_skip_conflict: "任务已不能安全应用到当前正文。",
+          bulk_accept_skip_invalid_state: "当前任务状态不允许批量接受。",
+          bulk_accept_skip_unknown: "批量审阅时被跳过。",
+          undo_last_bulk_accept: "撤销最近一次批量接受",
+          undo_last_bulk_accept_hint: "撤销目标：修订 {rev}",
           max_limit: "单次上限",
           unlimited: "不限",
           auto_refresh_hint: "自动刷新：{mode} {sec}s",
           auto_refresh_paused: "自动刷新：页面隐藏时暂停",
           auto_refresh_active_mode: "前台",
+          auto_refresh_stream_mode: "实时流",
+          auto_refresh_connecting_mode: "连接中",
+          auto_refresh_poll_mode: "轮询兜底",
           task_group_hint: "按状态分组显示当前文档任务。",
           no_task_selected: "未选择任务",
           action_recommendation: "操作建议",
@@ -1576,6 +1683,8 @@
           renderTemplateList();
         }
         updateAutoRefreshPill();
+        renderAcceptReadyPreview(state.acceptReadyPreview);
+        renderBulkAcceptUndo();
 
         if (!apiKeyInput.value.trim()) {
           setStatus(t("api_key_required"), 'warn');
@@ -1613,10 +1722,17 @@
         selectedTaskRecovery: null,
         tasks: [],
         taskSignature: "",
+        acceptReadyPreview: null,
+        lastBulkAcceptRollback: null,
         serverTemplates: [],
         taskPollMs: 15000,
         taskPollTimer: null,
         isTaskPollRunning: false,
+        taskEventAbortController: null,
+        taskEventRetryTimer: null,
+        realtimeMode: 'poll',
+        realtimeSyncTimer: null,
+        pendingRealtimeSync: null,
       };
 
       const taskGroupMeta = [
@@ -1662,8 +1778,11 @@
       const templateInstructionEl = document.getElementById("template-instruction");
       const templateListEl = document.getElementById("template-list");
       const taskListEl = document.getElementById("task-list");
+      const acceptReadyButtonEl = document.getElementById("accept-ready");
       const taskCountPillEl = document.getElementById("task-count-pill");
       const taskGroupSummaryEl = document.getElementById("task-group-summary");
+      const acceptReadyPreviewEl = document.getElementById("accept-ready-preview");
+      const acceptReadyUndoEl = document.getElementById("accept-ready-undo");
       const taskSummaryEl = document.getElementById("task-summary");
       const taskMetadataEl = document.getElementById("task-metadata");
       const taskActionsEl = document.getElementById("task-actions");
@@ -1741,6 +1860,8 @@
         state.selectedTaskRecovery = null;
         state.tasks = [];
         state.taskSignature = "";
+        state.acceptReadyPreview = null;
+        state.lastBulkAcceptRollback = null;
         docRevisionPillEl.textContent = t("no_doc_selected_pill");
         updateDocumentTitle();
         docSelectorEl.innerHTML = `<option value="">${escapeHtml(t("please_select_doc"))}</option>`;
@@ -1754,6 +1875,8 @@
         taskCountPillEl.textContent = t("tasks_count_initial");
         taskGroupSummaryEl.textContent = "";
         versionCountPillEl.textContent = t("versions_count_initial");
+        renderAcceptReadyPreview();
+        renderBulkAcceptUndo();
         if (!apiKeyInput.value.trim()) {
           setStatus(t("api_key_required"), 'warn');
         } else {
@@ -2117,10 +2240,228 @@
         if (document.hidden) {
           autoRefreshPillEl.textContent = t("auto_refresh_paused");
         } else {
+          let modeKey = "auto_refresh_poll_mode";
+          if (state.realtimeMode === 'stream') {
+            modeKey = "auto_refresh_stream_mode";
+          } else if (state.realtimeMode === 'connecting') {
+            modeKey = "auto_refresh_connecting_mode";
+          }
           autoRefreshPillEl.textContent = t("auto_refresh_hint", { 
-            mode: t("auto_refresh_active_mode"), 
+            mode: t(modeKey), 
             sec: Math.floor(state.taskPollMs / 1000) 
           });
+        }
+      }
+
+      function createEmptyRealtimeSync() {
+        return {
+          reloadAll: false,
+          refreshDocs: false,
+          refreshCurrentDoc: false,
+          refreshTasks: false,
+          refreshVersions: false,
+          forceRefreshSelected: false,
+        };
+      }
+
+      state.pendingRealtimeSync = createEmptyRealtimeSync();
+
+      function stopTaskEventStream({ keepMode = false } = {}) {
+        if (state.taskEventRetryTimer) {
+          clearTimeout(state.taskEventRetryTimer);
+          state.taskEventRetryTimer = null;
+        }
+        if (state.taskEventAbortController) {
+          state.taskEventAbortController.abort();
+          state.taskEventAbortController = null;
+        }
+        if (!keepMode) {
+          state.realtimeMode = 'poll';
+          updateAutoRefreshPill();
+        }
+      }
+
+      function queueRealtimeSync(nextSync) {
+        state.pendingRealtimeSync = {
+          ...state.pendingRealtimeSync,
+          reloadAll: state.pendingRealtimeSync.reloadAll || Boolean(nextSync.reloadAll),
+          refreshDocs: state.pendingRealtimeSync.refreshDocs || Boolean(nextSync.refreshDocs),
+          refreshCurrentDoc: state.pendingRealtimeSync.refreshCurrentDoc || Boolean(nextSync.refreshCurrentDoc),
+          refreshTasks: state.pendingRealtimeSync.refreshTasks || Boolean(nextSync.refreshTasks),
+          refreshVersions: state.pendingRealtimeSync.refreshVersions || Boolean(nextSync.refreshVersions),
+          forceRefreshSelected: state.pendingRealtimeSync.forceRefreshSelected || Boolean(nextSync.forceRefreshSelected),
+        };
+        if (state.realtimeSyncTimer) {
+          return;
+        }
+        state.realtimeSyncTimer = setTimeout(() => {
+          const pending = state.pendingRealtimeSync;
+          state.pendingRealtimeSync = createEmptyRealtimeSync();
+          state.realtimeSyncTimer = null;
+          safeRun(async () => {
+            if (pending.reloadAll) {
+              await loadDocs();
+              return;
+            }
+            if (pending.refreshDocs) {
+              await loadDocsOnly();
+            }
+            if (pending.refreshCurrentDoc && state.docId) {
+              await selectDoc(state.docId, { refreshDocs: false });
+              return;
+            }
+            const jobs = [];
+            if (pending.refreshTasks) {
+              jobs.push(loadTasks({ autoSelect: false, forceRefreshSelected: pending.forceRefreshSelected }));
+            }
+            if (pending.refreshVersions) {
+              jobs.push(loadVersions());
+            }
+            if (jobs.length) {
+              await Promise.all(jobs);
+            }
+          });
+        }, 150);
+      }
+
+      function handleTaskEvent(eventName, payload) {
+        if (eventName === 'ready') {
+          state.realtimeMode = 'stream';
+          updateAutoRefreshPill();
+          return;
+        }
+        if (!payload || typeof payload !== 'object') {
+          return;
+        }
+        if (eventName === 'document.changed') {
+          if (payload.kind === 'deleted') {
+            queueRealtimeSync({ reloadAll: payload.doc_id === state.docId, refreshDocs: payload.doc_id !== state.docId });
+            return;
+          }
+          queueRealtimeSync({
+            refreshDocs: true,
+            refreshCurrentDoc: payload.doc_id === state.docId,
+          });
+          return;
+        }
+        if (eventName !== 'task.changed' && eventName !== 'tasks.changed') {
+          return;
+        }
+        if (payload.doc_id !== state.docId) {
+          return;
+        }
+        queueRealtimeSync({
+          refreshTasks: true,
+          refreshVersions: Boolean(payload.document_changed),
+          refreshCurrentDoc: Boolean(payload.document_changed),
+          forceRefreshSelected: payload.task_id === state.selectedTaskId || Boolean(payload.document_changed),
+        });
+      }
+
+      function consumeTaskEventBuffer(buffer) {
+        let remaining = buffer;
+        let boundary = remaining.indexOf('\n\n');
+        while (boundary !== -1) {
+          const rawEvent = remaining.slice(0, boundary).trim();
+          remaining = remaining.slice(boundary + 2);
+          if (!rawEvent || rawEvent.startsWith(':')) {
+            boundary = remaining.indexOf('\n\n');
+            continue;
+          }
+          let eventName = 'message';
+          const dataLines = [];
+          rawEvent.split('\n').forEach((line) => {
+            if (line.startsWith('event:')) {
+              eventName = line.slice(6).trim();
+            } else if (line.startsWith('data:')) {
+              dataLines.push(line.slice(5).trim());
+            }
+          });
+          const dataText = dataLines.join('\n');
+          let payload = null;
+          if (dataText) {
+            try {
+              payload = JSON.parse(dataText);
+            } catch {
+              payload = null;
+            }
+          }
+          handleTaskEvent(eventName, payload);
+          boundary = remaining.indexOf('\n\n');
+        }
+        return remaining;
+      }
+
+      function scheduleTaskEventReconnect() {
+        if (document.hidden || !apiKeyInput.value.trim() || state.taskEventRetryTimer) {
+          return;
+        }
+        state.taskEventRetryTimer = setTimeout(() => {
+          state.taskEventRetryTimer = null;
+          startTaskEventStream().catch((error) => {
+            setStatus(error.message || t("request_failed"), 'error');
+          });
+        }, 3000);
+      }
+
+      async function startTaskEventStream() {
+        if (document.hidden || !apiKeyInput.value.trim() || state.taskEventAbortController) {
+          return;
+        }
+        state.realtimeMode = 'connecting';
+        updateAutoRefreshPill();
+        const controller = new AbortController();
+        state.taskEventAbortController = controller;
+        let shouldReconnect = true;
+        try {
+          const response = await fetch('/api/tasks/events', {
+            method: 'GET',
+            headers: {
+              Accept: 'text/event-stream',
+              Authorization: getHeaders().Authorization,
+            },
+            signal: controller.signal,
+            cache: 'no-store',
+          });
+          if (!response.ok || !response.body) {
+            let payload = null;
+            try {
+              payload = await response.json();
+            } catch {
+              payload = null;
+            }
+            throw new Error(buildFriendlyError(payload?.error?.code, payload?.error?.message));
+          }
+          state.realtimeMode = 'stream';
+          updateAutoRefreshPill();
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
+          while (state.taskEventAbortController === controller) {
+            const { value, done } = await reader.read();
+            if (done) {
+              break;
+            }
+            buffer += decoder.decode(value, { stream: true }).replaceAll('\r\n', '\n');
+            buffer = consumeTaskEventBuffer(buffer);
+          }
+        } catch (error) {
+          if (controller.signal.aborted) {
+            shouldReconnect = false;
+            return;
+          }
+          state.realtimeMode = 'poll';
+          updateAutoRefreshPill();
+          throw error;
+        } finally {
+          if (state.taskEventAbortController === controller) {
+            state.taskEventAbortController = null;
+            if (shouldReconnect) {
+              state.realtimeMode = 'poll';
+              updateAutoRefreshPill();
+              scheduleTaskEventReconnect();
+            }
+          }
         }
       }
 
@@ -2203,6 +2544,142 @@
           return;
         }
         taskGroupSummaryEl.textContent = '';
+      }
+
+      function describeBatchSkipReason(reason) {
+        if (reason === 'missing_result') return t('bulk_accept_skip_missing_result');
+        if (reason === 'task_stale') return t('bulk_accept_skip_task_stale');
+        if (reason === 'conflict') return t('bulk_accept_skip_conflict');
+        if (reason === 'invalid_state') return t('bulk_accept_skip_invalid_state');
+        return t('bulk_accept_skip_unknown');
+      }
+
+      function describeAcceptReadyScopeValue() {
+        if (acceptReadyScopeEl.value === 'selected-action') return t('scope_action');
+        if (acceptReadyScopeEl.value === 'current-block') return t('scope_block');
+        return t('scope_all');
+      }
+
+      function describeAcceptReadyLimitValue(limit) {
+        if (limit === null || limit === undefined) {
+          return t('unlimited');
+        }
+        return String(limit);
+      }
+
+      function summarizePreviewText(value) {
+        const trimmed = String(value || '').trim();
+        if (!trimmed) {
+          return t('empty_value');
+        }
+        return trimmed.length > 140 ? `${trimmed.slice(0, 140)}…` : trimmed;
+      }
+
+      function renderBatchPreviewSection(title, items, showReason) {
+        if (!items.length) {
+          return '';
+        }
+        const visibleItems = items.slice(0, 3)
+          .map((item) => {
+            const heading = item.heading || t('empty_value');
+            const primaryText = showReason ? summarizePreviewText(item.source_text) : summarizePreviewText(item.result_text || item.source_text);
+            const reasonLine = showReason && item.reason
+              ? `<div class="meta">${escapeHtml(describeBatchSkipReason(item.reason))}</div>`
+              : '';
+            return `
+              <div class="batch-preview-item">
+                <div class="batch-preview-item-head">
+                  <div class="batch-preview-item-title">#${item.task_id} · ${escapeHtml(item.action)}</div>
+                  <div class="batch-preview-item-meta">${escapeHtml(t('offset_label', { start: item.start_offset, end: item.end_offset }))}</div>
+                </div>
+                <div class="meta">${escapeHtml(heading)}</div>
+                <div class="batch-preview-item-code">${escapeHtml(primaryText)}</div>
+                ${reasonLine}
+              </div>
+            `;
+          })
+          .join('');
+        const moreCount = items.length - 3;
+        const moreLine = moreCount > 0
+          ? `<div class="panel-caption">${escapeHtml(t('bulk_accept_preview_more', { count: moreCount }))}</div>`
+          : '';
+        return `
+          <div class="batch-preview-section">
+            <strong>${escapeHtml(title)}</strong>
+            ${visibleItems}
+            ${moreLine}
+          </div>
+        `;
+      }
+
+      function renderBulkAcceptUndo() {
+        const rollback = state.lastBulkAcceptRollback;
+        if (!rollback || rollback.docId !== state.docId) {
+          acceptReadyUndoEl.innerHTML = '';
+          return;
+        }
+        acceptReadyUndoEl.innerHTML = `
+          <button id="undo-last-bulk-accept" class="secondary">${escapeHtml(t('undo_last_bulk_accept'))}</button>
+          <span class="pill">${escapeHtml(t('undo_last_bulk_accept_hint', { rev: rollback.revision }))}</span>
+        `;
+        document.getElementById('undo-last-bulk-accept').addEventListener('click', () => {
+          safeRun(() => rollbackVersion(rollback.versionId, 'undo last bulk accept'));
+        });
+      }
+
+      function renderAcceptReadyPreview(preview = null, warningMessage = '') {
+        state.acceptReadyPreview = preview;
+        if (warningMessage) {
+          acceptReadyButtonEl.disabled = true;
+          acceptReadyPreviewEl.className = 'detail-note warn';
+          acceptReadyPreviewEl.innerHTML = `
+            <strong>${escapeHtml(t('bulk_accept_preview'))}</strong>
+            <div>${escapeHtml(warningMessage)}</div>
+          `;
+          renderBulkAcceptUndo();
+          return;
+        }
+        if (!preview) {
+          acceptReadyButtonEl.disabled = !state.docId;
+          acceptReadyPreviewEl.className = 'detail-note';
+          acceptReadyPreviewEl.innerHTML = `
+            <strong>${escapeHtml(t('bulk_accept_preview'))}</strong>
+            <div>${escapeHtml(t('bulk_accept_preview_placeholder'))}</div>
+          `;
+          renderBulkAcceptUndo();
+          return;
+        }
+        acceptReadyButtonEl.disabled = preview.will_accept === 0;
+        acceptReadyPreviewEl.className = `detail-note ${preview.will_accept > 0 ? 'success' : 'warn'}`.trim();
+        const summary = preview.will_accept > 0
+          ? t('bulk_accept_preview_summary', { matched: preview.matched, accept: preview.will_accept, skip: preview.will_skip })
+          : t('bulk_accept_preview_none');
+        const extras = [
+          { label: t('bulk_accept_preview_scope_label'), value: describeAcceptReadyScopeValue() },
+          { label: t('bulk_accept_preview_limit_label'), value: describeAcceptReadyLimitValue(preview.limit) },
+          { label: t('bulk_accept_preview_matches_label'), value: String(preview.matched) },
+          { label: t('bulk_accept_preview_accept_label'), value: String(preview.will_accept) },
+          { label: t('bulk_accept_preview_skip_label'), value: String(preview.will_skip) },
+        ];
+        const extraHtml = extras
+          .map((item) => `
+            <div class="detail-note-inline">
+              <span class="detail-note-inline-label">${escapeHtml(item.label)}</span>
+              <div class="detail-note-inline-value">${escapeHtml(item.value)}</div>
+            </div>
+          `)
+          .join('');
+        const sections = [
+          renderBatchPreviewSection(t('bulk_accept_preview_candidates'), preview.accepted_tasks, false),
+          renderBatchPreviewSection(t('bulk_accept_preview_skipped'), preview.skipped_tasks, true),
+        ].filter(Boolean).join('');
+        acceptReadyPreviewEl.innerHTML = `
+          <strong>${escapeHtml(t('bulk_accept_preview'))}</strong>
+          <div>${escapeHtml(summary)}</div>
+          <div class="detail-note-extra">${extraHtml}</div>
+          <div class="batch-preview-list">${sections}</div>
+        `;
+        renderBulkAcceptUndo();
       }
 
       function renderTaskList(tasks) {
@@ -2293,6 +2770,30 @@
         return payload;
       }
 
+      async function loadAcceptReadyPreview(options = {}) {
+        const { silent = false } = options;
+        if (!state.docId) {
+          renderAcceptReadyPreview();
+          return null;
+        }
+        let payload;
+        try {
+          payload = buildAcceptReadyPayload();
+        } catch (error) {
+          renderAcceptReadyPreview(null, error.message || t('bulk_accept_preview_needs_task'));
+          if (!silent) {
+            throw error;
+          }
+          return null;
+        }
+        const preview = await api(`/api/docs/${state.docId}/tasks/accept-ready-preview`, {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        });
+        renderAcceptReadyPreview(preview);
+        return preview;
+      }
+
       function getHeaders() {
         const apiKey = apiKeyInput.value.trim();
         if (!apiKey) {
@@ -2366,6 +2867,9 @@
           return;
         }
         const doc = await api(`/api/docs/${docId}`);
+        if (state.lastBulkAcceptRollback && state.lastBulkAcceptRollback.docId !== doc.id) {
+          state.lastBulkAcceptRollback = null;
+        }
         state.docId = doc.id;
         state.revision = doc.revision;
         state.docBlocks = doc.blocks;
@@ -2383,6 +2887,7 @@
           await loadDocsOnly();
         }
         await Promise.all([loadTasks(), loadVersions()]);
+        await loadAcceptReadyPreview({ silent: true });
         setStatus(t("loaded_doc_msg", { id: doc.id, rev: doc.revision }), 'success');
       }
 
@@ -2394,6 +2899,7 @@
           taskCountPillEl.textContent = t("tasks_count_initial");
           taskListEl.innerHTML = `<option value="">${escapeHtml(t("select_doc_first"))}</option>`;
           resetTaskDetails();
+          renderAcceptReadyPreview();
           return { tasks: [], changed: false };
         }
         const previousSignature = state.taskSignature;
@@ -2403,6 +2909,7 @@
         if (!tasks.length) {
           renderTaskList(tasks);
           resetTaskDetails();
+          await loadAcceptReadyPreview({ silent: true });
           return { tasks, changed: previousSignature !== state.taskSignature };
         }
         if (state.selectedTaskId && !tasks.some((task) => task.id === state.selectedTaskId)) {
@@ -2416,6 +2923,8 @@
           if (forceRefreshSelected || state.selectedTaskId !== selectedTaskId || state.selectedTaskDetail === null) {
             await selectTask(selectedTaskId);
           }
+        } else {
+          await loadAcceptReadyPreview({ silent: true });
         }
         return { tasks, changed: previousSignature !== state.taskSignature };
       }
@@ -2561,11 +3070,13 @@
           setTaskSummary(t("diff_" + task.status), recoveryHint || "", task.status === 'failed' ? 'error' : 'warn', [], summaryExtras);
         }
         renderTaskActions(task, taskId, recoveryPreview);
+        await loadAcceptReadyPreview({ silent: true });
       }
 
       async function createDoc() {
         const title = document.getElementById('new-title').value.trim();
         if (!title) throw new Error(t("field_required", { field: t("new_doc_title") }));
+        state.lastBulkAcceptRollback = null;
         const doc = await api('/api/docs', {
           method: 'POST',
           body: JSON.stringify({ title, raw_markdown: `# ${title}\n`, actor: 'browser' }),
@@ -2577,6 +3088,7 @@
 
       async function saveDoc() {
         if (!state.docId) throw new Error(t("please_select_doc"));
+        state.lastBulkAcceptRollback = null;
         const title = docTitleInput.value.trim();
         const previousRevision = state.revision;
         const doc = await api(`/api/docs/${state.docId}`, {
@@ -2616,6 +3128,7 @@
         if (!state.docId) return;
         if (!window.confirm(t("delete_confirm"))) return;
         const deletedId = state.docId;
+        state.lastBulkAcceptRollback = null;
         await api(`/api/docs/${state.docId}`, { method: 'DELETE' });
         clearEditor();
         await loadDocs();
@@ -2644,10 +3157,18 @@
 
       async function acceptReadyTasks() {
         if (!state.docId) return;
+        const preview = state.acceptReadyPreview || await loadAcceptReadyPreview({ silent: false });
+        if (!preview || preview.will_accept === 0) {
+          setStatus(t("bulk_accept_none", { skipped: preview?.will_skip || 0 }), 'warn');
+          return;
+        }
         const result = await api(`/api/docs/${state.docId}/tasks/accept-ready`, {
           method: 'POST',
           body: JSON.stringify(buildAcceptReadyPayload()),
         });
+        state.lastBulkAcceptRollback = result.rollback_version_id
+          ? { docId: state.docId, versionId: result.rollback_version_id, revision: result.rollback_revision }
+          : null;
         await selectDoc(state.docId, { refreshDocs: true });
         if (result.accepted_task_ids.length > 0) await selectTask(result.accepted_task_ids[0]);
         setStatus(result.accepted === 0 ? t("bulk_accept_none", { skipped: result.skipped }) : t("bulk_accept_success", { count: result.accepted, skipped: result.skipped, rev: result.document_revision }), 'success');
@@ -2675,6 +3196,7 @@
       }
 
       async function acceptTask(taskId) {
+        state.lastBulkAcceptRollback = null;
         const task = await api(`/api/tasks/${taskId}/accept`, {
           method: 'POST',
           body: JSON.stringify({ expected_revision: state.revision, actor: 'browser', note: 'accept from ui' }),
@@ -2719,12 +3241,13 @@
         await recoverTask(taskId, 'relocate');
       }
 
-      async function rollbackVersion(versionId) {
+      async function rollbackVersion(versionId, note = null) {
         if (!state.docId) return;
         const doc = await api(`/api/docs/${state.docId}/versions/${versionId}/rollback`, {
           method: 'POST',
-          body: JSON.stringify({ expected_revision: state.revision, actor: 'browser', note: `rollback to ${versionId}` }),
+          body: JSON.stringify({ expected_revision: state.revision, actor: 'browser', note: note || `rollback to ${versionId}` }),
         });
+        state.lastBulkAcceptRollback = null;
         setStatus(t("rollback_success", { id: versionId, rev: doc.revision }), 'success');
         await selectDoc(state.docId);
       }
@@ -2762,7 +3285,8 @@
         localStorage.setItem('agentdocs.apiKey', apiKeyInput.value.trim());
         keyModalEl.classList.add('hidden');
         setStatus(t("api_key_saved_msg"), 'success');
-        safeRun(async () => { await loadTaskTemplates(); await loadDocs(); });
+        stopTaskEventStream();
+        safeRun(async () => { await loadTaskTemplates(); await loadDocs(); await startTaskEventStream(); });
       });
       document.getElementById('refresh-current').addEventListener('click', () => safeRun(refreshCurrent));
       document.getElementById('create-doc').addEventListener('click', () => safeRun(createDoc));
@@ -2778,6 +3302,8 @@
       document.getElementById('delete-doc').addEventListener('click', () => safeRun(deleteDoc));
       document.getElementById('create-task').addEventListener('click', () => safeRun(createTask));
       docSelectorEl.addEventListener('change', () => safeRun(() => selectDoc(Number(docSelectorEl.value))));
+      acceptReadyScopeEl.addEventListener('change', () => safeRun(() => loadAcceptReadyPreview({ silent: true })));
+      acceptReadyLimitEl.addEventListener('change', () => safeRun(() => loadAcceptReadyPreview({ silent: true })));
       taskTemplateEl.addEventListener('change', () => {
         const template = getTemplateCatalog().find(t => normalizeTemplateId(t.id) === taskTemplateEl.value);
         if (template) { taskActionEl.value = template.action; taskInstructionEl.value = template.instruction; }
@@ -2794,13 +3320,21 @@
         openKeyModal();
         setStatus(t("api_key_required"), 'warn');
       } else {
-        safeRun(async () => { await loadTaskTemplates(); await loadDocs(); });
+        safeRun(async () => { await loadTaskTemplates(); await loadDocs(); await startTaskEventStream(); });
       }
       
       document.addEventListener('visibilitychange', updateAutoRefreshPill);
+      document.addEventListener('visibilitychange', () => {
+        updateAutoRefreshPill();
+        if (document.hidden) {
+          stopTaskEventStream({ keepMode: true });
+          return;
+        }
+        safeRun(async () => { await startTaskEventStream(); });
+      });
 
       setInterval(() => {
-        if (!document.hidden && state.docId && !state.isTaskPollRunning) {
+        if (!document.hidden && state.docId && !state.isTaskPollRunning && state.realtimeMode !== 'stream') {
           state.isTaskPollRunning = true;
           loadTasks({ autoSelect: false }).finally(() => { state.isTaskPollRunning = false; });
         }

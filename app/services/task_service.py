@@ -208,20 +208,21 @@ class TaskService:
         limit: int | None = None,
     ) -> dict[str, object]:
         document = self.document_service.get_document(db, doc_id)
-        if (start_offset is None) != (end_offset is None):
-            raise ApiError(422, "validation_error", "provide both start_offset and end_offset")
-        if start_offset is not None and (start_offset < 0 or end_offset is None or end_offset <= start_offset):
-            raise ApiError(422, "validation_error", "invalid batch range")
-
-        query = db.query(Task).filter(Task.doc_id == doc_id).filter(Task.status == "done")
-        if action is not None:
-            query = query.filter(Task.action == action)
-        if start_offset is not None and end_offset is not None:
-            query = query.filter(Task.start_offset >= start_offset).filter(Task.end_offset <= end_offset)
-        query = query.order_by(Task.start_offset.desc(), Task.id.desc())
-        if limit is not None:
-            query = query.limit(limit)
-        tasks = query.all()
+        self._validate_batch_accept_filters(start_offset=start_offset, end_offset=end_offset)
+        tasks = self._list_batch_accept_tasks(
+            db,
+            doc_id=doc_id,
+            action=action,
+            start_offset=start_offset,
+            end_offset=end_offset,
+            limit=limit,
+        )
+        rollback_version_id = self._current_version_id(
+            db,
+            doc_id=doc_id,
+            revision=document.revision,
+        )
+        rollback_revision = document.revision
 
         accepted_task_ids: list[int] = []
         skipped_tasks: list[dict[str, object]] = []
@@ -247,6 +248,66 @@ class TaskService:
             "accepted": len(accepted_task_ids),
             "skipped": len(skipped_tasks),
             "accepted_task_ids": accepted_task_ids,
+            "skipped_tasks": skipped_tasks,
+            "rollback_version_id": rollback_version_id if accepted_task_ids else None,
+            "rollback_revision": rollback_revision if accepted_task_ids else None,
+        }
+
+    def preview_accept_ready_tasks(
+        self,
+        db: Session,
+        doc_id: int,
+        action: str | None = None,
+        start_offset: int | None = None,
+        end_offset: int | None = None,
+        limit: int | None = None,
+    ) -> dict[str, object]:
+        document = self.document_service.get_document(db, doc_id)
+        self._validate_batch_accept_filters(start_offset=start_offset, end_offset=end_offset)
+        tasks = self._list_batch_accept_tasks(
+            db,
+            doc_id=doc_id,
+            action=action,
+            start_offset=start_offset,
+            end_offset=end_offset,
+            limit=limit,
+        )
+
+        working_markdown = document.raw_markdown
+        accepted_task_ids: list[int] = []
+        accepted_tasks: list[dict[str, object]] = []
+        skipped_tasks: list[dict[str, object]] = []
+        for task in tasks:
+            preview_item = self._serialize_batch_preview_item(working_markdown, task)
+            if task.result is None:
+                skipped_tasks.append({**preview_item, "reason": "missing_result"})
+                continue
+            is_stale, _ = self._detect_stale(task, working_markdown)
+            if is_stale:
+                skipped_tasks.append({**preview_item, "reason": "task_stale"})
+                continue
+
+            accepted_task_ids.append(task.id)
+            accepted_tasks.append(preview_item)
+            if task.result != task.source_text:
+                working_markdown = (
+                    working_markdown[: task.start_offset]
+                    + task.result
+                    + working_markdown[task.end_offset :]
+                )
+
+        return {
+            "doc_id": doc_id,
+            "document_revision": document.revision,
+            "action": action,
+            "start_offset": start_offset,
+            "end_offset": end_offset,
+            "limit": limit,
+            "matched": len(tasks),
+            "will_accept": len(accepted_task_ids),
+            "will_skip": len(skipped_tasks),
+            "accepted_task_ids": accepted_task_ids,
+            "accepted_tasks": accepted_tasks,
             "skipped_tasks": skipped_tasks,
         }
 
@@ -469,6 +530,70 @@ class TaskService:
             "rejected": rejected,
             "unchanged": unchanged,
         }
+
+    def _validate_batch_accept_filters(
+        self,
+        *,
+        start_offset: int | None,
+        end_offset: int | None,
+    ) -> None:
+        if (start_offset is None) != (end_offset is None):
+            raise ApiError(422, "validation_error", "provide both start_offset and end_offset")
+        if start_offset is not None and (start_offset < 0 or end_offset is None or end_offset <= start_offset):
+            raise ApiError(422, "validation_error", "invalid batch range")
+
+    def _list_batch_accept_tasks(
+        self,
+        db: Session,
+        *,
+        doc_id: int,
+        action: str | None,
+        start_offset: int | None,
+        end_offset: int | None,
+        limit: int | None,
+    ) -> list[Task]:
+        query = db.query(Task).filter(Task.doc_id == doc_id).filter(Task.status == "done")
+        if action is not None:
+            query = query.filter(Task.action == action)
+        if start_offset is not None and end_offset is not None:
+            query = query.filter(Task.start_offset >= start_offset).filter(Task.end_offset <= end_offset)
+        query = query.order_by(Task.start_offset.desc(), Task.id.desc())
+        if limit is not None:
+            query = query.limit(limit)
+        return query.all()
+
+    def _serialize_batch_preview_item(
+        self,
+        raw_markdown: str,
+        task: Task,
+    ) -> dict[str, object]:
+        block = self._find_matching_block(raw_markdown, task)
+        return {
+            "task_id": task.id,
+            "action": task.action,
+            "heading": None if block is None or not block.heading else block.heading,
+            "start_offset": task.start_offset,
+            "end_offset": task.end_offset,
+            "source_text": task.source_text,
+            "result_text": task.result,
+            "reason": None,
+        }
+
+    def _current_version_id(
+        self,
+        db: Session,
+        *,
+        doc_id: int,
+        revision: int,
+    ) -> int | None:
+        version = (
+            db.query(DocumentVersion)
+            .filter(DocumentVersion.doc_id == doc_id)
+            .filter(DocumentVersion.revision == revision)
+            .order_by(DocumentVersion.created_at.desc(), DocumentVersion.id.desc())
+            .first()
+        )
+        return None if version is None else int(version.id)
 
     def _validate_range(
         self, raw_markdown: str, source_text: str, start_offset: int, end_offset: int

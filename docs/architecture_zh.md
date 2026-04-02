@@ -10,7 +10,8 @@ AgentDocs 是一个围绕单份 Markdown 文档、单个人工审核者和单个
 - 在读取文档时把 Markdown 解析成运行时 block 视图
 - 只允许在当前文档里创建单个 block 范围内的任务
 - 允许外部 Agent 轮询领取任务、回写结果或上报失败
-- 在 Agent 结果真正改写文档前，要求人工显式 accept
+- 通过认证后的 SSE 流向浏览器推送任务与文档更新事件
+- 在 Agent 结果真正改写文档前，要求人工显式 accept，包括批量合并前预览和批量合并后的回滚入口
 - 检测 stale 任务，并提供清理、重定位、预览和按当前正文重建能力
 
 系统不会做的事情：
@@ -18,7 +19,7 @@ AgentDocs 是一个围绕单份 Markdown 文档、单个人工审核者和单个
 - 不内置 LLM 推理
 - 不实现多用户身份和角色体系
 - 不持久化 blocks 表
-- 不使用 WebSocket、SSE、auto-apply、lease、heartbeat 或 claim-token 协议
+- 不使用 WebSocket、auto-apply、lease、heartbeat 或 claim-token 协议
 
 ## 真源
 
@@ -71,6 +72,7 @@ stale 检测只对 pending、processing 和 done 任务生效。
 
 - app/api：FastAPI 路由、认证依赖和响应序列化
 - app/services/document_service.py：文档 CRUD、版本快照、rollback 和默认任务设置
+- app/services/task_events.py：基于内存的任务/文档 SSE 事件总线
 - app/services/task_service.py：任务状态机、stale 检测、diff、批量 accept、清理、重定位和恢复
 - app/services/markdown.py：轻量级标题分块解析器
 - app/static/index.html：最小浏览器工作台

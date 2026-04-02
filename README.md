@@ -11,8 +11,9 @@ Implemented now:
 - Document CRUD with optimistic revision checks
 - Block-scoped task creation from selected Markdown ranges
 - Agent pickup and completion flows through the REST API
+- Authenticated SSE task and document update stream for browser-side realtime sync
 - Human accept, reject, cancel, retry, and rollback operations
-- Task diff preview, stale detection, stale cleanup, relocation, and requeue-from-current recovery
+- Task diff preview, batch-accept preview, stale detection, stale cleanup, relocation, and requeue-from-current recovery
 - Server-persisted task templates and document-level default task settings
 - Minimal browser UI and a simulated agent script for local testing
 
@@ -20,7 +21,7 @@ Explicitly out of scope for the current version:
 
 - Built-in LLM execution
 - Multi-user accounts or complex authorization
-- WebSocket or SSE push updates
+- WebSocket push updates
 - Auto-apply of agent output without human review
 - Persistent block tables
 - Lease, heartbeat, or claim-token task protocols

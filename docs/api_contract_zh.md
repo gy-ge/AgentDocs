@@ -52,6 +52,17 @@ Base URL：
 - revision
 - updated_at
 
+### GET /api/tasks/events
+
+返回 text/event-stream 响应，用于浏览器侧实时同步。
+
+规则：
+
+- 与其他 /api 路由一样，需要 Authorization: Bearer <API_KEY>
+- 建立订阅后会立即发送 ready 事件
+- 成功写操作后会发送 task.changed、tasks.changed 和 document.changed 事件
+- 浏览器工作台优先使用该事件流，同步失败时再退回轮询
+
 ### POST /api/docs
 
 请求：
@@ -177,6 +188,10 @@ Base URL：
 
 ### POST /api/docs/{doc_id}/tasks/accept-ready
 
+对当前文档执行一次批量接受。
+
+当 UI 需要先展示人工审阅摘要时，应先调用对应的 preview 接口。
+
 批量接受当前文档里可以安全合并的 done 任务。
 
 请求：
@@ -205,6 +220,29 @@ Base URL：
 - accepted
 - skipped
 - accepted_task_ids
+- skipped_tasks
+- rollback_version_id
+- rollback_revision
+
+### POST /api/docs/{doc_id}/tasks/accept-ready-preview
+
+预览当前批量接受筛选条件下的结果，不会修改文档或任务状态。
+
+请求体与 POST /api/docs/{doc_id}/tasks/accept-ready 相同。
+
+响应 data 包含：
+
+- doc_id
+- document_revision
+- action
+- start_offset
+- end_offset
+- limit
+- matched
+- will_accept
+- will_skip
+- accepted_task_ids
+- accepted_tasks
 - skipped_tasks
 
 ## 任务接口

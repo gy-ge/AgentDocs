@@ -106,6 +106,32 @@ class TaskRelocateAttemptRead(BaseModel):
     reason: str
 
 
+class TaskBatchPreviewItemRead(BaseModel):
+    task_id: int
+    action: str
+    heading: str | None = None
+    start_offset: int
+    end_offset: int
+    source_text: str
+    result_text: str | None = None
+    reason: str | None = None
+
+
+class TaskBatchPreviewRead(BaseModel):
+    doc_id: int
+    document_revision: int
+    action: str | None = None
+    start_offset: int | None = None
+    end_offset: int | None = None
+    limit: int | None = None
+    matched: int
+    will_accept: int
+    will_skip: int
+    accepted_task_ids: list[int]
+    accepted_tasks: list[TaskBatchPreviewItemRead]
+    skipped_tasks: list[TaskBatchPreviewItemRead]
+
+
 class TaskBatchAcceptRead(BaseModel):
     doc_id: int
     document_revision: int
@@ -113,6 +139,8 @@ class TaskBatchAcceptRead(BaseModel):
     skipped: int
     accepted_task_ids: list[int]
     skipped_tasks: list[TaskRelocateAttemptRead]
+    rollback_version_id: int | None = None
+    rollback_revision: int | None = None
 
 
 class TaskRelocateRead(BaseModel):

@@ -11,8 +11,9 @@ AgentDocs 是一个面向单个作者与单个外部 Agent 工作流的极简 Ma
 - 带 revision 乐观并发校验的文档 CRUD
 - 基于 Markdown 选区的单 block 任务创建
 - 通过 REST API 完成 Agent 领取与回写
+- 基于认证 SSE 的任务与文档更新流，用于浏览器实时同步
 - 人工 accept、reject、cancel、retry 与 rollback
-- 任务 diff 预览、stale 检测、stale 清理、重定位与按当前正文重建
+- 任务 diff 预览、批量接受预览、stale 检测、stale 清理、重定位与按当前正文重建
 - 服务端持久化任务模板与文档级默认任务设置
 - 最小浏览器工作台与本地模拟 Agent 脚本
 
@@ -20,7 +21,7 @@ AgentDocs 是一个面向单个作者与单个外部 Agent 工作流的极简 Ma
 
 - 内置 LLM 推理
 - 多用户账户或复杂权限系统
-- WebSocket 或 SSE 推送
+- WebSocket 推送
 - 无人工确认的自动应用结果
 - 持久化 block 表
 - lease、heartbeat、claim token 一类任务协议

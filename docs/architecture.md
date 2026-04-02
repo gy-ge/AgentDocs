@@ -10,7 +10,8 @@ What the system does:
 - Parses Markdown into runtime block views when documents are read
 - Restricts task creation to a single block range inside the current document text
 - Lets an external agent poll for work, submit a result, or report failure
-- Requires a human-driven accept step before agent output changes the document
+- Pushes authenticated task and document updates to the browser through an SSE stream
+- Requires a human-driven accept step before agent output changes the document, including batch preview before bulk merges and rollback after review
 - Detects stale tasks and supports cleanup, relocation, preview, and requeue-from-current recovery
 
 What the system does not do:
@@ -18,7 +19,7 @@ What the system does not do:
 - It does not run an LLM internally
 - It does not implement multi-user identity or role systems
 - It does not keep a persistent blocks table
-- It does not use WebSocket, SSE, auto-apply, lease, heartbeat, or claim-token flows
+- It does not use WebSocket, auto-apply, lease, heartbeat, or claim-token flows
 
 ## Source of Truth
 
@@ -71,6 +72,7 @@ Stale checks apply to pending, processing, and done tasks.
 
 - app/api: FastAPI routers, authentication dependency, and response serialization
 - app/services/document_service.py: document CRUD, version creation, rollback, and default task settings
+- app/services/task_events.py: in-memory broker for authenticated SSE task/document update streams
 - app/services/task_service.py: task lifecycle, stale detection, diff generation, batch accept, cleanup, relocation, and recovery
 - app/services/markdown.py: lightweight heading-based block parser
 - app/static/index.html: minimal browser workbench

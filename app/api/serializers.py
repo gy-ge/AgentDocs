@@ -3,6 +3,7 @@ from app.schemas.templates import TaskTemplateRead
 from app.schemas.tasks import (
     CleanupStaleTasksRead,
     TaskBatchAcceptRead,
+    TaskBatchPreviewRead,
     TaskDiffRead,
     TaskRecoveryPreviewRead,
     TaskRecoveryResultRead,
@@ -93,6 +94,10 @@ def serialize_task_diff(data: dict[str, object]) -> TaskDiffRead:
 
 def serialize_batch_accept(result: dict[str, object]) -> TaskBatchAcceptRead:
     return TaskBatchAcceptRead(**result)
+
+
+def serialize_batch_accept_preview(result: dict[str, object]) -> TaskBatchPreviewRead:
+    return TaskBatchPreviewRead(**result)
 
 
 def serialize_task_relocation(

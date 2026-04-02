@@ -177,6 +177,10 @@ Response data contains:
 
 ### POST /api/docs/{doc_id}/tasks/accept-ready
 
+Apply one batch of safe done tasks for one document.
+
+Use the companion preview endpoint first when the UI needs a reviewer-facing summary.
+
 Batch-accepts safe done tasks for one document.
 
 Request:
@@ -206,6 +210,29 @@ Response data contains:
 - skipped
 - accepted_task_ids
 - skipped_tasks
+- rollback_version_id
+- rollback_revision
+
+### POST /api/docs/{doc_id}/tasks/accept-ready-preview
+
+Preview the current batch-accept selection without changing document or task state.
+
+Request body is the same as POST /api/docs/{doc_id}/tasks/accept-ready.
+
+Response data contains:
+
+- doc_id
+- document_revision
+- action
+- start_offset
+- end_offset
+- limit
+- matched
+- will_accept
+- will_skip
+- accepted_task_ids
+- accepted_tasks
+- skipped_tasks
 
 ## Tasks
 
@@ -217,6 +244,17 @@ Optional query parameters:
 - doc_id
 
 Returns task list items with stale metadata.
+
+### GET /api/tasks/events
+
+Returns a text/event-stream response for browser-side realtime sync.
+
+Rules:
+
+- requires the same Authorization: Bearer <API_KEY> header as other /api routes
+- emits a ready event immediately after subscription
+- emits task.changed, tasks.changed, and document.changed events after successful writes
+- the browser workbench treats this stream as the primary sync path and falls back to polling if the stream disconnects
 
 ### GET /api/tasks/{task_id}
 

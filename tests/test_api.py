@@ -1,3 +1,9 @@
+import json
+
+from app.api import tasks as task_routes
+from app.services.task_events import TaskEventBroker
+
+
 def create_document(client, auth_headers, raw_markdown: str, title: str = "Doc"):
     response = client.post(
         "/api/docs",
@@ -31,6 +37,24 @@ def create_task(client, auth_headers, doc_id: int, raw_markdown: str, needle: st
     return response.json()["data"], start_offset, end_offset
 
 
+def read_task_event(lines):
+    event_name = "message"
+    data_lines = []
+    for line in lines:
+        if line == "":
+            if data_lines:
+                return event_name, json.loads("\n".join(data_lines))
+            continue
+        if line.startswith(":"):
+            continue
+        if line.startswith("event:"):
+            event_name = line.split(":", 1)[1].strip()
+            continue
+        if line.startswith("data:"):
+            data_lines.append(line.split(":", 1)[1].strip())
+    raise AssertionError("event stream ended before an event was received")
+
+
 def test_authentication_is_required(client):
     response = client.get("/api/docs")
 
@@ -42,6 +66,69 @@ def test_authentication_is_required(client):
             "message": "invalid api key",
         },
     }
+
+
+def test_task_event_stream_route_returns_event_stream(client, auth_headers, monkeypatch):
+    def fake_stream():
+        yield 'event: ready\ndata: {"stream":"tasks"}\n\n'
+        yield 'event: task.changed\ndata: {"kind":"picked_up","task_id":1}\n\n'
+
+    monkeypatch.setattr(task_routes.task_event_broker, "stream", fake_stream)
+
+    response = client.get("/api/tasks/events", headers=auth_headers)
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/event-stream")
+    assert "event: ready" in response.text
+    assert '"stream":"tasks"' in response.text
+    assert "event: task.changed" in response.text
+
+
+def test_task_event_broker_stream_emits_ready_and_task_updates():
+    broker = TaskEventBroker()
+    stream = broker.stream()
+
+    ready_event_name, ready_payload = read_task_event(iter(next(stream).splitlines()))
+    assert ready_event_name == "ready"
+    assert ready_payload == {"stream": "tasks"}
+
+    broker.publish_task(
+        kind="picked_up",
+        task_id=7,
+        doc_id=3,
+        status="processing",
+        doc_revision=2,
+        agent_name="agent-one",
+    )
+    task_event_name, task_payload = read_task_event(iter(next(stream).splitlines()))
+    assert task_event_name == "task.changed"
+    assert task_payload == {
+        "kind": "picked_up",
+        "task_id": 7,
+        "doc_id": 3,
+        "status": "processing",
+        "doc_revision": 2,
+        "document_changed": False,
+        "agent_name": "agent-one",
+    }
+    stream.close()
+
+
+def test_task_event_broker_stream_emits_document_updates():
+    broker = TaskEventBroker()
+    stream = broker.stream()
+
+    read_task_event(iter(next(stream).splitlines()))
+    broker.publish_document(kind="updated", doc_id=5, revision=4)
+
+    document_event_name, document_payload = read_task_event(iter(next(stream).splitlines()))
+    assert document_event_name == "document.changed"
+    assert document_payload == {
+        "kind": "updated",
+        "doc_id": 5,
+        "revision": 4,
+    }
+    stream.close()
 
 
 def test_root_page_is_served(client):
@@ -65,6 +152,7 @@ def test_root_page_is_served(client):
     assert "删除文档" in response.text
     assert "清理失效" in response.text
     assert "批量接受可合并结果" in response.text
+    assert "批量接受预览" in response.text
     assert "批量接受范围" in response.text
     assert "自动刷新：{mode} {sec}s" in response.text
     assert "前台" in response.text
@@ -371,6 +459,8 @@ def test_accept_ready_tasks_accepts_multiple_safe_done_tasks(client, auth_header
         "skipped": 0,
         "accepted_task_ids": [world_task["id"], hello_task["id"]],
         "skipped_tasks": [],
+        "rollback_version_id": 1,
+        "rollback_revision": 1,
     }
 
     doc_response = client.get(f"/api/docs/{doc_id}", headers=auth_headers)
@@ -434,6 +524,8 @@ def test_accept_ready_tasks_skips_stale_results_and_accepts_safe_ones(client, au
     assert data["accepted_task_ids"] == [safe_task["id"]]
     assert data["skipped_tasks"] == [{"task_id": stale_task["id"], "reason": "task_stale"}]
     assert data["document_revision"] == 3
+    assert data["rollback_version_id"] == 2
+    assert data["rollback_revision"] == 2
 
     doc_response = client.get(f"/api/docs/{doc_id}", headers=auth_headers)
     assert doc_response.status_code == 200
@@ -527,6 +619,87 @@ def test_accept_ready_tasks_can_filter_by_action_and_range(client, auth_headers)
     doc_response = client.get(f"/api/docs/{doc_id}", headers=auth_headers)
     assert doc_response.status_code == 200
     assert doc_response.json()["data"]["raw_markdown"] == "# Title\n## First\nGamma\n## Second\nBeta\n"
+
+
+def test_accept_ready_preview_reports_candidates_and_skips(client, auth_headers):
+    raw_markdown = "# Title\n## A\nHello\n## B\nWorld\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+
+    stale_task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "Hello")
+    safe_task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "World")
+
+    client.post(
+        "/api/tasks/next",
+        headers=auth_headers,
+        json={"agent_name": "agent-one"},
+    )
+    client.post(
+        f"/api/tasks/{stale_task['id']}/complete",
+        headers=auth_headers,
+        json={"result": "Hi", "error_message": None},
+    )
+    client.post(
+        "/api/tasks/next",
+        headers=auth_headers,
+        json={"agent_name": "agent-two"},
+    )
+    client.post(
+        f"/api/tasks/{safe_task['id']}/complete",
+        headers=auth_headers,
+        json={"result": "Planet", "error_message": None},
+    )
+
+    client.put(
+        f"/api/docs/{doc_id}",
+        headers=auth_headers,
+        json={
+            "title": "Doc",
+            "raw_markdown": "# Title\n## A\nHallo\n## B\nWorld\n",
+            "expected_revision": 1,
+            "actor": "browser",
+            "note": "make first task stale",
+        },
+    )
+
+    response = client.post(
+        f"/api/docs/{doc_id}/tasks/accept-ready-preview",
+        headers=auth_headers,
+        json={"actor": "browser", "note": "preview bulk accept"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["doc_id"] == doc_id
+    assert data["document_revision"] == 2
+    assert data["matched"] == 2
+    assert data["will_accept"] == 1
+    assert data["will_skip"] == 1
+    assert data["accepted_task_ids"] == [safe_task["id"]]
+    assert data["accepted_tasks"] == [
+        {
+            "task_id": safe_task["id"],
+            "action": "rewrite",
+            "heading": "B",
+            "start_offset": raw_markdown.index("World"),
+            "end_offset": raw_markdown.index("World") + len("World"),
+            "source_text": "World",
+            "result_text": "Planet",
+            "reason": None,
+        }
+    ]
+    assert data["skipped_tasks"] == [
+        {
+            "task_id": stale_task["id"],
+            "action": "rewrite",
+            "heading": "A",
+            "start_offset": raw_markdown.index("Hello"),
+            "end_offset": raw_markdown.index("Hello") + len("Hello"),
+            "source_text": "Hello",
+            "result_text": "Hi",
+            "reason": "task_stale",
+        }
+    ]
 
 
 def test_relocate_done_task_finds_unique_match_in_same_block(client, auth_headers):
@@ -1672,6 +1845,8 @@ def test_batch_accept_returns_empty_result_when_no_tasks_match(client, auth_head
     assert data["skipped"] == 0
     assert data["accepted_task_ids"] == []
     assert data["skipped_tasks"] == []
+    assert data["rollback_version_id"] is None
+    assert data["rollback_revision"] is None
 
 
 def test_document_parse_blocks_with_no_headings(client, auth_headers):

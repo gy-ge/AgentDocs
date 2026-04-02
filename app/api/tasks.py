@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.api.deps import require_api_key
@@ -16,6 +17,7 @@ from app.schemas.tasks import (
     TaskRecoverRequest,
     TaskNextRequest,
 )
+from app.services.task_events import task_event_broker
 from app.services.task_service import TaskService
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"], dependencies=[Depends(require_api_key)])
@@ -37,6 +39,19 @@ def list_tasks(
             for task in tasks
         ],
     }
+
+
+@router.get("/events")
+def stream_task_events():
+    return StreamingResponse(
+        task_event_broker.stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.get("/{task_id}")
@@ -69,6 +84,15 @@ def get_task_recovery_preview(task_id: int, db: Session = Depends(get_db)):
 def pickup_next_task(payload: TaskNextRequest, db: Session = Depends(get_db)):
     task = service.pickup_next_task(db, agent_name=payload.agent_name)
     description = None if task is None else service.describe_task(db, task)
+    if task is not None:
+        task_event_broker.publish_task(
+            kind="picked_up",
+            task_id=task.id,
+            doc_id=task.doc_id,
+            status=task.status,
+            doc_revision=task.doc_revision,
+            agent_name=task.agent_name,
+        )
     return {
         "ok": True,
         "data": None
@@ -91,6 +115,14 @@ def complete_task(
         result=payload.result,
         error_message=payload.error_message,
     )
+    task_event_broker.publish_task(
+        kind="completed" if task.status == "done" else "failed",
+        task_id=task.id,
+        doc_id=task.doc_id,
+        status=task.status,
+        doc_revision=task.doc_revision,
+        agent_name=task.agent_name,
+    )
     return {"ok": True, "data": serialize_task(task).model_dump(mode="json")}
 
 
@@ -105,24 +137,64 @@ def accept_task(
         actor=payload.actor,
         note=payload.note,
     )
+    document = service.document_service.get_document(db, task.doc_id)
+    task_event_broker.publish_task(
+        kind="accepted",
+        task_id=task.id,
+        doc_id=task.doc_id,
+        status=task.status,
+        doc_revision=document.revision,
+        agent_name=task.agent_name,
+        document_changed=document.revision != task.doc_revision,
+    )
+    if document.revision != task.doc_revision:
+        task_event_broker.publish_document(
+            kind="accepted_task_applied",
+            doc_id=document.id,
+            revision=document.revision,
+        )
     return {"ok": True, "data": serialize_task(task).model_dump(mode="json")}
 
 
 @router.post("/{task_id}/reject")
 def reject_task(task_id: int, db: Session = Depends(get_db)):
     task = service.reject_task(db, task_id=task_id)
+    task_event_broker.publish_task(
+        kind="rejected",
+        task_id=task.id,
+        doc_id=task.doc_id,
+        status=task.status,
+        doc_revision=task.doc_revision,
+        agent_name=task.agent_name,
+    )
     return {"ok": True, "data": serialize_task(task).model_dump(mode="json")}
 
 
 @router.post("/{task_id}/cancel")
 def cancel_task(task_id: int, db: Session = Depends(get_db)):
     task = service.cancel_task(db, task_id=task_id)
+    task_event_broker.publish_task(
+        kind="cancelled",
+        task_id=task.id,
+        doc_id=task.doc_id,
+        status=task.status,
+        doc_revision=task.doc_revision,
+        agent_name=task.agent_name,
+    )
     return {"ok": True, "data": serialize_task(task).model_dump(mode="json")}
 
 
 @router.post("/{task_id}/retry")
 def retry_task(task_id: int, db: Session = Depends(get_db)):
     task = service.retry_task(db, task_id=task_id)
+    task_event_broker.publish_task(
+        kind="retried",
+        task_id=task.id,
+        doc_id=task.doc_id,
+        status=task.status,
+        doc_revision=task.doc_revision,
+        agent_name=task.agent_name,
+    )
     return {"ok": True, "data": serialize_task(task).model_dump(mode="json")}
 
 
@@ -130,6 +202,14 @@ def retry_task(task_id: int, db: Session = Depends(get_db)):
 def relocate_task(task_id: int, db: Session = Depends(get_db)):
     task, relocation_strategy = service.relocate_task(db, task_id=task_id)
     description = service.describe_task(db, task)
+    task_event_broker.publish_task(
+        kind="relocated",
+        task_id=task.id,
+        doc_id=task.doc_id,
+        status=task.status,
+        doc_revision=task.doc_revision,
+        agent_name=task.agent_name,
+    )
     return {
         "ok": True,
         "data": serialize_task_relocation(
@@ -146,4 +226,23 @@ def recover_task(
     task_id: int, payload: TaskRecoverRequest, db: Session = Depends(get_db)
 ):
     result = service.recover_task(db, task_id=task_id, mode=payload.mode, actor=payload.actor)
+    source_task = result["source_task"]
+    task_event_broker.publish_task(
+        kind="recovered",
+        task_id=int(source_task["id"]),
+        doc_id=int(source_task["doc_id"]),
+        status=str(source_task["status"]),
+        doc_revision=int(source_task["doc_revision"]),
+        agent_name=source_task.get("agent_name"),
+    )
+    new_task = result.get("new_task")
+    if new_task is not None:
+        task_event_broker.publish_task(
+            kind="recreated",
+            task_id=int(new_task["id"]),
+            doc_id=int(new_task["doc_id"]),
+            status=str(new_task["status"]),
+            doc_revision=int(new_task["doc_revision"]),
+            agent_name=new_task.get("agent_name"),
+        )
     return {"ok": True, "data": serialize_task_recovery_result(result).model_dump(mode="json")}
