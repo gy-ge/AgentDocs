@@ -149,6 +149,29 @@ Manual publishing is best reserved for exceptional cases such as republishing th
 
 If the package stays private, users can still pull it after logging in with a GitHub personal access token that has `read:packages`.
 
+Run the published image locally
+
+You can override the image tag with the `IMAGE_TAG` environment variable (or set it in `.env`). Example commands:
+
+```bash
+# pull specific published tag (default: latest)
+IMAGE_TAG=v0.1.0 docker compose pull
+
+# start the service with the pulled image
+IMAGE_TAG=v0.1.0 docker compose up -d
+
+# follow logs
+docker compose logs -f
+
+# stop and remove
+docker compose down
+```
+
+Notes:
+
+- If the repository package is private, `docker compose pull` will prompt for credentials; authenticate with `docker login ghcr.io` using a Personal Access Token that has `read:packages`.
+- By default the compose file uses `ghcr.io/gy-ge/agentdocs:${IMAGE_TAG:-latest}` so you can omit `IMAGE_TAG` to run `latest`.
+
 ## Authentication
 
 All API routes under /api require this header:

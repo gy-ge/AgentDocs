@@ -149,6 +149,29 @@ git push origin v0.1.0
 
 如果包保持 private，使用者仍可先用带有 `read:packages` 权限的 GitHub Personal Access Token 登录后再拉取。
 
+本地运行已发布镜像
+
+可以用环境变量 `IMAGE_TAG` 覆盖默认镜像标签（或在 `.env` 中设置）。示例：
+
+```bash
+# 拉取指定标签（默认 latest）
+IMAGE_TAG=v0.1.0 docker compose pull
+
+# 启动服务
+IMAGE_TAG=v0.1.0 docker compose up -d
+
+# 查看日志
+docker compose logs -f
+
+# 停止并移除
+docker compose down
+```
+
+注意：
+
+- 如果仓库包是私有的，`docker compose pull` 需要验证，先用带有 `read:packages` 权限的 Personal Access Token 登录 `ghcr.io`。
+- 默认 `docker-compose.yml` 使用 `ghcr.io/gy-ge/agentdocs:${IMAGE_TAG:-latest}`，不设置 `IMAGE_TAG` 将拉取 `latest`。
+
 ## 认证方式
 
 所有 /api 路由都要求以下请求头：
