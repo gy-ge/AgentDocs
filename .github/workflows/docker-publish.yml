@@ -47,8 +47,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-      attestations: write
-      id-token: write
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -93,13 +91,10 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          provenance: ${{ github.event_name != 'pull_request' }}
-          sbom: ${{ github.event_name != 'pull_request' }}
+          provenance: false
+          sbom: false
 
-      - name: Attest build provenance
+      - name: Verify published platforms
         if: github.event_name != 'pull_request'
-        uses: actions/attest-build-provenance@v2
-        with:
-          subject-name: ${{ env.IMAGE_NAME }}
-          subject-digest: ${{ steps.build.outputs.digest }}
-          push-to-registry: true
+        run: |
+          docker buildx imagetools inspect ${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
