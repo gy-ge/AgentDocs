@@ -349,6 +349,11 @@
         min-width: 0;
       }
 
+      .doc-title-toolbar input.is-loading,
+      .editor-panel #doc-body.is-loading {
+        visibility: hidden;
+      }
+
       .doc-meta-row {
         display: grid;
         gap: 8px;

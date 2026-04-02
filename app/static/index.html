@@ -708,6 +708,7 @@
         docBlocks: [],
         docTaskDefaults: null,
         docDirty: false,
+        isLoadingDoc: false,
         lastSavedTitle: '',
         lastSavedBody: '',
         lastSavedAt: null,
@@ -863,6 +864,14 @@
       function updateDocumentTitle(docTitle = '') {
         const baseTitle = docTitle ? `${docTitle} · AgentDocs` : 'AgentDocs';
         document.title = state.docDirty ? `* ${baseTitle}` : baseTitle;
+      }
+
+      function setDocumentLoading(isLoading) {
+        state.isLoadingDoc = isLoading;
+        docTitleInput.classList.toggle('is-loading', isLoading);
+        docBodyInput.classList.toggle('is-loading', isLoading);
+        docTitleInput.disabled = isLoading;
+        docBodyInput.disabled = isLoading;
       }
 
       function formatSavedTime(value) {
@@ -2319,30 +2328,35 @@
         if (state.docId && computeDocumentDirty() && !nextOptions.skipDirtyFlush) {
           await flushDocumentChanges();
         }
-        const doc = await api(`/api/docs/${docId}`);
-        state.docId = doc.id;
-        state.revision = doc.revision;
-        state.docBlocks = doc.blocks;
-        state.selectedTaskId = null;
-        state.selectedTaskDetail = null;
-        state.selectedTaskRecovery = null;
-        state.tasks = [];
-        state.taskSignature = '';
-        docRevisionPillEl.textContent = t("revision_pill", { rev: doc.revision });
-        updateDocumentTitle(doc.title);
-        docSelectorEl.value = String(doc.id);
-        docTitleInput.value = doc.title;
-        docBodyInput.value = doc.raw_markdown;
-        syncSavedDocumentSnapshot(doc);
-        syncCurrentBlocks();
-        applyDocumentTaskDefaults(doc);
-        updateSelectionInfo();
-        resetTaskDetails();
-        if (nextOptions.refreshDocs) {
-          await loadDocsOnly();
+        setDocumentLoading(true);
+        try {
+          const doc = await api(`/api/docs/${docId}`);
+          state.docId = doc.id;
+          state.revision = doc.revision;
+          state.docBlocks = doc.blocks;
+          state.selectedTaskId = null;
+          state.selectedTaskDetail = null;
+          state.selectedTaskRecovery = null;
+          state.tasks = [];
+          state.taskSignature = '';
+          docRevisionPillEl.textContent = t("revision_pill", { rev: doc.revision });
+          updateDocumentTitle(doc.title);
+          docSelectorEl.value = String(doc.id);
+          docTitleInput.value = doc.title;
+          docBodyInput.value = doc.raw_markdown;
+          syncSavedDocumentSnapshot(doc);
+          syncCurrentBlocks();
+          applyDocumentTaskDefaults(doc);
+          updateSelectionInfo();
+          resetTaskDetails();
+          if (nextOptions.refreshDocs) {
+            await loadDocsOnly();
+          }
+          await Promise.all([loadTasks({ autoSelect: false }), loadVersions()]);
+          setStatus(t("loaded_doc_msg", { id: doc.id, rev: doc.revision }), 'success');
+        } finally {
+          setDocumentLoading(false);
         }
-        await Promise.all([loadTasks({ autoSelect: false }), loadVersions()]);
-        setStatus(t("loaded_doc_msg", { id: doc.id, rev: doc.revision }), 'success');
       }
 
       async function loadTasks(options = {}) {
