@@ -178,9 +178,13 @@ def test_task_selection_action_flow_and_autosave(ui_stack):
         page.locator("#task-instruction").fill("Polish this section for UI testing")
         page.get_by_role("button", name="Create Task").click()
 
-        page.locator("#task-summary").get_by_text("Ready to accept", exact=True).wait_for(timeout=12000)
-        page.locator("#task-actions").get_by_role("button", name="Select Text", exact=True).wait_for(timeout=5000)
-        page.locator("#task-actions").get_by_role("button", name="Select Text", exact=True).click()
+        page.locator("#task-comment-list").get_by_text("Ready to accept", exact=True).wait_for(timeout=12000)
+        page.locator("#task-comment-list [data-comment-task-id]").first.wait_for(timeout=5000)
+        page.locator("#review-surface [data-review-task-id]").first.wait_for(timeout=5000)
+        assert page.locator("#task-comment-list [data-comment-task-id]").count() == 1
+        assert page.locator("#review-surface [data-review-task-id]").count() >= 1
+        page.locator("#task-comment-list [data-comment-open]").first.wait_for(timeout=5000)
+        page.locator("#task-comment-list [data-comment-open]").first.click()
         selected_task_value = page.locator("#task-list").input_value()
         assert selected_task_value != ""
         selected_text = page.locator("#doc-body").evaluate("el => el.value.slice(el.selectionStart, el.selectionEnd)")
@@ -271,11 +275,69 @@ def test_task_actions_stay_usable_on_narrow_viewport(ui_stack):
         _save_api_key(page)
         page.locator("#doc-selector").select_option(str(doc["id"]))
         page.get_by_text(f"Loaded document #{doc['id']}, revision 1.").wait_for(timeout=5000)
-        page.locator("#task-summary").get_by_text("Ready to accept", exact=True).wait_for(timeout=5000)
-        select_text_button = page.locator("#task-actions").get_by_role("button", name="Select Text", exact=True)
+        page.locator("#task-comment-list [data-comment-task-id]").first.wait_for(timeout=5000)
+        page.locator("#task-comment-list [data-comment-task-id]").first.click()
+        select_text_button = page.locator("#task-comment-list [data-comment-open]").first
         assert select_text_button.is_visible()
         select_text_button.click()
         selected_text = page.locator("#doc-body").evaluate("el => el.value.slice(el.selectionStart, el.selectionEnd)")
         assert selected_text == "Alpha beta gamma."
+
+        browser.close()
+
+
+def test_review_comments_show_latest_task_first(ui_stack):
+    base_url = ui_stack["base_url"]
+    raw_markdown = "# Comment Order\n\n## Section A\nAlpha beta gamma.\n\n## Section B\nDelta epsilon zeta.\n"
+    doc = _api_request(
+        base_url,
+        "/api/docs",
+        method="POST",
+        payload={"title": "Comment Order", "raw_markdown": raw_markdown, "actor": "browser"},
+    )
+
+    alpha_start = raw_markdown.index("Alpha beta gamma.")
+    alpha_end = alpha_start + len("Alpha beta gamma.")
+    delta_start = raw_markdown.index("Delta epsilon zeta.")
+    delta_end = delta_start + len("Delta epsilon zeta.")
+
+    _api_request(
+        base_url,
+        f"/api/docs/{doc['id']}/tasks",
+        method="POST",
+        payload={
+            "action": "rewrite",
+            "instruction": "first task",
+            "source_text": "Alpha beta gamma.",
+            "start_offset": alpha_start,
+            "end_offset": alpha_end,
+            "doc_revision": 1,
+        },
+    )
+    latest_task = _api_request(
+        base_url,
+        f"/api/docs/{doc['id']}/tasks",
+        method="POST",
+        payload={
+            "action": "rewrite",
+            "instruction": "second task",
+            "source_text": "Delta epsilon zeta.",
+            "start_offset": delta_start,
+            "end_offset": delta_end,
+            "doc_revision": 1,
+        },
+    )
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        page = browser.new_page(viewport={"width": 1440, "height": 1100})
+        page.goto(base_url, wait_until="networkidle")
+
+        _save_api_key(page)
+        page.locator("#doc-selector").select_option(str(doc["id"]))
+        page.locator("#task-comment-list [data-comment-task-id]").nth(1).wait_for(timeout=5000)
+        first_card = page.locator("#task-comment-list [data-comment-task-id]").first
+        assert first_card.get_attribute("data-comment-task-id") == str(latest_task["id"])
+        assert "Delta epsilon zeta." in first_card.text_content()
 
         browser.close()
