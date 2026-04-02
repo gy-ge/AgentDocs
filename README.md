@@ -108,14 +108,16 @@ The repository now includes [docker-publish.yml](.github/workflows/docker-publis
 Recommended setup:
 
 - Keep the package public in GitHub Packages if you want anonymous `docker pull` access.
-- Use pushes to `main` for rolling delivery and Git tags like `v0.1.0` for immutable releases.
+- Use pushes to `main` only for validation, and Git tags like `v0.1.0` for actual image releases.
 - Rely on the built-in `GITHUB_TOKEN`; no extra registry secret is required for the workflow.
 
 Workflow behavior:
 
-- Pull requests build and test the image but do not publish it.
-- Pushes to `main` publish a rolling image with tags such as `latest`, `main`, and `sha-<commit>`.
-- Version tags like `v0.1.0` publish semver tags.
+- Pull requests run tests and a Docker build validation, but do not publish images.
+- Pushes to `main` run tests and a Docker build validation, but do not publish images.
+- Version tags like `v0.1.0` publish semver tags to GHCR.
+- Manual runs can publish a custom tag and optionally refresh `latest`.
+- After each actual publish, the workflow pulls the published digest and starts the container once as a smoke test.
 
 After the first successful publish, the image will be available under:
 
@@ -129,6 +131,21 @@ Example usage:
 docker pull ghcr.io/<owner>/<repository>:latest
 docker run --rm -p 8000:8000 --env-file .env ghcr.io/<owner>/<repository>:latest
 ```
+
+Recommended release flow:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+How `latest` is updated:
+
+- Pushing a normal version tag such as `v0.1.0` updates the semver tags and `latest` together.
+- Manual publishing does not update `latest` unless you explicitly set `publish_latest=true` in the workflow input.
+- If you want to move `latest` to an already-tested build without changing the semver tags, run the workflow manually with a maintenance tag and enable `publish_latest`.
+
+Manual publishing is best reserved for exceptional cases such as republishing the same code with an explicit maintenance tag.
 
 If the package stays private, users can still pull it after logging in with a GitHub personal access token that has `read:packages`.
 

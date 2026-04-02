@@ -108,14 +108,16 @@ docker compose up --build -d
 推荐做法：
 
 - 如果希望任何人都能直接 `docker pull`，请在 GitHub Packages 中把这个包设为 public。
-- 用 `main` 分支持续发布滚动镜像，用 `v0.1.0` 这类 Git tag 发布不可变版本。
+- `main` 分支只做校验，用 `v0.1.0` 这类 Git tag 发布正式镜像。
 - 工作流直接使用内置 `GITHUB_TOKEN` 登录 GHCR，不需要额外配置镜像仓库密钥。
 
 工作流行为：
 
-- Pull Request 只做测试与镜像构建，不会推送镜像。
-- 推送到 `main` 时会发布 `latest`、`main` 和 `sha-<commit>` 等滚动标签。
-- 推送 `v0.1.0` 这类版本标签时会发布对应的 semver 标签。
+- Pull Request 只做测试与 Docker 构建校验，不会推送镜像。
+- 推送到 `main` 时只做测试与 Docker 构建校验，不会推送镜像。
+- 推送 `v0.1.0` 这类版本标签时会向 GHCR 发布对应的 semver 标签。
+- 手动触发时可以发布自定义标签，并可选择是否同时刷新 `latest`。
+- 每次真正发布后，工作流都会按 digest 拉取已发布镜像，并实际启动一次容器做 smoke test。
 
 首次发布成功后，镜像地址为：
 
@@ -129,6 +131,21 @@ ghcr.io/<owner>/<repository>:latest
 docker pull ghcr.io/<owner>/<repository>:latest
 docker run --rm -p 8000:8000 --env-file .env ghcr.io/<owner>/<repository>:latest
 ```
+
+推荐发布流程：
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+`latest` 标签如何同步：
+
+- 推送 `v0.1.0` 这类正式版本标签时，会同时更新 semver 标签和 `latest`。
+- 手动触发发布时，默认不会更新 `latest`；只有显式把 `publish_latest` 设为 `true` 才会同步。
+- 如果你想在不改 semver 版本标签的前提下，把 `latest` 指向一份已经验证过的构建，可以手动触发工作流，填写一个维护用标签，并勾选 `publish_latest`。
+
+手动发布更适合少数例外场景，例如对同一份代码补发一个明确的维护标签。
 
 如果包保持 private，使用者仍可先用带有 `read:packages` 权限的 GitHub Personal Access Token 登录后再拉取。
 
