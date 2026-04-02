@@ -1,0 +1,28 @@
+services:
+  agentdocs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: agentdocs
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - agentdocs-data:/app/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "/app/.venv/bin/python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/').read()",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  agentdocs-data:

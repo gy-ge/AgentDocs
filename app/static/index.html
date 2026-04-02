@@ -1584,7 +1584,7 @@
           setStatus(t("loaded_doc_msg", { id: state.docId, rev: state.revision }), 'success');
         } else {
           docRevisionPillEl.textContent = t("no_doc_selected_pill");
-          setStatus(t("waiting_connection"));
+          setStatus(t("no_doc_selected"));
         }
       }
 
@@ -1754,6 +1754,11 @@
         taskCountPillEl.textContent = t("tasks_count_initial");
         taskGroupSummaryEl.textContent = "";
         versionCountPillEl.textContent = t("versions_count_initial");
+        if (!apiKeyInput.value.trim()) {
+          setStatus(t("api_key_required"), 'warn');
+        } else {
+          setStatus(t("no_doc_selected"));
+        }
       }
 
       function loadLegacyCustomTemplates() {

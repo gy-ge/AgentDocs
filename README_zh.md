@@ -67,6 +67,40 @@ uv run uvicorn app.main:app --reload
 
 然后访问 http://127.0.0.1:8000。
 
+## Docker 部署
+
+先创建环境变量文件：
+
+```bash
+cp .env.example .env
+```
+
+构建并启动容器：
+
+```bash
+docker compose up --build -d
+```
+
+容器入口会在启动 Uvicorn 之前自动执行 `alembic upgrade head`。
+
+第一次打开 http://127.0.0.1:8000 时，需要在浏览器弹出的连接设置里输入 `.env` 中的共享 API Key。按默认示例配置，这个值是 `change-me`。
+
+常用命令：
+
+```bash
+docker compose logs -f
+docker compose ps
+docker compose down
+```
+
+SQLite 数据库会持久化在名为 `agentdocs-data` 的 Docker volume 中，并挂载到容器内的 `/app/data`。
+
+如果代码或依赖有变化，需要重新构建：
+
+```bash
+docker compose up --build -d
+```
+
 ## 认证方式
 
 所有 /api 路由都要求以下请求头：

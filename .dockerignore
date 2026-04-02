@@ -1,0 +1,14 @@
+.git
+.gitignore
+.pytest_cache
+.python-version
+.venv
+.vscode
+__pycache__/
+*.py[cod]
+*.db
+.env
+data/
+lighthouse-mobile/
+lighthouse-mobile-after/
+lighthouse-mobile-final/

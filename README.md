@@ -67,6 +67,40 @@ uv run uvicorn app.main:app --reload
 
 Then open http://127.0.0.1:8000.
 
+## Docker Deployment
+
+Create the environment file first:
+
+```bash
+cp .env.example .env
+```
+
+Build and start the container:
+
+```bash
+docker compose up --build -d
+```
+
+The container entrypoint runs `alembic upgrade head` automatically before starting Uvicorn.
+
+After opening http://127.0.0.1:8000 for the first time, enter the shared API key from `.env` in the browser's Connection Settings dialog. With the default example config, that value is `change-me`.
+
+Useful commands:
+
+```bash
+docker compose logs -f
+docker compose ps
+docker compose down
+```
+
+The SQLite database is persisted in the named Docker volume `agentdocs-data`, mounted at `/app/data` inside the container.
+
+If you want to rebuild after dependency or code changes:
+
+```bash
+docker compose up --build -d
+```
+
 ## Authentication
 
 All API routes under /api require this header:
