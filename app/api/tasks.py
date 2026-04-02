@@ -42,7 +42,7 @@ def list_tasks(
 
 
 @router.get("/events")
-def stream_task_events():
+async def stream_task_events():
     return StreamingResponse(
         task_event_broker.stream(),
         media_type="text/event-stream",

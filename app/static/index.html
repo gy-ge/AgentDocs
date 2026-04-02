@@ -6,1423 +6,26 @@
     <meta name="description" data-i18n="app_description" content="AgentDocs is a personal document workbench for managing Markdown, Agent tasks, versions, and recovery." />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2324292f'/%3E%3Ctext x='50%25' y='53%25' dominant-baseline='middle' text-anchor='middle' font-family='Segoe UI,Arial,sans-serif' font-size='30' font-weight='700' fill='white'%3EA%3C/text%3E%3C/svg%3E" />
     <title>AgentDocs</title>
-    <style>
-      :root {
-        color-scheme: light;
-        --bg: #f6f8fa;
-        --panel: #ffffff;
-        --panel-soft: #f6f8fa;
-        --line: #d0d7de;
-        --line-strong: #8c959f;
-        --text: #1f2328;
-        --muted: #59636e;
-        --accent: #24292f;
-        --success: #1a7f37;
-        --warning: #9a6700;
-        --danger: #cf222e;
-        --shadow: 0 1px 2px rgba(31, 35, 40, 0.08);
-        --shadow-lg: 0 16px 40px rgba(31, 35, 40, 0.12);
-        --radius: 12px;
-        --review-bg: linear-gradient(180deg, #fffcf2 0%, #f7f2e5 100%);
-        --review-insert-bg: rgba(26, 127, 55, 0.13);
-        --review-delete-bg: rgba(207, 34, 46, 0.1);
-        --review-focus: rgba(36, 41, 47, 0.12);
-      }
-
-      * {
-        box-sizing: border-box;
-      }
-
-      body {
-        margin: 0;
-        background: var(--bg);
-        color: var(--text);
-        font-family: "Segoe UI Variable", "Segoe UI", "PingFang SC", sans-serif;
-      }
-
-      button,
-      input,
-      textarea,
-      select {
-        width: 100%;
-        border: 1px solid var(--line);
-        border-radius: 10px;
-        background: #ffffff;
-        color: var(--text);
-        font: inherit;
-      }
-
-      button,
-      input,
-      select {
-        min-height: 40px;
-        padding: 0 12px;
-      }
-
-      textarea {
-        min-height: 140px;
-        padding: 12px;
-        resize: vertical;
-        line-height: 1.6;
-      }
-
-      input:focus,
-      textarea:focus,
-      select:focus,
-      button:focus,
-      details summary:focus {
-        outline: 2px solid rgba(36, 41, 47, 0.16);
-        outline-offset: 1px;
-      }
-
-      button {
-        cursor: pointer;
-      }
-
-      button:hover:not(:disabled) {
-        background: var(--panel-soft);
-      }
-
-      button:disabled {
-        opacity: 0.55;
-        cursor: default;
-      }
-
-      button.primary {
-        background: var(--accent);
-        border-color: var(--accent);
-        color: #ffffff;
-      }
-
-      button.primary:hover:not(:disabled) {
-        background: #111418;
-      }
-
-      button.secondary {
-        background: var(--panel-soft);
-      }
-
-      button.warn {
-        background: #fff8c5;
-        border-color: #d4a72c;
-        color: #5a4600;
-      }
-
-      button.danger {
-        border-color: rgba(207, 34, 46, 0.36);
-        color: var(--danger);
-        background: rgba(207, 34, 46, 0.05);
-      }
-
-      label {
-        display: block;
-        margin-bottom: 6px;
-        font-size: 13px;
-        font-weight: 600;
-      }
-
-      .app-shell {
-        min-height: 100vh;
-        padding: 24px;
-      }
-
-      .app-frame {
-        max-width: 1560px;
-        margin: 0 auto;
-      }
-
-      .app-header,
-      .panel-header,
-      .section-header,
-      .inline-actions,
-      .stack,
-      .doc-toolbar,
-      .task-actions,
-      .modal-actions,
-      .doc-switcher {
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-        align-items: center;
-      }
-
-      .stack {
-        flex-direction: column;
-        align-items: stretch;
-        flex-wrap: nowrap;
-      }
-
-      .app-header,
-      .panel-header,
-      .section-header {
-        justify-content: space-between;
-      }
-
-      .brand h1,
-      .section-title h2,
-      .section-title h3,
-      .section-title h4 {
-        margin: 0;
-      }
-
-      .brand h1 {
-        font-size: 28px;
-        line-height: 1.08;
-      }
-
-      .brand p,
-      .section-title p,
-      .hint,
-      .meta {
-        margin: 6px 0 0;
-        color: var(--muted);
-        font-size: 13px;
-        line-height: 1.5;
-      }
-
-      .workspace {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) 380px;
-        gap: 18px;
-        align-items: start;
-        grid-template-areas: "editor sidebar";
-      }
-
-      .sidebar,
-      .editor-column {
-        display: grid;
-        gap: 16px;
-      }
-
-      .sidebar {
-        grid-area: sidebar;
-        align-content: start;
-        position: sticky;
-        top: 24px;
-        max-height: calc(100vh - 48px);
-      }
-
-      .editor-column {
-        grid-area: editor;
-      }
-
-      .panel {
-        background: var(--panel);
-        border: 1px solid var(--line);
-        border-radius: var(--radius);
-        box-shadow: var(--shadow);
-      }
-
-      .panel-body {
-        display: grid;
-        gap: 10px;
-        padding: 18px;
-      }
-
-      .panel-body.stack {
-        gap: 14px;
-      }
-
-      .pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        min-height: 28px;
-        padding: 0 10px;
-        border: 1px solid var(--line);
-        border-radius: 999px;
-        background: var(--panel-soft);
-        color: var(--muted);
-        white-space: nowrap;
-      }
-
-      .pill.warn {
-        border-color: rgba(154, 103, 0, 0.28);
-        background: rgba(154, 103, 0, 0.08);
-        color: #7a5200;
-      }
-
-      .pill.success {
-        border-color: rgba(26, 127, 55, 0.24);
-        background: rgba(26, 127, 55, 0.08);
-        color: #166534;
-      }
-
-      #workspace-sync-pill {
-        width: auto;
-        min-width: 160px;
-        max-width: 260px;
-        justify-content: center;
-        white-space: normal;
-        text-align: center;
-        line-height: 1.35;
-        font-size: 12px;
-      }
-
-      .status {
-        margin: 16px 0;
-        padding: 10px 12px;
-        border: 1px solid var(--line);
-        border-radius: 10px;
-        background: var(--panel);
-        color: var(--muted);
-      }
-
-      .status.success {
-        border-color: rgba(26, 127, 55, 0.25);
-        background: rgba(26, 127, 55, 0.05);
-        color: #166534;
-      }
-
-      .status.error {
-        border-color: rgba(207, 34, 46, 0.25);
-        background: rgba(207, 34, 46, 0.06);
-        color: var(--danger);
-      }
-
-      .version-list {
-        display: grid;
-        gap: 10px;
-        overflow: auto;
-      }
-
-      .version-list {
-        max-height: 280px;
-      }
-
-      .card {
-        border: 1px solid var(--line);
-        border-radius: 10px;
-        background: var(--panel);
-        padding: 12px;
-        text-align: left;
-      }
-
-      .card h4,
-      .card p {
-        margin: 0;
-      }
-
-      .doc-toolbar button,
-      .task-actions button,
-      .inline-actions button,
-      .modal-actions button,
-      .doc-switcher button {
-        width: auto;
-      }
-
-      .doc-title-toolbar,
-      .doc-title-actions {
-        display: flex;
-        gap: 10px;
-        align-items: center;
-      }
-
-      .doc-title-toolbar {
-        min-width: 0;
-      }
-
-      .doc-title-toolbar input {
-        flex: 1 1 320px;
-        min-width: 0;
-      }
-
-      .doc-meta-row {
-        display: grid;
-        gap: 8px;
-      }
-
-      .doc-save-meta {
-        min-height: 20px;
-        color: var(--muted);
-        font-size: 12px;
-        line-height: 1.45;
-      }
-
-      .doc-conflict-actions {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-      }
-
-      .doc-conflict-actions:empty {
-        display: none;
-      }
-
-      .doc-conflict-actions button {
-        width: auto;
-      }
-
-      .doc-title-actions {
-        flex: 0 0 auto;
-        flex-wrap: wrap;
-        justify-content: flex-end;
-      }
-
-      .doc-title-actions button {
-        width: auto;
-        flex: 0 0 auto;
-        white-space: nowrap;
-      }
-
-      .doc-switcher {
-        display: grid;
-        grid-template-columns: minmax(0, 1.5fr) minmax(180px, 1fr) auto;
-        gap: 10px;
-        align-items: center;
-      }
-
-      .doc-switcher > * {
-        min-width: 0;
-      }
-
-      .doc-switcher .doc-switcher-actions {
-        justify-content: flex-end;
-      }
-
-      .task-composer-grid {
-        display: grid;
-        gap: 12px;
-      }
-
-      .task-composer-panel .panel-body {
-        padding: 16px;
-      }
-
-      .task-composer-panel .panel-body.stack {
-        gap: 10px;
-      }
-
-      .task-composer-panel .task-composer-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 10px;
-        align-items: start;
-      }
-
-      .task-composer-panel .task-composer-grid > :nth-child(2),
-      .task-composer-panel .task-composer-grid > :nth-child(4) {
-        grid-column: 1 / -1;
-      }
-
-      .task-composer-grid > div {
-        min-width: 0;
-      }
-
-      .task-composer-grid textarea {
-        min-height: 40px;
-      }
-
-      .task-composer-panel label {
-        margin-bottom: 4px;
-        font-size: 12px;
-      }
-
-      .task-composer-panel textarea {
-        min-height: 46px;
-        line-height: 1.45;
-      }
-
-      .selection-status {
-        display: grid;
-        grid-template-columns: auto minmax(0, 1fr);
-        gap: 10px;
-        align-items: center;
-        min-height: 40px;
-        padding: 10px 12px;
-        border: 1px solid var(--line);
-        border-radius: 10px;
-        background: linear-gradient(180deg, #ffffff 0%, #f9fafb 100%);
-      }
-
-      .task-composer-panel .selection-status {
-        min-height: 36px;
-        padding: 8px 10px;
-        gap: 8px;
-      }
-
-      .selection-status-label {
-        color: var(--muted);
-        font-size: 12px;
-        font-weight: 600;
-        letter-spacing: 0.02em;
-        white-space: nowrap;
-      }
-
-      .selection-status-value {
-        min-width: 0;
-        color: var(--text);
-        font-size: 13px;
-        line-height: 1.5;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-
-      .selection-status.is-active {
-        border-color: rgba(36, 41, 47, 0.18);
-        background: linear-gradient(180deg, #ffffff 0%, #f3f4f6 100%);
-      }
-
-      .panel-caption {
-        margin-top: -4px;
-        color: var(--muted);
-        font-size: 12px;
-        line-height: 1.45;
-      }
-
-      .review-surface-panel {
-        display: grid;
-        gap: 12px;
-        padding: 16px;
-        border: 1px solid rgba(36, 41, 47, 0.08);
-        border-radius: 14px;
-        background: var(--review-bg);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
-      }
-
-      .review-surface-header {
-        display: flex;
-        gap: 12px;
-        flex-wrap: wrap;
-        justify-content: space-between;
-        align-items: center;
-      }
-
-      .review-mode-toggle {
-        display: inline-flex;
-        gap: 8px;
-        flex-wrap: wrap;
-        align-items: center;
-      }
-
-      .review-mode-toggle button {
-        width: auto;
-        min-width: 96px;
-      }
-
-      .review-mode-toggle button.is-active {
-        background: var(--accent);
-        border-color: var(--accent);
-        color: #ffffff;
-      }
-
-      .review-panel-body {
-        display: grid;
-        gap: 12px;
-      }
-
-      .review-panel-body[data-mode="review"] .editor-textarea-shell {
-        display: none;
-      }
-
-      .review-panel-body[data-mode="edit"] .review-surface {
-        display: none;
-      }
-
-      .review-surface {
-        display: grid;
-        gap: 12px;
-        min-height: 180px;
-      }
-
-      .review-surface-note {
-        color: var(--muted);
-        font-size: 12px;
-        line-height: 1.5;
-      }
-
-      .review-surface-content {
-        min-height: 132px;
-        padding: 16px 18px;
-        border: 1px solid rgba(36, 41, 47, 0.12);
-        border-radius: 12px;
-        background: rgba(255, 255, 255, 0.9);
-        color: var(--text);
-        font-family: Georgia, "Noto Serif SC", "Times New Roman", serif;
-        font-size: 16px;
-        line-height: 1.8;
-        white-space: pre-wrap;
-        word-break: break-word;
-        overflow-wrap: anywhere;
-      }
-
-      .review-surface-content.is-empty {
-        display: grid;
-        place-items: center;
-        color: var(--muted);
-        font-size: 14px;
-      }
-
-      .review-mark,
-      .review-change-group {
-        border-radius: 0.4em;
-        transition: box-shadow 120ms ease, background 120ms ease;
-      }
-
-      .review-mark[data-review-task-id],
-      .review-change-group[data-review-task-id] {
-        cursor: pointer;
-      }
-
-      .review-mark.is-active,
-      .review-change-group.is-active {
-        box-shadow: 0 0 0 3px var(--review-focus);
-      }
-
-      .review-mark--pending,
-      .review-mark--processing,
-      .review-mark--failed,
-      .review-mark--rejected,
-      .review-mark--cancelled,
-      .review-mark--stale,
-      .review-mark--accepted {
-        padding: 0.02em 0.16em;
-      }
-
-      .review-mark--pending {
-        background: rgba(9, 105, 218, 0.1);
-        box-shadow: inset 0 -0.22em 0 rgba(9, 105, 218, 0.16);
-      }
-
-      .review-mark--processing {
-        background: rgba(154, 103, 0, 0.12);
-        box-shadow: inset 0 -0.22em 0 rgba(154, 103, 0, 0.18);
-      }
-
-      .review-mark--failed,
-      .review-mark--rejected,
-      .review-mark--cancelled,
-      .review-mark--stale {
-        background: rgba(207, 34, 46, 0.08);
-        box-shadow: inset 0 -0.22em 0 rgba(207, 34, 46, 0.14);
-      }
-
-      .review-mark--accepted {
-        background: rgba(26, 127, 55, 0.08);
-        box-shadow: inset 0 -0.22em 0 rgba(26, 127, 55, 0.18);
-      }
-
-      .review-mark--delete {
-        padding: 0.02em 0.16em;
-        margin-right: 0.16em;
-        background: var(--review-delete-bg);
-        color: #8f1d22;
-        text-decoration: line-through;
-        text-decoration-color: rgba(207, 34, 46, 0.7);
-        text-decoration-thickness: 1.5px;
-      }
-
-      .review-mark--insert {
-        padding: 0.02em 0.16em;
-        background: var(--review-insert-bg);
-        color: #14532d;
-        box-shadow: inset 0 -0.22em 0 rgba(26, 127, 55, 0.18);
-      }
-
-      .task-comment-list {
-        display: grid;
-        gap: 10px;
-      }
-
-      .task-comment-empty {
-        padding: 14px;
-        border: 1px dashed var(--line);
-        border-radius: 12px;
-        background: rgba(255, 255, 255, 0.68);
-        color: var(--muted);
-        font-size: 13px;
-        line-height: 1.5;
-      }
-
-      .task-comment-card {
-        display: grid;
-        gap: 10px;
-        padding: 14px;
-        border: 1px solid rgba(36, 41, 47, 0.08);
-        border-radius: 14px;
-        background: linear-gradient(180deg, #ffffff 0%, #fbfbfc 100%);
-        box-shadow: var(--shadow);
-        transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
-      }
-
-      .task-comment-card:hover {
-        transform: translateY(-1px);
-        box-shadow: var(--shadow-lg);
-      }
-
-      .task-comment-card.is-active {
-        border-color: rgba(36, 41, 47, 0.24);
-        box-shadow: 0 0 0 2px rgba(36, 41, 47, 0.08), var(--shadow-lg);
-      }
-
-      .task-comment-header,
-      .task-comment-inline-actions,
-      .task-comment-meta {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-        align-items: center;
-        justify-content: space-between;
-      }
-
-      .task-comment-title {
-        font-size: 13px;
-        font-weight: 700;
-        line-height: 1.45;
-      }
-
-      .task-comment-subtitle,
-      .task-comment-meta {
-        color: var(--muted);
-        font-size: 11px;
-        line-height: 1.45;
-      }
-
-      .task-comment-status {
-        display: inline-flex;
-        align-items: center;
-        min-height: 24px;
-        padding: 0 9px;
-        border-radius: 999px;
-        font-size: 11px;
-        font-weight: 700;
-        letter-spacing: 0.03em;
-        text-transform: uppercase;
-        border: 1px solid transparent;
-      }
-
-      .task-comment-status--done,
-      .task-comment-status--accepted {
-        color: #166534;
-        border-color: rgba(26, 127, 55, 0.22);
-        background: rgba(26, 127, 55, 0.08);
-      }
-
-      .task-comment-status--pending,
-      .task-comment-status--processing {
-        color: #7a5200;
-        border-color: rgba(154, 103, 0, 0.22);
-        background: rgba(154, 103, 0, 0.09);
-      }
-
-      .task-comment-status--failed,
-      .task-comment-status--rejected,
-      .task-comment-status--cancelled,
-      .task-comment-status--stale {
-        color: #8f1d22;
-        border-color: rgba(207, 34, 46, 0.2);
-        background: rgba(207, 34, 46, 0.08);
-      }
-
-      .task-comment-preview-group {
-        display: grid;
-        gap: 6px;
-      }
-
-      .task-comment-preview-label {
-        font-size: 11px;
-        font-weight: 700;
-        letter-spacing: 0.04em;
-        color: var(--muted);
-        text-transform: uppercase;
-      }
-
-      .task-comment-preview {
-        padding: 10px 12px;
-        border-radius: 10px;
-        font-size: 12px;
-        line-height: 1.55;
-        white-space: pre-wrap;
-        word-break: break-word;
-        background: var(--panel-soft);
-      }
-
-      .task-comment-preview.source {
-        border-left: 3px solid rgba(207, 34, 46, 0.34);
-        background: rgba(207, 34, 46, 0.04);
-      }
-
-      .task-comment-preview.result {
-        border-left: 3px solid rgba(26, 127, 55, 0.34);
-        background: rgba(26, 127, 55, 0.05);
-      }
-
-      .task-comment-detail {
-        display: grid;
-        gap: 10px;
-        padding-top: 10px;
-        border-top: 1px solid rgba(31, 35, 40, 0.08);
-      }
-
-      .task-comment-detail:empty {
-        display: none;
-      }
-
-      .task-comment-detail .detail-note {
-        margin: 0;
-      }
-
-      .task-comment-inline-actions button {
-        width: auto;
-        min-height: 34px;
-      }
-
-      .editor-textarea-shell {
-        display: grid;
-        gap: 6px;
-      }
-
-      .task-list-wrap {
-        display: grid;
-        gap: 8px;
-      }
-
-      .task-list-wrap > label,
-      .task-list-wrap > select {
-        display: none;
-      }
-
-      .task-list-wrap select {
-        background: var(--panel-soft);
-      }
-
-      .task-button-row {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 10px;
-      }
-
-      .task-composer-panel .task-button-row {
-        gap: 8px;
-      }
-
-      .task-composer-panel .task-button-row button {
-        min-height: 38px;
-      }
-
-      .editor-panel #doc-body {
-        height: 32vh;
-        min-height: 120px;
-      }
-
-      .compact-field {
-        display: grid;
-        gap: 6px;
-      }
-
-      .compact-field label {
-        margin-bottom: 0;
-      }
-
-      .visually-hidden {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        padding: 0;
-        margin: -1px;
-        overflow: hidden;
-        clip: rect(0, 0, 0, 0);
-        white-space: nowrap;
-        border: 0;
-      }
-
-      .detail-note,
-      .diff {
-        border: 1px solid var(--line);
-        border-radius: 10px;
-      }
-
-      .detail-note {
-        padding: 9px 12px;
-        background: var(--panel-soft);
-        overflow: visible;
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
-      }
-
-      .detail-note.success {
-        border-color: rgba(26, 127, 55, 0.25);
-        background: rgba(26, 127, 55, 0.06);
-      }
-
-      .detail-note.warn {
-        border-color: rgba(154, 103, 0, 0.25);
-        background: rgba(154, 103, 0, 0.06);
-      }
-
-      .detail-note.error {
-        border-color: rgba(207, 34, 46, 0.25);
-        background: rgba(207, 34, 46, 0.06);
-      }
-
-      .detail-note strong {
-        display: block;
-        margin-bottom: 4px;
-        line-height: 1.35;
-      }
-
-      .detail-note > div {
-        line-height: 1.45;
-      }
-
-      .detail-note-inline {
-        display: grid;
-        gap: 4px;
-      }
-
-      .detail-note-extra {
-        display: grid;
-        gap: 8px;
-        margin-top: 8px;
-        padding-top: 8px;
-        border-top: 1px solid rgba(31, 35, 40, 0.08);
-      }
-
-      .detail-note-inline-label {
-        font-size: 11px;
-        font-weight: 700;
-        letter-spacing: 0.04em;
-        color: var(--muted);
-        text-transform: uppercase;
-      }
-
-      .detail-note-inline-value {
-        font-size: 12px;
-        line-height: 1.45;
-        word-break: break-word;
-      }
-
-      .detail-note code {
-        display: block;
-        margin-top: 8px;
-        padding: 8px 10px;
-        border-radius: 8px;
-        background: rgba(31, 35, 40, 0.06);
-        color: var(--text);
-        font-family: Consolas, monospace;
-        font-size: 12px;
-        line-height: 1.45;
-        white-space: pre-wrap;
-        word-break: break-word;
-      }
-
-      .task-meta {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 8px 12px;
-        padding: 10px 12px;
-        border: 1px solid var(--line);
-        border-radius: 10px;
-        background: var(--panel-soft);
-      }
-
-      .task-meta:empty {
-        display: none;
-      }
-
-      .task-meta-row {
-        display: grid;
-        gap: 2px;
-        min-width: 0;
-      }
-
-      .task-meta-row.is-wide {
-        grid-column: 1 / -1;
-      }
-
-      .task-meta-label {
-        font-size: 11px;
-        font-weight: 700;
-        letter-spacing: 0.04em;
-        color: var(--muted);
-        text-transform: uppercase;
-      }
-
-      .task-meta-value {
-        font-size: 12px;
-        line-height: 1.45;
-        white-space: pre-wrap;
-        word-break: break-word;
-      }
-
-      .diff {
-        overflow: visible;
-        background: transparent;
-        color: #1f2328;
-        padding: 0;
-      }
-
-      .diff-toggle {
-        border: 0;
-        border-radius: 10px;
-        background: #f6f8fa;
-      }
-
-      .diff-toggle summary {
-        padding: 12px 14px;
-        font-size: 13px;
-        font-weight: 600;
-      }
-
-      .diff-toggle[open] summary {
-        border-bottom: 1px solid var(--line);
-      }
-
-      .diff-preview {
-        display: grid;
-        gap: 12px;
-        padding: 14px;
-      }
-
-      .diff-columns {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 10px;
-      }
-
-      .diff-column {
-        display: grid;
-        gap: 8px;
-        min-width: 0;
-      }
-
-      .diff-label {
-        font-size: 11px;
-        font-weight: 700;
-        letter-spacing: 0.04em;
-        color: var(--muted);
-        text-transform: uppercase;
-      }
-
-      .diff-snippet,
-      .diff-unified {
-        min-height: 74px;
-        padding: 10px 12px;
-        border: 1px solid var(--line);
-        border-radius: 10px;
-        background: #ffffff;
-        color: var(--text);
-        font-family: Consolas, monospace;
-        font-size: 12px;
-        line-height: 1.55;
-        white-space: pre-wrap;
-        word-break: break-word;
-      }
-
-      .diff-snippet.source {
-        background: rgba(154, 103, 0, 0.06);
-        border-left: 4px solid rgba(154, 103, 0, 0.55);
-      }
-
-      .diff-snippet.current {
-        background: rgba(31, 35, 40, 0.05);
-        border-left: 4px solid rgba(31, 35, 40, 0.4);
-      }
-
-      .diff-snippet.result {
-        background: rgba(26, 127, 55, 0.07);
-        border-left: 4px solid rgba(26, 127, 55, 0.55);
-      }
-
-      .diff-meta {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-      }
-
-      .diff-meta .pill {
-        min-height: 24px;
-      }
-
-      .diff-preview details {
-        background: #ffffff;
-      }
-
-      .diff-preview .panel-caption {
-        margin-top: 0;
-      }
-
-      .diff-preview summary {
-        padding: 10px 12px;
-        font-size: 13px;
-      }
-
-      .template-list {
-        display: grid;
-        gap: 10px;
-        margin-top: 14px;
-        max-height: min(42vh, 360px);
-        overflow: auto;
-        padding-right: 4px;
-        scrollbar-gutter: stable;
-      }
-
-      .template-item {
-        display: grid;
-        gap: 8px;
-        padding: 12px;
-        border: 1px solid var(--line);
-        border-radius: 10px;
-        background: var(--panel-soft);
-      }
-
-      .template-item h3,
-      .template-item p {
-        margin: 0;
-      }
-
-      .template-item .meta {
-        margin: 0;
-      }
-
-      .template-item-actions {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-      }
-
-      .template-item-actions button {
-        width: auto;
-      }
-
-      .task-actions {
-        margin-top: 6px;
-        gap: 8px;
-      }
-
-      .task-panel .panel-body {
-        padding: 16px;
-      }
-
-      .task-panel .panel-body.stack {
-        gap: 10px;
-        max-height: min(72vh, 760px);
-        overflow-y: auto;
-        overflow-x: hidden;
-        overscroll-behavior: contain;
-        scrollbar-gutter: stable;
-      }
-
-      .task-panel .panel-body.stack > * {
-        min-width: 0;
-      }
-
-      .task-actions:empty {
-        display: none;
-      }
-
-      .task-actions button {
-        min-width: 116px;
-      }
-
-      .batch-preview-list {
-        display: grid;
-        gap: 8px;
-        margin-top: 8px;
-      }
-
-      .batch-preview-section {
-        display: grid;
-        gap: 8px;
-      }
-
-      .batch-preview-item {
-        display: grid;
-        gap: 6px;
-        padding: 10px 12px;
-        border: 1px solid var(--line);
-        border-radius: 10px;
-        background: #ffffff;
-      }
-
-      .batch-preview-item-head {
-        display: flex;
-        justify-content: space-between;
-        gap: 8px;
-        flex-wrap: wrap;
-        align-items: center;
-      }
-
-      .batch-preview-item-title {
-        font-size: 12px;
-        font-weight: 700;
-        line-height: 1.4;
-      }
-
-      .batch-preview-item-meta {
-        color: var(--muted);
-        font-size: 11px;
-        line-height: 1.4;
-      }
-
-      .batch-preview-item-code {
-        padding: 8px 10px;
-        border-radius: 8px;
-        background: rgba(31, 35, 40, 0.06);
-        color: var(--text);
-        font-family: Consolas, monospace;
-        font-size: 12px;
-        line-height: 1.45;
-        white-space: pre-wrap;
-        word-break: break-word;
-      }
-
-      .task-panel .diff,
-      .task-panel .detail-note {
-        background-clip: padding-box;
-      }
-
-      .task-composer-panel .section-title p,
-      .task-panel .section-title p,
-      .task-composer-panel .panel-caption,
-      .task-panel .panel-caption,
-      #task-group-summary {
-        display: none;
-      }
-
-      .version-panel .panel-body {
-        padding-top: 12px;
-      }
-
-      details {
-        border: 1px solid var(--line);
-        border-radius: 12px;
-        background: var(--panel-soft);
-      }
-
-      .sidebar details {
-        background: var(--panel);
-      }
-
-      details summary {
-        list-style: none;
-        cursor: pointer;
-        padding: 12px 14px;
-        font-weight: 600;
-      }
-
-      details summary::-webkit-details-marker {
-        display: none;
-      }
-
-      details[open] summary {
-        border-bottom: 1px solid var(--line);
-      }
-
-      .details-body {
-        padding: 14px;
-      }
-
-      .modal-backdrop {
-        position: fixed;
-        inset: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 20px;
-        background: rgba(31, 35, 40, 0.52);
-        z-index: 40;
-      }
-
-      .modal-backdrop.hidden {
-        display: none;
-      }
-
-      .modal-card {
-        width: min(420px, 100%);
-        max-height: 88vh;
-        overflow: auto;
-        border: 1px solid var(--line);
-        border-radius: 14px;
-        background: var(--panel);
-        box-shadow: 0 18px 44px rgba(31, 35, 40, 0.18);
-        padding: 20px;
-      }
-
-      .modal-card h2 {
-        margin: 0;
-        font-size: 20px;
-      }
-
-      .modal-card p {
-        margin: 8px 0 0;
-        color: var(--muted);
-        font-size: 14px;
-        line-height: 1.5;
-      }
-
-      #diff-state {
-        display: none;
-      }
-
-      @media (max-width: 1200px) {
-        .workspace {
-          grid-template-columns: 1fr;
-          grid-template-areas:
-            "editor"
-            "sidebar";
-        }
-
-        .sidebar {
-          position: static;
-          top: auto;
-          max-height: none;
-        }
-
-        .editor-panel #doc-body {
-          height: 38vh;
-        }
-
-        .task-list,
-        .version-list {
-          max-height: none;
-        }
-      }
-
-      @media (max-width: 860px) {
-        .app-header,
-        .panel-header,
-        .section-header {
-          align-items: stretch;
-        }
-
-        .doc-switcher,
-        .task-list-tools,
-        .diff-columns,
-        .task-actions,
-        .review-surface-header,
-        .task-comment-header,
-        .task-comment-meta,
-        .task-comment-inline-actions,
-        .inline-actions,
-        .modal-actions {
-          align-items: stretch;
-        }
-
-        .doc-switcher .doc-switcher-actions,
-        .doc-switcher {
-          grid-template-columns: 1fr;
-        }
-
-        .diff-columns {
-          grid-template-columns: 1fr;
-        }
-
-        .doc-switcher .doc-switcher-actions,
-        .doc-switcher > div,
-        .task-actions button,
-        .inline-actions button,
-        .modal-actions button {
-          width: 100%;
-          min-width: 0;
-        }
-
-        .task-button-row {
-          grid-template-columns: 1fr;
-        }
-
-        .task-composer-panel .task-composer-grid {
-          grid-template-columns: 1fr;
-        }
-
-        .task-composer-panel .task-composer-grid > :nth-child(2),
-        .task-composer-panel .task-composer-grid > :nth-child(4) {
-          grid-column: auto;
-        }
-
-        .task-meta {
-          grid-template-columns: 1fr;
-        }
-
-        .task-meta-row.is-wide {
-          grid-column: auto;
-        }
-
-        .task-panel .panel-body.stack {
-          max-height: min(62vh, 620px);
-        }
-
-        .review-surface-content {
-          font-size: 15px;
-        }
-
-        .selection-status {
-          grid-template-columns: 1fr;
-          gap: 4px;
-        }
-
-        .selection-status-value {
-          white-space: normal;
-          overflow: visible;
-          text-overflow: clip;
-        }
-      }
-
-      @media (max-width: 720px) {
-        .app-shell {
-          padding: 14px;
-        }
-
-        .app-header {
-          gap: 14px;
-        }
-
-        .brand p {
-          display: none;
-        }
-
-        .panel-body {
-          padding: 16px;
-        }
-
-        .doc-title-toolbar {
-          flex-direction: column;
-          align-items: stretch;
-        }
-
-        .doc-title-actions {
-          width: 100%;
-          align-items: stretch;
-        }
-
-        .doc-title-actions button {
-          width: 100%;
-          min-width: 0;
-        }
-
-        .editor-panel #doc-body {
-          height: 34vh;
-        }
-
-        .review-surface-panel,
-        .task-comment-card {
-          padding: 14px;
-        }
-      }
-
-      #lang-toggle {
-        width: auto;
-        min-width: 80px;
-        font-weight: 600;
-      }
-    </style>
+    <link rel="stylesheet" href="/index.css" />
   </head>
   <body>
     <div id="key-modal" class="modal-backdrop hidden">
       <section class="modal-card" aria-labelledby="key-modal-title" aria-modal="true" role="dialog">
-        <div class="stack" style="gap: 14px">
+        <form id="key-form" class="stack" style="gap: 14px">
           <div>
             <h2 id="key-modal-title" data-i18n="connection_settings">Connection Settings</h2>
             <p data-i18n="key_modal_hint">Enter your shared API Key. It will be stored locally in your browser.</p>
           </div>
+          <input class="visually-hidden" type="text" name="username" autocomplete="username" tabindex="-1" value="shared-api-key" />
           <div>
             <label for="api-key" data-i18n="api_key">API Key</label>
-            <input id="api-key" type="password" data-i18n="api_key_placeholder" placeholder="Enter shared API Key" />
+            <input id="api-key" type="password" autocomplete="current-password" data-i18n="api_key_placeholder" placeholder="Enter shared API Key" />
           </div>
           <div class="modal-actions">
-            <button id="save-key" class="primary" data-i18n="save_and_continue">Save and Continue</button>
-            <button id="close-key" class="secondary" data-i18n="later">Later</button>
+            <button id="save-key" type="submit" class="primary" data-i18n="save_and_continue">Save and Continue</button>
+            <button id="close-key" type="button" class="secondary" data-i18n="later">Later</button>
           </div>
-        </div>
+        </form>
       </section>
     </div>
 
@@ -1482,10 +85,11 @@
           <aside class="sidebar">
             <section class="panel task-composer-panel">
               <div class="panel-body stack">
-                <div class="section-header">
+                <div class="task-composer-toolbar">
                   <div class="section-title">
                     <h2 data-i18n="review_compose">Review Composer</h2>
                   </div>
+                  <button id="cleanup-stale" class="secondary" data-i18n="cleanup_stale">Cleanup Stale</button>
                 </div>
 
                 <div id="selection-status" class="selection-status" aria-live="polite">
@@ -1505,18 +109,15 @@
                     </select>
                   </div>
                   <div>
-                    <label for="task-instruction" data-i18n="additional_instructions">Additional Instructions</label>
-                    <textarea id="task-instruction" rows="1" data-i18n="task_instruction_placeholder" placeholder="e.g. Make it more formal..."></textarea>
+                    <label for="task-template" data-i18n="quick_templates_short">Templates</label>
+                    <div class="task-template-row">
+                      <select id="task-template"></select>
+                      <button id="create-task" class="primary" data-i18n="create_task_short">Create</button>
+                    </div>
                   </div>
                   <div>
-                    <label for="task-template" data-i18n="quick_templates">Quick Templates</label>
-                    <select id="task-template"></select>
-                  </div>
-                  <div class="task-button-row">
-                    <button id="create-task" class="primary" data-i18n="create_task">Create Task</button>
-                    <button id="manage-templates" class="secondary" data-i18n="manage_templates">Manage Templates</button>
-                    <button id="save-doc-defaults" class="secondary" data-i18n="set_as_defaults">Set as Defaults</button>
-                    <button id="cleanup-stale" class="secondary" data-i18n="cleanup_stale">Cleanup Stale</button>
+                    <label for="task-instruction" data-i18n="additional_instructions">Additional Instructions</label>
+                    <textarea id="task-instruction" rows="1" data-i18n="task_instruction_placeholder" placeholder="e.g. Make it more formal..."></textarea>
                   </div>
                 </div>
               </div>
@@ -1585,40 +186,39 @@
           <section class="editor-column">
             <section class="panel editor-panel">
               <div class="panel-body stack">
-                <div class="panel-header">
-                  <div class="section-title">
-                    <h2 data-i18n="doc_editor">Document Workbench</h2>
-                    <p data-i18n="doc_editor_hint">Write and manage documents here.</p>
+                <div class="editor-toolbar">
+                  <div class="editor-toolbar-top">
+                    <div class="doc-switcher">
+                      <div class="compact-field">
+                        <label class="visually-hidden" for="doc-selector" data-i18n="existing_docs">Existing Docs</label>
+                        <select id="doc-selector">
+                          <option value="" data-i18n="please_select_doc">Please select document</option>
+                        </select>
+                      </div>
+                      <div class="compact-field">
+                        <label class="visually-hidden" for="new-title" data-i18n="new_doc_title">New Title</label>
+                        <input id="new-title" data-i18n="new_doc_placeholder" placeholder="Enter title to create" />
+                      </div>
+                      <div class="doc-switcher-actions inline-actions">
+                        <button id="create-doc" class="primary" data-i18n="create">Create</button>
+                      </div>
+                    </div>
+                    <div class="editor-status-pills">
+                      <span id="doc-save-pill" class="pill">No changes</span>
+                      <span id="doc-revision-pill" class="pill" data-i18n="no_doc_selected">No document selected</span>
+                      <span id="review-surface-pill" class="pill" data-i18n="editor_task_markers_empty">No task markers</span>
+                    </div>
                   </div>
-                  <div class="inline-actions">
-                    <span id="doc-save-pill" class="pill">No changes</span>
-                    <span id="doc-revision-pill" class="pill" data-i18n="no_doc_selected">No document selected</span>
-                  </div>
-                </div>
 
-                <div class="doc-switcher">
-                  <div class="compact-field">
-                    <label class="visually-hidden" for="doc-selector" data-i18n="existing_docs">Existing Docs</label>
-                    <select id="doc-selector">
-                      <option value="" data-i18n="please_select_doc">Please select document</option>
-                    </select>
-                  </div>
-                  <div class="compact-field">
-                    <label class="visually-hidden" for="new-title" data-i18n="new_doc_title">New Title</label>
-                    <input id="new-title" data-i18n="new_doc_placeholder" placeholder="Enter title to create" />
-                  </div>
-                  <div class="doc-switcher-actions inline-actions">
-                    <button id="create-doc" class="primary" data-i18n="create">Create</button>
-                  </div>
-                </div>
-
-                <div class="doc-title-toolbar">
-                  <label class="visually-hidden" for="doc-title" data-i18n="title">Title</label>
-                  <input id="doc-title" data-i18n="no_doc_selected" placeholder="No document selected" />
-                  <div class="doc-title-actions">
-                    <button id="save-doc" class="primary" data-i18n="save_doc">Save Document</button>
-                    <button id="export-doc" class="secondary" data-i18n="export_markdown">Export Markdown</button>
-                    <button id="delete-doc" class="danger" data-i18n="delete_doc">Delete Document</button>
+                  <div class="editor-toolbar-bottom doc-title-toolbar">
+                    <label class="visually-hidden" for="doc-title" data-i18n="title">Title</label>
+                    <input id="doc-title" data-i18n="no_doc_selected" placeholder="No document selected" />
+                    <div class="doc-title-actions">
+                      <button id="save-doc" class="primary" data-i18n="save_doc_short">Save</button>
+                      <button id="export-doc" class="secondary" data-i18n="export_markdown_short">Export</button>
+                      <button id="delete-doc" class="danger" data-i18n="delete_doc_short">Delete</button>
+                      <button id="review-mode-review" class="secondary toolbar-mode-button" type="button" data-i18n="review_mode_review">Review</button>
+                    </div>
                   </div>
                 </div>
 
@@ -1628,17 +228,6 @@
                 </div>
 
                 <div class="review-surface-panel">
-                  <div class="review-surface-header">
-                    <div class="section-title">
-                      <h3 data-i18n="review_surface">Inline Review</h3>
-                      <p data-i18n="review_surface_hint">Suggested edits render here with insertions, strike-through, and status color.</p>
-                    </div>
-                    <div class="review-mode-toggle">
-                      <span id="review-surface-pill" class="pill" data-i18n="editor_task_markers_empty">No task markers</span>
-                      <button id="review-mode-review" class="secondary is-active" type="button" data-i18n="review_mode_review">Review</button>
-                      <button id="review-mode-edit" class="secondary" type="button" data-i18n="review_mode_edit">Edit</button>
-                    </div>
-                  </div>
                   <div id="review-panel-body" class="review-panel-body" data-mode="review">
                     <div id="review-surface" class="review-surface" aria-live="polite"></div>
                     <div class="editor-textarea-shell">
@@ -1665,6 +254,7 @@
           save_and_continue: "Save and Continue",
           later: "Later",
           manage_templates: "Manage Templates",
+          manage_templates_option: "Manage Templates...",
           template_modal_hint: "Builtin templates serve as examples. Custom templates are stored on the server.",
           template_name: "Template Name",
           template_name_placeholder: "e.g. Technical Polish",
@@ -1678,7 +268,6 @@
           review_compose: "Review Composer",
           review_comments: "Review Comments",
           review_surface: "Inline Review",
-          review_surface_hint: "Suggested edits render here with insertions, strike-through, and status color.",
           review_mode_review: "Review",
           review_mode_edit: "Edit",
           review_surface_placeholder: "Select a document to see the inline review surface.",
@@ -1698,8 +287,9 @@
           additional_instructions: "Additional Instructions",
           task_instruction_placeholder: "e.g. Make it more formal...",
           quick_templates: "Quick Templates",
+          quick_templates_short: "Template",
           create_task: "Create Task",
-          set_as_defaults: "Set as Defaults",
+          create_task_short: "Create",
           cleanup_stale: "Cleanup Stale",
           task_processing: "Task Processing",
           tasks_count_initial: "Total 0",
@@ -1741,8 +331,11 @@
           title: "Title",
           common_actions: "Common Actions",
           save_doc: "Save Document",
+          save_doc_short: "Save",
           export_markdown: "Export Markdown",
+          export_markdown_short: "Export",
           delete_doc: "Delete Document",
+          delete_doc_short: "Delete",
           doc_body_placeholder: "# Start writing...",
           api_key_saved_msg: "API Key saved to browser.",
           api_key_required: "API Key required. Open Connection Settings to continue.",
@@ -1751,21 +344,21 @@
           template_saved: "Template \"{name}\" saved.",
           import_legacy_success: "Imported custom templates from browser to server.",
           no_doc_selected_pill: "No document selected",
-          revision_pill: "revision {rev}",
-          doc_save_state_idle: "No changes",
-          doc_save_state_unsaved: "Unsaved changes",
-          doc_save_state_saving: "Saving draft...",
-          doc_save_state_saved: "All changes saved",
+          revision_pill: "Rev {rev}",
+          doc_save_state_idle: "Idle",
+          doc_save_state_unsaved: "Unsaved",
+          doc_save_state_saving: "Saving",
+          doc_save_state_saved: "Saved",
           doc_last_saved_at: "Last saved at {time}",
           doc_last_saved_never: "No successful save yet for this session",
           doc_conflict_detected: "A newer server revision was detected while saving. Review the latest version before continuing.",
           reload_server_version: "Reload Latest",
           keep_local_draft: "Keep Local Draft",
-          loaded_doc_msg: "Loaded document #{id}, revision {rev}.",
-          doc_saved_msg: "Document saved, revision {rev}.",
+          loaded_doc_msg: "Loaded document #{id}.",
+          doc_saved_msg: "Document saved.",
           rollback_to_this: "Rollback to here",
           no_remarks: "No remarks",
-          rollback_success: "Rolled back to version #{id}, revision {rev}.",
+          rollback_success: "Rolled back to version #{id}.",
           accept: "Accept",
           reject: "Reject",
           cancel: "Cancel",
@@ -1793,6 +386,7 @@
           task_retried_msg: "Task #{id} set to pending.",
           task_recreated_msg: "Recreated task #{newId} based on current text.",
           cleanup_summary: "Cleaned up: cancelled {cancelled}, closed {rejected}, kept {unchanged}.",
+          batch_accept_mergeable_results: "Batch Accept Mergeable Results",
           task_created_msg: "Task created, waiting for Agent.",
           selection_at: "Selection {start}-{end}, length {len}",
           current_block: "Current block: {block}",
@@ -1823,7 +417,7 @@
           task_revision_single: "task rev {taskRev}",
           task_revision_current: "task rev {taskRev} · current rev {currentRev}",
           version_entry_title: "revision {rev}",
-          doc_option_label: "{title} · rev {rev}",
+          doc_option_label: "{title}",
           unauthorized_invalid_key: "Unauthorized: Invalid API Key.",
           request_failed: "Request failed",
           selection_removed_reason: "Source selection removed.",
@@ -1837,9 +431,9 @@
           conflict_revision_mismatch: "Document changed on the server. Save your draft after reviewing the latest version.",
           editor_task_markers: "Editor Task Markers",
           editor_task_markers_short: "Tasks",
-          editor_task_markers_empty: "No task markers",
+          editor_task_markers_empty: "No marks",
           editor_task_markers_hint: "Select text or choose a task to inspect nearby task markers.",
-          editor_task_markers_count: "Markers {count}",
+          editor_task_markers_count: "Marks {count}",
           editor_task_markers_block: "Current block · {name}",
           editor_task_markers_all: "Whole document",
           jump_to_task: "Open Task",
@@ -1857,6 +451,7 @@
           save_and_continue: "保存并继续",
           later: "稍后再说",
           manage_templates: "管理模板",
+          manage_templates_option: "管理模板...",
           template_modal_hint: "内置模板只提供格式示例，自定义模板保存在服务端，适合个人跨设备长期复用。",
           template_name: "模板名称",
           template_name_placeholder: "例如：技术方案润色",
@@ -1870,7 +465,6 @@
           review_compose: "审阅创建",
           review_comments: "审阅批注",
           review_surface: "文内审阅",
-          review_surface_hint: "这里用颜色、删除线和状态标记展示当前建议修改。",
           review_mode_review: "审阅",
           review_mode_edit: "编辑",
           review_surface_placeholder: "先选择文档，再查看文内审阅层。",
@@ -1890,8 +484,9 @@
           additional_instructions: "补充说明",
           task_instruction_placeholder: "例如：改成更正式的项目说法。",
           quick_templates: "快捷模板",
+          quick_templates_short: "模板",
           create_task: "创建任务",
-          set_as_defaults: "设为文档默认",
+          create_task_short: "创建",
           cleanup_stale: "清理失效",
           task_processing: "任务处理",
           tasks_count_initial: "总计 0",
@@ -1933,8 +528,11 @@
           title: "标题",
           common_actions: "常用动作",
           save_doc: "保存文档",
+          save_doc_short: "保存",
           export_markdown: "导出 Markdown",
+          export_markdown_short: "导出",
           delete_doc: "删除文档",
+          delete_doc_short: "删除",
           doc_body_placeholder: "# 开始写文档...",
           api_key_saved_msg: "API Key 已保存到当前浏览器。",
           api_key_required: "需要先设置 API Key，请在连接设置中填写。",
@@ -1943,21 +541,21 @@
           template_saved: "模板“{name}”已保存。",
           import_legacy_success: "已将当前浏览器中的自定义模板迁移到服务端。",
           no_doc_selected_pill: "未选择文档",
-          revision_pill: "修订 {rev}",
-          doc_save_state_idle: "无变更",
-          doc_save_state_unsaved: "有未保存修改",
-          doc_save_state_saving: "正在保存草稿...",
-          doc_save_state_saved: "修改已保存",
+          revision_pill: "修 {rev}",
+          doc_save_state_idle: "空白",
+          doc_save_state_unsaved: "未保存",
+          doc_save_state_saving: "保存中",
+          doc_save_state_saved: "已保存",
           doc_last_saved_at: "最近保存于 {time}",
           doc_last_saved_never: "本次会话里还没有成功保存",
           doc_conflict_detected: "保存时发现服务端已有更新版本，请先查看最新内容再继续。",
           reload_server_version: "载入最新版本",
           keep_local_draft: "保留本地草稿",
-          loaded_doc_msg: "已加载文档 #{id}，当前修订 {rev}。",
-          doc_saved_msg: "文档已保存，当前修订 {rev}。",
+          loaded_doc_msg: "已加载文档 #{id}。",
+          doc_saved_msg: "文档已保存。",
           rollback_to_this: "回滚到这里",
           no_remarks: "无备注",
-          rollback_success: "已回滚到版本 #{id}，当前修订 {rev}。",
+          rollback_success: "已回滚到版本 #{id}。",
           accept: "接受",
           reject: "拒绝",
           cancel: "取消",
@@ -1985,6 +583,7 @@
           task_retried_msg: "任务 #{id} 已重置为待处理。",
           task_recreated_msg: "已基于当前正文重建任务 #{newId}。",
           cleanup_summary: "已清理失效任务：取消 {cancelled}，关闭 {rejected}，保留 {unchanged}。",
+          batch_accept_mergeable_results: "批量接受可合并结果",
           task_created_msg: "任务已创建，等待 Agent 处理。",
           selection_at: "选中区域 {start}-{end}，长度 {len}",
           current_block: "当前 block：{block}",
@@ -2015,7 +614,7 @@
           task_revision_single: "任务修订 {taskRev}",
           task_revision_current: "任务修订 {taskRev} · 当前修订 {currentRev}",
           version_entry_title: "修订 {rev}",
-          doc_option_label: "{title} · rev {rev}",
+          doc_option_label: "{title}",
           unauthorized_invalid_key: "认证失败：API Key 无效。",
           request_failed: "请求失败",
           selection_removed_reason: "原始选区已经被删除，旧任务不能再直接合并。",
@@ -2029,7 +628,7 @@
           conflict_revision_mismatch: "服务端文档已变化，请先查看最新版本，再决定如何处理当前草稿。",
           editor_task_markers: "编辑区任务标记",
           editor_task_markers_short: "任务",
-          editor_task_markers_empty: "当前没有任务标记",
+          editor_task_markers_empty: "无标记",
           editor_task_markers_hint: "选择文本或任务后，这里会显示附近的任务标记。",
           editor_task_markers_count: "标记 {count}",
           editor_task_markers_block: "当前 block · {name}",
@@ -2132,6 +731,7 @@
         reviewMode: 'edit',
         realtimeSyncTimer: null,
         pendingRealtimeSync: null,
+        taskPollIntervalId: null,
       };
 
       const taskGroupMeta = [
@@ -2158,9 +758,11 @@
 
       const LAST_TASK_ACTION_KEY = 'agentdocs.lastTaskAction';
       const CUSTOM_TEMPLATES_KEY = 'agentdocs.customTemplates';
+      const MANAGE_TEMPLATE_OPTION = '__manage_templates__';
 
       const statusEl = document.getElementById("status");
       const apiKeyInput = document.getElementById("api-key");
+      const keyFormEl = document.getElementById("key-form");
       const keyModalEl = document.getElementById("key-modal");
       const templateModalEl = document.getElementById("template-modal");
       const docSavePillEl = document.getElementById("doc-save-pill");
@@ -2217,6 +819,14 @@
           return;
         }
         keyModalEl.classList.add("hidden");
+      }
+
+      function saveApiKeyAndReloadData() {
+        localStorage.setItem('agentdocs.apiKey', apiKeyInput.value.trim());
+        keyModalEl.classList.add('hidden');
+        setStatus(t("api_key_saved_msg"), 'success');
+        stopTaskEventStream();
+        safeRun(async () => { await loadTaskTemplates(); await loadDocs(); await startTaskEventStream(); });
       }
 
       function openTemplateModal() {
@@ -2280,7 +890,7 @@
         document.getElementById('reload-server-version').addEventListener('click', () => {
           safeRun(async () => {
             state.docConflictDetected = false;
-            await selectDoc(state.docId, { refreshDocs: true, skipDirtyFlush: true });
+            await selectDoc(state.docId, { refreshDocs: true, skipDirtyFlush: true, discardDraft: true });
           });
         });
         document.getElementById('keep-local-draft').addEventListener('click', () => {
@@ -2311,7 +921,7 @@
           docSavePillEl.className = 'pill';
           docSaveMetaEl.textContent = t('doc_last_saved_never');
           saveDocButtonEl.disabled = true;
-          saveDocButtonEl.textContent = t('save_doc');
+          saveDocButtonEl.textContent = t('save_doc_short');
           renderDocumentConflictActions();
           updateDocumentTitle();
           return;
@@ -2339,7 +949,7 @@
           saveDocButtonEl.disabled = false;
         }
         docSaveMetaEl.textContent = state.docConflictDetected ? t('doc_conflict_detected') : formatSavedTime(state.lastSavedAt);
-        saveDocButtonEl.textContent = t('save_doc');
+        saveDocButtonEl.textContent = t('save_doc_short');
         renderDocumentConflictActions();
         updateDocumentTitle(docTitleInput.value.trim());
       }
@@ -2655,15 +1265,12 @@
                 </div>
               `
               : '';
-            return `
-              <article class="task-comment-card${isActive ? ' is-active' : ''}" data-comment-task-id="${task.id}" tabindex="0" role="button" aria-label="#${task.id} ${escapeHtml(task.action)}">
-                <div class="task-comment-header">
-                  <div>
-                    <div class="task-comment-title">#${task.id} · ${escapeHtml(task.action)}</div>
-                    <div class="task-comment-subtitle">${escapeHtml(blockLabel)} · ${escapeHtml(t('offset_label', { start: task.start_offset, end: task.end_offset }))}</div>
-                  </div>
-                  <span class="task-comment-status task-comment-status--${statusKey}">${escapeHtml(describeTaskOptionStatus(task))}</span>
-                </div>
+            const summaryText = summarizeTaskCardText(task.result || task.source_text);
+            const summaryLabel = task.result && task.result !== task.source_text
+              ? t('review_card_result')
+              : t('review_card_source');
+            const expandedBody = isActive
+              ? `
                 <div class="task-comment-preview-group">
                   <div class="task-comment-preview-label">${escapeHtml(t('review_card_source'))}</div>
                   <div class="task-comment-preview source">${escapeHtml(summarizeTaskCardText(task.source_text))}</div>
@@ -2673,6 +1280,23 @@
                   <div class="inline-actions">${topActions.join('')}</div>
                 </div>
                 ${buildTaskCardDetailHtml(task, recoveryPreview)}
+              `
+              : `
+                <div class="task-comment-summary">
+                  <span class="task-comment-summary-label">${escapeHtml(summaryLabel)}</span>
+                  <span class="task-comment-summary-text">${escapeHtml(summaryText)}</span>
+                </div>
+              `;
+            return `
+              <article class="task-comment-card${isActive ? ' is-active' : ' is-collapsed'}" data-comment-task-id="${task.id}" tabindex="0" role="button" aria-expanded="${isActive ? 'true' : 'false'}" aria-label="#${task.id} ${escapeHtml(task.action)}">
+                <div class="task-comment-header">
+                  <div>
+                    <div class="task-comment-title">#${task.id} · ${escapeHtml(task.action)}</div>
+                    <div class="task-comment-subtitle">${escapeHtml(blockLabel)} · ${escapeHtml(t('offset_label', { start: task.start_offset, end: task.end_offset }))}</div>
+                  </div>
+                  <span class="task-comment-status task-comment-status--${statusKey}">${escapeHtml(describeTaskOptionStatus(task))}</span>
+                </div>
+                ${expandedBody}
               </article>
             `;
           })
@@ -2685,6 +1309,10 @@
             return;
           }
           const openTask = async () => {
+            if (state.selectedTaskId === taskId) {
+              resetTaskDetails();
+              return;
+            }
             await selectTask(taskId);
           };
           card.addEventListener('click', (event) => {
@@ -2897,6 +1525,7 @@
           ...state.serverTemplates.map(
             (template) => `<option value="${normalizeTemplateId(template.id)}">${escapeHtml(t("custom_template", { name: template.name }))}</option>`
           ),
+          `<option value="${MANAGE_TEMPLATE_OPTION}">${escapeHtml(t("manage_templates_option"))}</option>`,
         ];
         taskTemplateEl.innerHTML = options.join('');
         taskTemplateEl.value = '';
@@ -3205,14 +1834,7 @@
         } else if (!document.hidden && state.realtimeMode === 'connecting') {
           syncMode = t('workspace_sync_connecting');
         }
-        const saveState = state.isSavingDoc
-          ? t('doc_save_state_saving')
-          : state.docDirty
-            ? t('doc_save_state_unsaved')
-            : state.docId
-              ? t('doc_save_state_saved')
-              : t('doc_save_state_idle');
-        workspaceSyncPillEl.textContent = t('workspace_sync_summary', { mode: syncMode, save: saveState });
+        workspaceSyncPillEl.textContent = syncMode;
       }
 
       function createEmptyRealtimeSync() {
@@ -3240,6 +1862,20 @@
         if (!keepMode) {
           state.realtimeMode = 'poll';
           updateAutoRefreshPill();
+        }
+      }
+
+      function cleanupAppRuntime({ keepMode = false } = {}) {
+        clearDocumentAutosaveTimer();
+        if (state.realtimeSyncTimer) {
+          clearTimeout(state.realtimeSyncTimer);
+          state.realtimeSyncTimer = null;
+        }
+        state.pendingRealtimeSync = createEmptyRealtimeSync();
+        stopTaskEventStream({ keepMode });
+        if (state.taskPollIntervalId) {
+          clearInterval(state.taskPollIntervalId);
+          state.taskPollIntervalId = null;
         }
       }
 
@@ -3661,15 +2297,24 @@
         renderDocOptions(docs);
       }
 
-      async function selectDoc(docId, options = { refreshDocs: true, skipDirtyFlush: false }) {
+      async function selectDoc(docId, options = { refreshDocs: true, skipDirtyFlush: false, discardDraft: false }) {
         const nextOptions = {
           refreshDocs: true,
           skipDirtyFlush: false,
+          discardDraft: false,
           ...options,
         };
         if (!docId) {
           clearEditor();
           return;
+        }
+        if (nextOptions.discardDraft) {
+          clearDocumentAutosaveTimer();
+          state.lastSavedTitle = docTitleInput.value;
+          state.lastSavedBody = docBodyInput.value;
+          state.docDirty = false;
+          state.docConflictDetected = false;
+          updateDocumentDirtyUi();
         }
         if (state.docId && computeDocumentDirty() && !nextOptions.skipDirtyFlush) {
           await flushDocumentChanges();
@@ -3696,7 +2341,7 @@
         if (nextOptions.refreshDocs) {
           await loadDocsOnly();
         }
-        await Promise.all([loadTasks(), loadVersions()]);
+        await Promise.all([loadTasks({ autoSelect: false }), loadVersions()]);
         setStatus(t("loaded_doc_msg", { id: doc.id, rev: doc.revision }), 'success');
       }
 
@@ -3997,21 +2642,6 @@
         await persistDocumentChanges({ note: 'manual edit from ui', silent: false });
       }
 
-      async function saveDocumentTaskDefaults(clear = false) {
-        if (!state.docId) return;
-        const doc = await api(`/api/docs/${state.docId}/task-defaults`, {
-          method: 'POST',
-          body: JSON.stringify({
-            actor: 'browser',
-            default_task_action: clear ? null : taskActionEl.value,
-            default_task_instruction: clear ? null : (taskInstructionEl.value || null),
-          }),
-        });
-        applyDocumentTaskDefaults(doc);
-        setStatus(clear ? t("defaults_cleared") : t("defaults_saved"), 'success');
-        await loadDocsOnly();
-      }
-
       async function deleteDoc() {
         if (!state.docId) return;
         if (!window.confirm(t("delete_confirm"))) return;
@@ -4059,8 +2689,11 @@
             doc_revision: state.revision,
           }),
         });
-        state.selectedTaskId = task.id;
-        await loadTasks({ forceRefreshSelected: true });
+        state.selectedTaskId = null;
+        state.selectedTaskDetail = null;
+        state.selectedTaskRecovery = null;
+        state.selectedTaskDiff = null;
+        await loadTasks({ autoSelect: false, forceRefreshSelected: false });
         setStatus(t("task_created_msg"), 'success');
       }
 
@@ -4159,29 +2792,36 @@
 
       document.getElementById('open-key-modal').addEventListener('click', openKeyModal);
       document.getElementById('close-key').addEventListener('click', closeKeyModal);
-      document.getElementById('save-key').addEventListener('click', () => {
-        localStorage.setItem('agentdocs.apiKey', apiKeyInput.value.trim());
-        keyModalEl.classList.add('hidden');
-        setStatus(t("api_key_saved_msg"), 'success');
-        stopTaskEventStream();
-        safeRun(async () => { await loadTaskTemplates(); await loadDocs(); await startTaskEventStream(); });
+      keyFormEl.addEventListener('submit', (event) => {
+        event.preventDefault();
+        saveApiKeyAndReloadData();
       });
       document.getElementById('refresh-current').addEventListener('click', () => safeRun(refreshCurrent));
       document.getElementById('create-doc').addEventListener('click', () => safeRun(createDoc));
       document.getElementById('save-doc').addEventListener('click', () => safeRun(saveDoc));
-      document.getElementById('save-doc-defaults').addEventListener('click', () => safeRun(() => saveDocumentTaskDefaults(false)));
       document.getElementById('export-doc').addEventListener('click', () => safeRun(async () => exportDoc()));
-      document.getElementById('manage-templates').addEventListener('click', () => safeRun(async () => { await loadTaskTemplates({ allowLegacyImport: false }); openTemplateModal(); }));
       document.getElementById('close-template-modal').addEventListener('click', closeTemplateModal);
       document.getElementById('save-template').addEventListener('click', () => safeRun(async () => saveTemplateFromForm()));
       document.getElementById('reset-template-form').addEventListener('click', resetTemplateForm);
       document.getElementById('cleanup-stale').addEventListener('click', () => safeRun(cleanupStaleTasks));
-      reviewModeReviewButtonEl.addEventListener('click', () => setReviewMode('review'));
-      reviewModeEditButtonEl.addEventListener('click', () => setReviewMode('edit', { focusEditor: true }));
+      if (reviewModeReviewButtonEl) {
+        reviewModeReviewButtonEl.addEventListener('click', () => setReviewMode('review'));
+      }
+      if (reviewModeEditButtonEl) {
+        reviewModeEditButtonEl.addEventListener('click', () => setReviewMode('edit', { focusEditor: true }));
+      }
       document.getElementById('delete-doc').addEventListener('click', () => safeRun(deleteDoc));
       document.getElementById('create-task').addEventListener('click', () => safeRun(createTask));
       docSelectorEl.addEventListener('change', () => safeRun(() => selectDoc(Number(docSelectorEl.value))));
       taskTemplateEl.addEventListener('change', () => {
+        if (taskTemplateEl.value === MANAGE_TEMPLATE_OPTION) {
+          taskTemplateEl.value = '';
+          safeRun(async () => {
+            await loadTaskTemplates({ allowLegacyImport: false });
+            openTemplateModal();
+          });
+          return;
+        }
         const template = getTemplateCatalog().find(t => normalizeTemplateId(t.id) === taskTemplateEl.value);
         if (template) { taskActionEl.value = template.action; taskInstructionEl.value = template.instruction; }
       });
@@ -4201,11 +2841,14 @@
         }
       });
       window.addEventListener('beforeunload', (event) => {
-        if (!state.docDirty && !state.docAutosaveTimer && !state.isSavingDoc) {
+        if (!state.docDirty && !state.isSavingDoc) {
           return;
         }
         event.preventDefault();
         event.returnValue = t('unsaved_changes_warning');
+      });
+      window.addEventListener('pagehide', () => {
+        cleanupAppRuntime({ keepMode: true });
       });
       
       renderI18n();
@@ -4230,7 +2873,7 @@
         safeRun(async () => { await startTaskEventStream(); });
       });
 
-      setInterval(() => {
+      state.taskPollIntervalId = setInterval(() => {
         if (!document.hidden && state.docId && !state.isTaskPollRunning && state.realtimeMode !== 'stream') {
           state.isTaskPollRunning = true;
           loadTasks({ autoSelect: false }).finally(() => { state.isTaskPollRunning = false; });

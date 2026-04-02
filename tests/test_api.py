@@ -1,4 +1,7 @@
+import asyncio
 import json
+
+import pytest
 
 from app.api import tasks as task_routes
 from app.services.task_events import TaskEventBroker
@@ -85,50 +88,73 @@ def test_task_event_stream_route_returns_event_stream(client, auth_headers, monk
 
 
 def test_task_event_broker_stream_emits_ready_and_task_updates():
-    broker = TaskEventBroker()
-    stream = broker.stream()
+    async def run_test():
+        broker = TaskEventBroker()
+        broker.open()
+        stream = broker.stream()
 
-    ready_event_name, ready_payload = read_task_event(iter(next(stream).splitlines()))
-    assert ready_event_name == "ready"
-    assert ready_payload == {"stream": "tasks"}
+        ready_event_name, ready_payload = read_task_event(iter((await anext(stream)).splitlines()))
+        assert ready_event_name == "ready"
+        assert ready_payload == {"stream": "tasks"}
 
-    broker.publish_task(
-        kind="picked_up",
-        task_id=7,
-        doc_id=3,
-        status="processing",
-        doc_revision=2,
-        agent_name="agent-one",
-    )
-    task_event_name, task_payload = read_task_event(iter(next(stream).splitlines()))
-    assert task_event_name == "task.changed"
-    assert task_payload == {
-        "kind": "picked_up",
-        "task_id": 7,
-        "doc_id": 3,
-        "status": "processing",
-        "doc_revision": 2,
-        "document_changed": False,
-        "agent_name": "agent-one",
-    }
-    stream.close()
+        broker.publish_task(
+            kind="picked_up",
+            task_id=7,
+            doc_id=3,
+            status="processing",
+            doc_revision=2,
+            agent_name="agent-one",
+        )
+        task_event_name, task_payload = read_task_event(iter((await anext(stream)).splitlines()))
+        assert task_event_name == "task.changed"
+        assert task_payload == {
+            "kind": "picked_up",
+            "task_id": 7,
+            "doc_id": 3,
+            "status": "processing",
+            "doc_revision": 2,
+            "document_changed": False,
+            "agent_name": "agent-one",
+        }
+        await stream.aclose()
+
+    asyncio.run(run_test())
 
 
 def test_task_event_broker_stream_emits_document_updates():
-    broker = TaskEventBroker()
-    stream = broker.stream()
+    async def run_test():
+        broker = TaskEventBroker()
+        broker.open()
+        stream = broker.stream()
 
-    read_task_event(iter(next(stream).splitlines()))
-    broker.publish_document(kind="updated", doc_id=5, revision=4)
+        read_task_event(iter((await anext(stream)).splitlines()))
+        broker.publish_document(kind="updated", doc_id=5, revision=4)
 
-    document_event_name, document_payload = read_task_event(iter(next(stream).splitlines()))
-    assert document_event_name == "document.changed"
-    assert document_payload == {
-        "kind": "updated",
-        "doc_id": 5,
-        "revision": 4,
-    }
-    stream.close()
+        document_event_name, document_payload = read_task_event(iter((await anext(stream)).splitlines()))
+        assert document_event_name == "document.changed"
+        assert document_payload == {
+            "kind": "updated",
+            "doc_id": 5,
+            "revision": 4,
+        }
+        await stream.aclose()
+
+    asyncio.run(run_test())
+
+
+def test_task_event_broker_close_stops_stream_immediately():
+    async def run_test():
+        broker = TaskEventBroker()
+        broker.open()
+        stream = broker.stream(heartbeat_seconds=0.01)
+
+        read_task_event(iter((await anext(stream)).splitlines()))
+        broker.close()
+
+        with pytest.raises(StopAsyncIteration):
+            await anext(stream)
+
+    asyncio.run(run_test())
 
 
 def test_root_page_is_served(client):
@@ -151,14 +177,11 @@ def test_root_page_is_served(client):
     assert "导出 Markdown" in response.text
     assert "删除文档" in response.text
     assert "清理失效" in response.text
-    assert "批量接受可合并结果" in response.text
-    assert "批量接受预览" in response.text
-    assert "批量接受范围" in response.text
-    assert "自动刷新：{mode} {sec}s" in response.text
-    assert "前台" in response.text
+    assert "同步 {mode} · 保存 {save}" in response.text
+    assert "轮询 {sec}s" in response.text
     assert "快捷模板" in response.text
     assert "管理模板" in response.text
-    assert "设为文档默认" in response.text
+    assert "管理模板..." in response.text
     assert "查看 unified diff" in response.text
 
 

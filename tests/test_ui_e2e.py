@@ -165,24 +165,29 @@ def test_task_selection_action_flow_and_autosave(ui_stack):
 
         _save_api_key(page)
         page.locator("#new-title").fill("Playwright Marker Flow")
-        page.get_by_role("button", name="Create", exact=True).click()
+        page.locator("#create-doc").click()
         page.get_by_text("Loaded document #", exact=False).wait_for(timeout=5000)
 
         page.locator("#doc-body").fill(
             "# Playwright Marker Flow\n\n## Section A\nAlpha beta gamma.\n\n## Section B\nDelta epsilon zeta."
         )
-        page.get_by_text("All changes saved").wait_for(timeout=6000)
+        page.wait_for_function("() => document.querySelector('#doc-save-pill')?.textContent === 'Saved'", timeout=6000)
         assert page.locator("#doc-save-meta").text_content().startswith("Last saved at")
 
         _select_textarea_range(page, "Alpha beta gamma.")
         page.locator("#task-instruction").fill("Polish this section for UI testing")
-        page.get_by_role("button", name="Create Task").click()
+        page.locator("#create-task").click()
 
-        page.locator("#task-comment-list").get_by_text("Ready to accept", exact=True).wait_for(timeout=12000)
+        page.wait_for_function(
+            "() => Array.from(document.querySelectorAll('#task-comment-list .task-comment-status')).some((el) => el.textContent?.trim() === 'Completed')",
+            timeout=12000,
+        )
         page.locator("#task-comment-list [data-comment-task-id]").first.wait_for(timeout=5000)
+        page.locator("#review-mode-review").click()
         page.locator("#review-surface [data-review-task-id]").first.wait_for(timeout=5000)
         assert page.locator("#task-comment-list [data-comment-task-id]").count() == 1
         assert page.locator("#review-surface [data-review-task-id]").count() >= 1
+        page.locator("#task-comment-list [data-comment-task-id]").first.click()
         page.locator("#task-comment-list [data-comment-open]").first.wait_for(timeout=5000)
         page.locator("#task-comment-list [data-comment-open]").first.click()
         selected_task_value = page.locator("#task-list").input_value()
@@ -213,10 +218,10 @@ def test_conflict_reload_latest_recovers_document(ui_stack):
 
         _save_api_key(page)
         page.locator("#doc-selector").select_option(str(doc["id"]))
-        page.get_by_text(f"Loaded document #{doc['id']}, revision 1.").wait_for(timeout=5000)
+        page.get_by_text(f"Loaded document #{doc['id']}.").wait_for(timeout=5000)
 
         page.locator("#doc-title").fill("Conflict Recovery Local Draft")
-        page.get_by_text("Unsaved changes").wait_for(timeout=5000)
+        page.wait_for_function("() => document.querySelector('#doc-save-pill')?.textContent === 'Unsaved'", timeout=5000)
 
         _api_request(
             base_url,
@@ -235,7 +240,7 @@ def test_conflict_reload_latest_recovers_document(ui_stack):
         page.get_by_role("button", name="Reload Latest").click()
         page.locator("#doc-title").wait_for(timeout=5000)
         assert page.locator("#doc-title").input_value() == "Conflict Recovery Remote"
-        assert page.locator("#doc-save-pill").text_content() == "All changes saved"
+        assert page.locator("#doc-save-pill").text_content() == "Saved"
         assert page.locator("#doc-conflict-actions").text_content().strip() == ""
 
         browser.close()
@@ -274,7 +279,7 @@ def test_task_actions_stay_usable_on_narrow_viewport(ui_stack):
 
         _save_api_key(page)
         page.locator("#doc-selector").select_option(str(doc["id"]))
-        page.get_by_text(f"Loaded document #{doc['id']}, revision 1.").wait_for(timeout=5000)
+        page.get_by_text(f"Loaded document #{doc['id']}.").wait_for(timeout=5000)
         page.locator("#task-comment-list [data-comment-task-id]").first.wait_for(timeout=5000)
         page.locator("#task-comment-list [data-comment-task-id]").first.click()
         select_text_button = page.locator("#task-comment-list [data-comment-open]").first
