@@ -199,6 +199,31 @@ uv run python scripts/simulate_agent.py --api-key change-me --mode uppercase
 uv run python scripts/simulate_agent.py --api-key change-me --mode fail
 ```
 
+## UI 端到端测试
+
+仓库现在包含基于 Playwright 的浏览器端到端测试，用于覆盖静态工作台的关键交互。
+
+首次运行前先安装 Chromium 运行时：
+
+```bash
+uv run python -m playwright install chromium
+```
+
+执行浏览器 E2E：
+
+```bash
+uv run pytest tests/test_ui_e2e.py
+```
+
+当前覆盖内容：
+
+- 文档创建与自动保存反馈
+- 编辑器侧任务标记与任务审阅联动
+- 服务端 revision 变化后的 Reload Latest 冲突恢复
+- 窄屏下任务标记区可用性
+
+测试会自动启动临时数据库、Uvicorn 进程和模拟 Agent，因此不依赖你手工启动本地服务。
+
 ## Agent 接入
 
 外部 Agent 协议保持很小。

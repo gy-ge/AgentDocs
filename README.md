@@ -199,6 +199,31 @@ uv run python scripts/simulate_agent.py --api-key change-me --mode uppercase
 uv run python scripts/simulate_agent.py --api-key change-me --mode fail
 ```
 
+## UI E2E Tests
+
+The repository now includes Playwright-based browser E2E coverage for the static workbench.
+
+Install the Chromium runtime once:
+
+```bash
+uv run python -m playwright install chromium
+```
+
+Run the browser E2E suite:
+
+```bash
+uv run pytest tests/test_ui_e2e.py
+```
+
+What the E2E suite covers now:
+
+- document creation and autosave feedback
+- editor-side task markers and task review linkage
+- conflict recovery through Reload Latest after a server-side revision change
+- narrow viewport marker usability
+
+The test starts its own temporary database, Uvicorn process, and simulated agent worker, so it does not depend on the manually running app.
+
 ## Agent Integration
 
 The external agent protocol is intentionally small.

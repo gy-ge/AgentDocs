@@ -655,6 +655,59 @@ class TaskService:
         )
         task.status = "accepted"
         task.resolved_at = now
+        self._sync_related_tasks_after_document_change(
+            db,
+            document_id=document.id,
+            accepted_task_id=task.id,
+            raw_markdown=document.raw_markdown,
+            revision=document.revision,
+        )
+
+    def _sync_related_tasks_after_document_change(
+        self,
+        db: Session,
+        *,
+        document_id: int,
+        accepted_task_id: int,
+        raw_markdown: str,
+        revision: int,
+    ) -> None:
+        related_tasks = (
+            db.query(Task)
+            .filter(Task.doc_id == document_id)
+            .filter(Task.id != accepted_task_id)
+            .filter(Task.status.in_(sorted(self.RELOCATABLE_STATUSES)))
+            .order_by(Task.id.asc())
+            .all()
+        )
+        for related_task in related_tasks:
+            self._sync_task_reference_to_document(
+                db,
+                task=related_task,
+                raw_markdown=raw_markdown,
+                revision=revision,
+            )
+
+    def _sync_task_reference_to_document(
+        self,
+        db: Session,
+        *,
+        task: Task,
+        raw_markdown: str,
+        revision: int,
+    ) -> None:
+        current_text = self._current_text(raw_markdown, task)
+        if current_text == task.source_text and self._hash_text(current_text) == task.source_hash:
+            task.doc_revision = revision
+            return
+
+        relocation = self._find_relocation_target(db, task, raw_markdown)
+        if relocation is None:
+            return
+
+        task.start_offset = int(relocation["start_offset"])
+        task.end_offset = int(relocation["end_offset"])
+        task.doc_revision = revision
 
     def _current_text(self, raw_markdown: str, task: Task) -> str:
         start, end = self._selection_bounds(raw_markdown, task)

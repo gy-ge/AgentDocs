@@ -205,7 +205,22 @@
         box-shadow: var(--shadow);
       }
 
+      #accept-ready-preview {
+        padding: 10px 12px;
+      }
+
+      #accept-ready-preview strong {
+        display: block;
+        margin-bottom: 2px;
+      }
+
+      #accept-ready-preview .panel-caption {
+        margin-top: 0;
+      }
+
       .panel-body {
+        display: grid;
+        gap: 10px;
         padding: 18px;
       }
 
@@ -223,8 +238,19 @@
         border-radius: 999px;
         background: var(--panel-soft);
         color: var(--muted);
-        font-size: 12px;
         white-space: nowrap;
+      }
+
+      .pill.warn {
+        border-color: rgba(154, 103, 0, 0.28);
+        background: rgba(154, 103, 0, 0.08);
+        color: #7a5200;
+      }
+
+      .pill.success {
+        border-color: rgba(26, 127, 55, 0.24);
+        background: rgba(26, 127, 55, 0.08);
+        color: #166534;
       }
 
       #auto-refresh-pill {
@@ -302,6 +328,32 @@
       .doc-title-toolbar input {
         flex: 1 1 320px;
         min-width: 0;
+      }
+
+      .doc-meta-row {
+        display: grid;
+        gap: 8px;
+      }
+
+      .doc-save-meta {
+        min-height: 20px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .doc-conflict-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .doc-conflict-actions:empty {
+        display: none;
+      }
+
+      .doc-conflict-actions button {
+        width: auto;
       }
 
       .doc-title-actions {
@@ -736,8 +788,12 @@
       }
 
       .task-actions {
-        margin-top: -2px;
+        margin-top: 6px;
         gap: 8px;
+      }
+
+      .task-panel .panel-body {
+        padding: 16px;
       }
 
       .task-panel .panel-body.stack {
@@ -1248,7 +1304,10 @@
                     <h2 data-i18n="doc_editor">Document Workbench</h2>
                     <p data-i18n="doc_editor_hint">Write and manage documents here.</p>
                   </div>
-                  <span id="doc-revision-pill" class="pill" data-i18n="no_doc_selected">No document selected</span>
+                  <div class="inline-actions">
+                    <span id="doc-save-pill" class="pill">No changes</span>
+                    <span id="doc-revision-pill" class="pill" data-i18n="no_doc_selected">No document selected</span>
+                  </div>
                 </div>
 
                 <div class="doc-switcher">
@@ -1275,6 +1334,11 @@
                     <button id="export-doc" class="secondary" data-i18n="export_markdown">Export Markdown</button>
                     <button id="delete-doc" class="danger" data-i18n="delete_doc">Delete Document</button>
                   </div>
+                </div>
+
+                <div class="doc-meta-row">
+                  <div id="doc-save-meta" class="doc-save-meta"></div>
+                  <div id="doc-conflict-actions" class="doc-conflict-actions"></div>
                 </div>
 
                 <div>
@@ -1397,7 +1461,17 @@
           import_legacy_success: "Imported custom templates from browser to server.",
           no_doc_selected_pill: "No document selected",
           revision_pill: "revision {rev}",
+          doc_save_state_idle: "No changes",
+          doc_save_state_unsaved: "Unsaved changes",
+          doc_save_state_saving: "Saving draft...",
+          doc_save_state_saved: "All changes saved",
+          doc_last_saved_at: "Last saved at {time}",
+          doc_last_saved_never: "No successful save yet for this session",
+          doc_conflict_detected: "A newer server revision was detected while saving. Review the latest version before continuing.",
+          reload_server_version: "Reload Latest",
+          keep_local_draft: "Keep Local Draft",
           loaded_doc_msg: "Loaded document #{id}, revision {rev}.",
+          doc_saved_msg: "Document saved, revision {rev}.",
           rollback_to_this: "Rollback to here",
           no_remarks: "No remarks",
           rollback_success: "Rolled back to version #{id}, revision {rev}.",
@@ -1455,6 +1529,7 @@
           empty_value: "None",
           location_label: "Location",
           revision_label: "Revision",
+          status_label: "Status",
           offset_label: "offset {start}-{end}",
           task_revision_single: "task rev {taskRev}",
           task_revision_current: "task rev {taskRev} · current rev {currentRev}",
@@ -1469,6 +1544,20 @@
           requeue_recommendation: "Current range can be recreated as a single block task.",
           select_task_first: "Select a task first",
           no_block_context: "No block context",
+          unsaved_changes_warning: "You have unsaved document changes.",
+          conflict_revision_mismatch: "Document changed on the server. Save your draft after reviewing the latest version.",
+          editor_task_markers: "Editor Task Markers",
+          editor_task_markers_short: "Tasks",
+          editor_task_markers_empty: "No task markers",
+          editor_task_markers_hint: "Select text or choose a task to inspect nearby task markers.",
+          editor_task_markers_count: "Markers {count}",
+          editor_task_markers_block: "Current block · {name}",
+          editor_task_markers_all: "Whole document",
+          jump_to_task: "Open Task",
+          jump_to_text: "Select Text",
+          editor_task_focus: "Focused Marker",
+          editor_task_preview: "Preview",
+          editor_task_legend: "Task Status Overview",
         },
         zh: {
           app_description: "AgentDocs 是一个面向个人使用的文档工作台，用于管理 Markdown 文档、Agent 任务、版本和恢复流程。",
@@ -1577,7 +1666,17 @@
           import_legacy_success: "已将当前浏览器中的自定义模板迁移到服务端。",
           no_doc_selected_pill: "未选择文档",
           revision_pill: "修订 {rev}",
+          doc_save_state_idle: "无变更",
+          doc_save_state_unsaved: "有未保存修改",
+          doc_save_state_saving: "正在保存草稿...",
+          doc_save_state_saved: "修改已保存",
+          doc_last_saved_at: "最近保存于 {time}",
+          doc_last_saved_never: "本次会话里还没有成功保存",
+          doc_conflict_detected: "保存时发现服务端已有更新版本，请先查看最新内容再继续。",
+          reload_server_version: "载入最新版本",
+          keep_local_draft: "保留本地草稿",
           loaded_doc_msg: "已加载文档 #{id}，当前修订 {rev}。",
+          doc_saved_msg: "文档已保存，当前修订 {rev}。",
           rollback_to_this: "回滚到这里",
           no_remarks: "无备注",
           rollback_success: "已回滚到版本 #{id}，当前修订 {rev}。",
@@ -1635,6 +1734,7 @@
           empty_value: "无",
           location_label: "位置",
           revision_label: "修订",
+          status_label: "状态",
           offset_label: "偏移 {start}-{end}",
           task_revision_single: "任务修订 {taskRev}",
           task_revision_current: "任务修订 {taskRev} · 当前修订 {currentRev}",
@@ -1649,6 +1749,20 @@
           requeue_recommendation: "当前区间仍可作为单一 block 任务，可直接按当前正文重建。",
           select_task_first: "请先选择一个任务",
           no_block_context: "当前任务没有 block 上下文",
+          unsaved_changes_warning: "当前文档还有未保存修改。",
+          conflict_revision_mismatch: "服务端文档已变化，请先查看最新版本，再决定如何处理当前草稿。",
+          editor_task_markers: "编辑区任务标记",
+          editor_task_markers_short: "任务",
+          editor_task_markers_empty: "当前没有任务标记",
+          editor_task_markers_hint: "选择文本或任务后，这里会显示附近的任务标记。",
+          editor_task_markers_count: "标记 {count}",
+          editor_task_markers_block: "当前 block · {name}",
+          editor_task_markers_all: "整篇文档",
+          jump_to_task: "打开任务",
+          jump_to_text: "选中文本",
+          editor_task_focus: "当前聚焦标记",
+          editor_task_preview: "预览",
+          editor_task_legend: "任务状态概览",
         }
       };
 
@@ -1682,6 +1796,7 @@
         if (!templateModalEl.classList.contains('hidden')) {
           renderTemplateList();
         }
+        updateDocumentDirtyUi();
         updateAutoRefreshPill();
         renderAcceptReadyPreview(state.acceptReadyPreview);
         renderBulkAcceptUndo();
@@ -1717,6 +1832,14 @@
         revision: null,
         docBlocks: [],
         docTaskDefaults: null,
+        docDirty: false,
+        lastSavedTitle: '',
+        lastSavedBody: '',
+        lastSavedAt: null,
+        docAutosaveTimer: null,
+        isSavingDoc: false,
+        pendingSavePromise: null,
+        docConflictDetected: false,
         selectedTaskId: null,
         selectedTaskDetail: null,
         selectedTaskRecovery: null,
@@ -1764,12 +1887,16 @@
       const apiKeyInput = document.getElementById("api-key");
       const keyModalEl = document.getElementById("key-modal");
       const templateModalEl = document.getElementById("template-modal");
+      const docSavePillEl = document.getElementById("doc-save-pill");
       const docRevisionPillEl = document.getElementById("doc-revision-pill");
       const docSelectorEl = document.getElementById("doc-selector");
       const selectionInfoEl = document.getElementById("selection-info");
       const selectionStatusEl = document.getElementById("selection-status");
       const docTitleInput = document.getElementById("doc-title");
       const docBodyInput = document.getElementById("doc-body");
+      const docSaveMetaEl = document.getElementById("doc-save-meta");
+      const docConflictActionsEl = document.getElementById("doc-conflict-actions");
+      const saveDocButtonEl = document.getElementById("save-doc");
       const taskActionEl = document.getElementById("task-action");
       const taskInstructionEl = document.getElementById("task-instruction");
       const taskTemplateEl = document.getElementById("task-template");
@@ -1847,14 +1974,138 @@
       }
 
       function updateDocumentTitle(docTitle = '') {
-        document.title = docTitle ? `${docTitle} · AgentDocs` : 'AgentDocs';
+        const baseTitle = docTitle ? `${docTitle} · AgentDocs` : 'AgentDocs';
+        document.title = state.docDirty ? `* ${baseTitle}` : baseTitle;
+      }
+
+      function formatSavedTime(value) {
+        if (!value) {
+          return t('doc_last_saved_never');
+        }
+        return t('doc_last_saved_at', {
+          time: new Date(value).toLocaleTimeString(currentLang === 'zh' ? 'zh-CN' : 'en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+          }),
+        });
+      }
+
+      function renderDocumentConflictActions() {
+        if (!state.docConflictDetected || !state.docId) {
+          docConflictActionsEl.innerHTML = '';
+          return;
+        }
+        docConflictActionsEl.innerHTML = `
+          <button id="reload-server-version" class="warn">${escapeHtml(t('reload_server_version'))}</button>
+          <button id="keep-local-draft" class="secondary">${escapeHtml(t('keep_local_draft'))}</button>
+        `;
+        document.getElementById('reload-server-version').addEventListener('click', () => {
+          safeRun(async () => {
+            state.docConflictDetected = false;
+            await selectDoc(state.docId, { refreshDocs: true, skipDirtyFlush: true });
+          });
+        });
+        document.getElementById('keep-local-draft').addEventListener('click', () => {
+          state.docConflictDetected = false;
+          renderDocumentConflictActions();
+          setStatus(t('unsaved_changes_warning'), 'warn');
+        });
+      }
+
+      function clearDocumentAutosaveTimer() {
+        if (!state.docAutosaveTimer) {
+          return;
+        }
+        clearTimeout(state.docAutosaveTimer);
+        state.docAutosaveTimer = null;
+      }
+
+      function computeDocumentDirty() {
+        if (!state.docId) {
+          return false;
+        }
+        return docTitleInput.value !== state.lastSavedTitle || docBodyInput.value !== state.lastSavedBody;
+      }
+
+      function updateDocumentDirtyUi() {
+        if (!state.docId) {
+          docSavePillEl.textContent = t('doc_save_state_idle');
+          docSavePillEl.className = 'pill';
+          docSaveMetaEl.textContent = t('doc_last_saved_never');
+          saveDocButtonEl.disabled = true;
+          saveDocButtonEl.textContent = t('save_doc');
+          renderDocumentConflictActions();
+          updateDocumentTitle();
+          return;
+        }
+
+        if (state.isSavingDoc) {
+          docSavePillEl.textContent = t('doc_save_state_saving');
+          docSavePillEl.className = 'pill warn';
+          docSaveMetaEl.textContent = formatSavedTime(state.lastSavedAt);
+          saveDocButtonEl.disabled = true;
+          saveDocButtonEl.textContent = t('doc_save_state_saving');
+          renderDocumentConflictActions();
+          updateDocumentTitle(docTitleInput.value.trim());
+          return;
+        }
+
+        state.docDirty = computeDocumentDirty();
+        if (state.docDirty) {
+          docSavePillEl.textContent = t('doc_save_state_unsaved');
+          docSavePillEl.className = 'pill warn';
+          saveDocButtonEl.disabled = false;
+        } else {
+          docSavePillEl.textContent = t('doc_save_state_saved');
+          docSavePillEl.className = 'pill success';
+          saveDocButtonEl.disabled = false;
+        }
+        docSaveMetaEl.textContent = state.docConflictDetected ? t('doc_conflict_detected') : formatSavedTime(state.lastSavedAt);
+        saveDocButtonEl.textContent = t('save_doc');
+        renderDocumentConflictActions();
+        updateDocumentTitle(docTitleInput.value.trim());
+      }
+
+      function syncSavedDocumentSnapshot(doc) {
+        state.lastSavedTitle = doc.title || '';
+        state.lastSavedBody = doc.raw_markdown || '';
+        state.lastSavedAt = new Date().toISOString();
+        state.docDirty = false;
+        state.docConflictDetected = false;
+        clearDocumentAutosaveTimer();
+        updateDocumentDirtyUi();
+      }
+
+      function scheduleDocumentAutosave() {
+        clearDocumentAutosaveTimer();
+        if (!state.docId || !state.docDirty || state.isSavingDoc) {
+          return;
+        }
+        state.docAutosaveTimer = setTimeout(() => {
+          state.docAutosaveTimer = null;
+          safeRun(() => persistDocumentChanges({ note: 'autosave from ui', silent: true }));
+        }, 1200);
+      }
+
+      function handleDocumentInputChange() {
+        updateDocumentDirtyUi();
+        scheduleDocumentAutosave();
       }
 
       function clearEditor() {
+        clearDocumentAutosaveTimer();
         state.docId = null;
         state.revision = null;
         state.docBlocks = [];
         state.docTaskDefaults = null;
+        state.docDirty = false;
+        state.lastSavedTitle = '';
+        state.lastSavedBody = '';
+        state.lastSavedAt = null;
+        state.isSavingDoc = false;
+        state.pendingSavePromise = null;
+        state.docConflictDetected = false;
         state.selectedTaskId = null;
         state.selectedTaskDetail = null;
         state.selectedTaskRecovery = null;
@@ -1868,6 +2119,7 @@
         docSelectorEl.value = "";
         docTitleInput.value = "";
         docBodyInput.value = "";
+        updateDocumentDirtyUi();
         updateSelectionInfo();
         taskListEl.innerHTML = `<option value="">${escapeHtml(t("select_doc_first"))}</option>`;
         renderEmpty(versionListEl, t("select_doc_first"), t("historical_versions"));
@@ -1882,6 +2134,45 @@
         } else {
           setStatus(t("no_doc_selected"));
         }
+      }
+
+      function getTaskMarkerStatusKey(task) {
+        if (task.is_stale) return 'stale';
+        if (task.status === 'accepted') return 'accepted';
+        if (task.status === 'done') return 'done';
+        if (task.status === 'processing') return 'processing';
+        if (task.status === 'pending') return 'pending';
+        if (task.status === 'failed') return 'failed';
+        if (task.status === 'rejected') return 'rejected';
+        if (task.status === 'cancelled') return 'cancelled';
+        return 'pending';
+      }
+
+      function getCurrentSelectionRange() {
+        return {
+          start: docBodyInput.selectionStart || 0,
+          end: docBodyInput.selectionEnd || 0,
+        };
+      }
+
+      function taskIntersectsRange(task, start, end) {
+        if (start === end) {
+          return task.start_offset <= start && task.end_offset >= start;
+        }
+        return task.start_offset < end && task.end_offset > start;
+      }
+
+      function setEditorSelectionForTask(task) {
+        if (!task) {
+          return;
+        }
+        docBodyInput.focus();
+        docBodyInput.setSelectionRange(task.start_offset, task.end_offset);
+        docBodyInput.dispatchEvent(new Event('select', { bubbles: true }));
+      }
+
+      function renderEditorTaskMarkers() {
+        return;
       }
 
       function loadLegacyCustomTemplates() {
@@ -2654,30 +2945,19 @@
         const summary = preview.will_accept > 0
           ? t('bulk_accept_preview_summary', { matched: preview.matched, accept: preview.will_accept, skip: preview.will_skip })
           : t('bulk_accept_preview_none');
-        const extras = [
-          { label: t('bulk_accept_preview_scope_label'), value: describeAcceptReadyScopeValue() },
-          { label: t('bulk_accept_preview_limit_label'), value: describeAcceptReadyLimitValue(preview.limit) },
-          { label: t('bulk_accept_preview_matches_label'), value: String(preview.matched) },
-          { label: t('bulk_accept_preview_accept_label'), value: String(preview.will_accept) },
-          { label: t('bulk_accept_preview_skip_label'), value: String(preview.will_skip) },
-        ];
-        const extraHtml = extras
-          .map((item) => `
-            <div class="detail-note-inline">
-              <span class="detail-note-inline-label">${escapeHtml(item.label)}</span>
-              <div class="detail-note-inline-value">${escapeHtml(item.value)}</div>
-            </div>
-          `)
-          .join('');
-        const sections = [
-          renderBatchPreviewSection(t('bulk_accept_preview_candidates'), preview.accepted_tasks, false),
-          renderBatchPreviewSection(t('bulk_accept_preview_skipped'), preview.skipped_tasks, true),
-        ].filter(Boolean).join('');
+        const compactMeta = `${t('bulk_accept_preview_scope_label')}: ${describeAcceptReadyScopeValue()} · ${t('bulk_accept_preview_limit_label')}: ${describeAcceptReadyLimitValue(preview.limit)} · ${t('bulk_accept_preview_accept_label')}: ${preview.will_accept} · ${t('bulk_accept_preview_skip_label')}: ${preview.will_skip}`;
+        const firstAccepted = preview.accepted_tasks?.[0] || null;
+        const firstSkipped = preview.skipped_tasks?.[0] || null;
+        const focusLine = firstAccepted
+          ? `${t('bulk_accept_preview_candidates')}: #${firstAccepted.task_id} · ${firstAccepted.action} · ${summarizePreviewText(firstAccepted.result_text || firstAccepted.source_text)}`
+          : firstSkipped
+            ? `${t('bulk_accept_preview_skipped')}: #${firstSkipped.task_id} · ${describeBatchSkipReason(firstSkipped.reason)}`
+            : '';
         acceptReadyPreviewEl.innerHTML = `
           <strong>${escapeHtml(t('bulk_accept_preview'))}</strong>
           <div>${escapeHtml(summary)}</div>
-          <div class="detail-note-extra">${extraHtml}</div>
-          <div class="batch-preview-list">${sections}</div>
+          <div class="panel-caption">${escapeHtml(compactMeta)}</div>
+          ${focusLine ? `<div class="panel-caption">${escapeHtml(focusLine)}</div>` : ''}
         `;
         renderBulkAcceptUndo();
       }
@@ -2685,6 +2965,7 @@
       function renderTaskList(tasks) {
         taskCountPillEl.textContent = t("tasks_count_pattern", { count: tasks.length });
         renderTaskGroupSummary(tasks);
+        renderEditorTaskMarkers();
         if (!tasks.length) {
           taskListEl.innerHTML = `<option value="">${escapeHtml(t("no_tasks_in_doc"))}</option>`;
           return;
@@ -2709,6 +2990,11 @@
         if (code === "unauthorized") {
           openKeyModal();
           return t("unauthorized_invalid_key");
+        }
+        if (code === 'conflict' && message === 'document revision mismatch') {
+          state.docConflictDetected = true;
+          updateDocumentDirtyUi();
+          return t('conflict_revision_mismatch');
         }
         return message || t("request_failed");
       }
@@ -2861,10 +3147,18 @@
         renderDocOptions(docs);
       }
 
-      async function selectDoc(docId, options = { refreshDocs: true }) {
+      async function selectDoc(docId, options = { refreshDocs: true, skipDirtyFlush: false }) {
+        const nextOptions = {
+          refreshDocs: true,
+          skipDirtyFlush: false,
+          ...options,
+        };
         if (!docId) {
           clearEditor();
           return;
+        }
+        if (state.docId && computeDocumentDirty() && !nextOptions.skipDirtyFlush) {
+          await flushDocumentChanges();
         }
         const doc = await api(`/api/docs/${docId}`);
         if (state.lastBulkAcceptRollback && state.lastBulkAcceptRollback.docId !== doc.id) {
@@ -2879,11 +3173,12 @@
         docSelectorEl.value = String(doc.id);
         docTitleInput.value = doc.title;
         docBodyInput.value = doc.raw_markdown;
+        syncSavedDocumentSnapshot(doc);
         syncCurrentBlocks();
         applyDocumentTaskDefaults(doc);
         updateSelectionInfo();
         resetTaskDetails();
-        if (options.refreshDocs) {
+        if (nextOptions.refreshDocs) {
           await loadDocsOnly();
         }
         await Promise.all([loadTasks(), loadVersions()]);
@@ -2972,7 +3267,9 @@
 
       function buildTaskActionConfigs(task, taskId, recoveryPreview) {
         const relocationAvailable = Boolean(recoveryPreview?.can_relocate || canRelocateTask(task));
-        const actions = [];
+        const actions = [
+          { label: t("jump_to_text"), handler: () => setEditorSelectionForTask(task), className: 'secondary' },
+        ];
         if (task.status === 'done' && !task.is_stale) {
           actions.push({ label: t("accept"), handler: () => acceptTask(taskId), className: 'primary' });
         }
@@ -3026,6 +3323,7 @@
 
       async function selectTask(taskId) {
         state.selectedTaskId = taskId;
+        renderEditorTaskMarkers();
         const task = await api(`/api/tasks/${taskId}`);
         state.selectedTaskDetail = task;
         state.selectedTaskRecovery = null;
@@ -3071,9 +3369,11 @@
         }
         renderTaskActions(task, taskId, recoveryPreview);
         await loadAcceptReadyPreview({ silent: true });
+        renderEditorTaskMarkers();
       }
 
       async function createDoc() {
+        await flushDocumentChanges();
         const title = document.getElementById('new-title').value.trim();
         if (!title) throw new Error(t("field_required", { field: t("new_doc_title") }));
         state.lastBulkAcceptRollback = null;
@@ -3086,27 +3386,67 @@
         await selectDoc(doc.id, { refreshDocs: false });
       }
 
-      async function saveDoc() {
+      async function persistDocumentChanges(options = {}) {
+        const { note = 'manual edit from ui', silent = false } = options;
         if (!state.docId) throw new Error(t("please_select_doc"));
+        if (state.pendingSavePromise) {
+          return state.pendingSavePromise;
+        }
+        if (!computeDocumentDirty()) {
+          updateDocumentDirtyUi();
+          return null;
+        }
         state.lastBulkAcceptRollback = null;
         const title = docTitleInput.value.trim();
-        const previousRevision = state.revision;
-        const doc = await api(`/api/docs/${state.docId}`, {
-          method: 'PUT',
-          body: JSON.stringify({
-            title,
-            raw_markdown: docBodyInput.value,
-            expected_revision: state.revision,
-            actor: 'browser',
-            note: 'manual edit from ui',
-          }),
-        });
-        state.revision = doc.revision;
-        state.docBlocks = doc.blocks;
-        docRevisionPillEl.textContent = t("revision_pill", { rev: doc.revision });
-        syncCurrentBlocks();
-        setStatus(t("loaded_doc_msg", { id: doc.id, rev: doc.revision }), 'success');
-        await Promise.all([loadDocsOnly(), loadTasks({ forceRefreshSelected: true }), loadVersions()]);
+        state.isSavingDoc = true;
+        updateDocumentDirtyUi();
+        state.pendingSavePromise = (async () => {
+          const doc = await api(`/api/docs/${state.docId}`, {
+            method: 'PUT',
+            body: JSON.stringify({
+              title,
+              raw_markdown: docBodyInput.value,
+              expected_revision: state.revision,
+              actor: 'browser',
+              note,
+            }),
+          });
+          state.revision = doc.revision;
+          state.docBlocks = doc.blocks;
+          docRevisionPillEl.textContent = t("revision_pill", { rev: doc.revision });
+          syncSavedDocumentSnapshot(doc);
+          syncCurrentBlocks();
+          updateSelectionInfo();
+          await Promise.all([loadDocsOnly(), loadTasks({ forceRefreshSelected: true }), loadVersions()]);
+          if (!silent) {
+            setStatus(t("doc_saved_msg", { rev: doc.revision }), 'success');
+          }
+          return doc;
+        })();
+        try {
+          return await state.pendingSavePromise;
+        } finally {
+          state.pendingSavePromise = null;
+          state.isSavingDoc = false;
+          updateDocumentDirtyUi();
+        }
+      }
+
+      async function flushDocumentChanges() {
+        clearDocumentAutosaveTimer();
+        if (state.pendingSavePromise) {
+          await state.pendingSavePromise;
+          return;
+        }
+        if (!computeDocumentDirty()) {
+          updateDocumentDirtyUi();
+          return;
+        }
+        await persistDocumentChanges({ note: 'autosave before navigation', silent: true });
+      }
+
+      async function saveDoc() {
+        await persistDocumentChanges({ note: 'manual edit from ui', silent: false });
       }
 
       async function saveDocumentTaskDefaults(clear = false) {
@@ -3157,6 +3497,7 @@
 
       async function acceptReadyTasks() {
         if (!state.docId) return;
+        await flushDocumentChanges();
         const preview = state.acceptReadyPreview || await loadAcceptReadyPreview({ silent: false });
         if (!preview || preview.will_accept === 0) {
           setStatus(t("bulk_accept_none", { skipped: preview?.will_skip || 0 }), 'warn');
@@ -3176,6 +3517,7 @@
 
       async function createTask() {
         if (!state.docId) return;
+        await flushDocumentChanges();
         const start = docBodyInput.selectionStart;
         const end = docBodyInput.selectionEnd;
         if (start === end) throw new Error(t("no_selection"));
@@ -3196,6 +3538,7 @@
       }
 
       async function acceptTask(taskId) {
+        await flushDocumentChanges();
         state.lastBulkAcceptRollback = null;
         const task = await api(`/api/tasks/${taskId}/accept`, {
           method: 'POST',
@@ -3243,6 +3586,7 @@
 
       async function rollbackVersion(versionId, note = null) {
         if (!state.docId) return;
+        await flushDocumentChanges();
         const doc = await api(`/api/docs/${state.docId}/versions/${versionId}/rollback`, {
           method: 'POST',
           body: JSON.stringify({ expected_revision: state.revision, actor: 'browser', note: note || `rollback to ${versionId}` }),
@@ -3253,6 +3597,7 @@
       }
 
       async function refreshCurrent() {
+        await flushDocumentChanges();
         if (state.docId) await selectDoc(state.docId); else await loadDocs();
       }
 
@@ -3269,6 +3614,14 @@
           selectionInfoEl.textContent = t("selection_at", { start, end, len: end - start }) + (blockText ? " · " + blockText : "");
           selectionStatusEl.classList.add('is-active');
         }
+        if (state.selectedTaskId) {
+          const selectedTask = state.tasks.find((task) => task.id === state.selectedTaskId);
+          if (selectedTask && taskIntersectsRange(selectedTask, start, end)) {
+            renderEditorTaskMarkers();
+            return;
+          }
+        }
+        renderEditorTaskMarkers();
       }
 
       async function safeRun(callback) {
@@ -3309,8 +3662,27 @@
         if (template) { taskActionEl.value = template.action; taskInstructionEl.value = template.instruction; }
       });
       taskListEl.addEventListener('change', () => { if (taskListEl.value) safeRun(() => selectTask(Number(taskListEl.value))); });
-      docBodyInput.addEventListener('input', updateSelectionInfo);
+      docTitleInput.addEventListener('input', handleDocumentInputChange);
+      docBodyInput.addEventListener('input', () => {
+        updateSelectionInfo();
+        handleDocumentInputChange();
+      });
       docBodyInput.addEventListener('select', updateSelectionInfo);
+      document.addEventListener('keydown', (event) => {
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+          event.preventDefault();
+          if (state.docId) {
+            safeRun(saveDoc);
+          }
+        }
+      });
+      window.addEventListener('beforeunload', (event) => {
+        if (!state.docDirty && !state.docAutosaveTimer && !state.isSavingDoc) {
+          return;
+        }
+        event.preventDefault();
+        event.returnValue = t('unsaved_changes_warning');
+      });
       
       renderI18n();
       restoreTaskComposerState();

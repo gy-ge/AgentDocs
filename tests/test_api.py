@@ -2072,6 +2072,62 @@ def test_accept_task_rejects_already_accepted_task(client, auth_headers):
     assert response.json()["error"]["code"] == "invalid_state"
 
 
+def test_accept_task_relocates_following_done_task_after_document_revision_change(client, auth_headers):
+    raw_markdown = "# Heading\nAlpha\nBeta\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+    first_task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "Alpha")
+    second_task, _, second_end = create_task(client, auth_headers, doc_id, raw_markdown, "Beta")
+
+    client.post(
+        "/api/tasks/next",
+        headers=auth_headers,
+        json={"agent_name": "test-agent"},
+    )
+    client.post(
+        f"/api/tasks/{first_task['id']}/complete",
+        headers=auth_headers,
+        json={"result": "Alpha refined", "error_message": None},
+    )
+    client.post(
+        "/api/tasks/next",
+        headers=auth_headers,
+        json={"agent_name": "test-agent"},
+    )
+    client.post(
+        f"/api/tasks/{second_task['id']}/complete",
+        headers=auth_headers,
+        json={"result": "Beta refined", "error_message": None},
+    )
+
+    accept_response = client.post(
+        f"/api/tasks/{first_task['id']}/accept",
+        headers=auth_headers,
+        json={"expected_revision": 1, "actor": "browser", "note": "accept first task"},
+    )
+    assert accept_response.status_code == 200
+
+    second_task_response = client.get(f"/api/tasks/{second_task['id']}", headers=auth_headers)
+    assert second_task_response.status_code == 200
+    second_task_data = second_task_response.json()["data"]
+    assert second_task_data["status"] == "done"
+    assert second_task_data["doc_revision"] == 2
+    assert second_task_data["is_stale"] is False
+    assert second_task_data["stale_reason"] is None
+    assert second_task_data["end_offset"] > second_end
+
+    second_diff_response = client.get(f"/api/tasks/{second_task['id']}/diff", headers=auth_headers)
+    assert second_diff_response.status_code == 200
+    assert second_diff_response.json()["data"]["can_accept"] is True
+
+    second_accept_response = client.post(
+        f"/api/tasks/{second_task['id']}/accept",
+        headers=auth_headers,
+        json={"expected_revision": 2, "actor": "browser", "note": "accept second task"},
+    )
+    assert second_accept_response.status_code == 200
+
+
 def test_reject_task_rejects_non_done_task(client, auth_headers):
     """A pending or processing task cannot be rejected."""
     raw_markdown = "# Heading\nAlpha\n"
