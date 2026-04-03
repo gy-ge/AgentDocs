@@ -278,6 +278,10 @@ Task fields include:
 - stale_reason
 - recommended_action
 - context
+- created_at
+- started_at
+- completed_at
+- resolved_at
 
 context fields include:
 
