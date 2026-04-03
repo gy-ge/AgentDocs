@@ -14,6 +14,9 @@
         --shadow: 0 1px 2px rgba(31, 35, 40, 0.08);
         --shadow-lg: 0 16px 40px rgba(31, 35, 40, 0.12);
         --radius: 12px;
+        --workspace-panel-height: clamp(540px, calc(100vh - 220px), 920px);
+        --control-height-compact: 36px;
+        --review-panel-max-height: clamp(320px, calc(100vh - 320px), 720px);
         --review-bg: linear-gradient(180deg, #fffcf2 0%, #f7f2e5 100%);
         --review-insert-bg: rgba(26, 127, 55, 0.13);
         --review-delete-bg: rgba(207, 34, 46, 0.1);
@@ -175,7 +178,10 @@
         display: grid;
         grid-template-columns: minmax(0, 1fr) 280px;
         gap: 18px;
-        align-items: start;
+        align-items: stretch;
+        min-height: var(--workspace-panel-height);
+        height: var(--workspace-panel-height);
+        max-height: var(--workspace-panel-height);
         grid-template-areas: "editor sidebar";
       }
 
@@ -190,12 +196,16 @@
         align-content: start;
         position: sticky;
         top: 24px;
-        max-height: calc(100vh - 48px);
+        min-height: 0;
+        height: var(--workspace-panel-height);
+        max-height: var(--workspace-panel-height);
       }
 
       .editor-column {
         grid-area: editor;
-        min-height: clamp(480px, calc(100vh - 176px), 920px);
+        min-height: 0;
+        height: 100%;
+        max-height: 100%;
       }
 
       .panel {
@@ -213,6 +223,12 @@
 
       .panel-body.stack {
         gap: 14px;
+      }
+
+      .comment-rail,
+      .comment-rail .task-panel {
+        min-height: 0;
+        height: 100%;
       }
 
       .pill {
@@ -304,7 +320,8 @@
       }
 
       .doc-title-toolbar,
-      .doc-title-actions {
+      .doc-title-actions,
+      .editor-toolbar-actions {
         display: flex;
         gap: 10px;
         align-items: center;
@@ -312,29 +329,32 @@
 
       .editor-toolbar {
         display: grid;
-        gap: 10px;
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        gap: 8px;
+        align-items: center;
       }
 
       .editor-toolbar-top,
       .editor-toolbar-bottom {
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
-        gap: 10px;
+        gap: 8px;
         align-items: center;
       }
 
       .editor-status-pills {
         display: flex;
         gap: 6px;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         justify-content: flex-end;
         align-content: center;
         align-items: center;
         min-height: 0;
+        min-width: 0;
       }
 
       .editor-status-pills .pill {
-        min-height: 26px;
+        min-height: 24px;
         padding: 0 9px;
         font-size: 12px;
       }
@@ -344,12 +364,14 @@
         flex-wrap: nowrap;
       }
 
-      .doc-title-toolbar input {
+      .doc-title-toolbar input,
+      .doc-title-input {
         flex: 1 1 320px;
         min-width: 0;
       }
 
       .doc-title-toolbar input.is-loading,
+      .doc-title-input.is-loading,
       .editor-panel #doc-body.is-loading {
         visibility: hidden;
       }
@@ -382,36 +404,46 @@
 
       .doc-title-actions {
         flex: 0 0 auto;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         justify-content: flex-end;
-        gap: 8px;
+        gap: 6px;
+      }
+
+      .editor-toolbar-actions {
+        flex: 0 0 auto;
+        flex-wrap: nowrap;
+        justify-content: flex-end;
       }
 
       .doc-title-actions button {
         width: auto;
         flex: 0 0 auto;
         white-space: nowrap;
-        min-height: 36px;
-        padding: 0 11px;
+        min-height: 34px;
+        padding: 0 10px;
       }
 
       .toolbar-mode-button {
-        min-width: 76px;
+        min-width: 68px;
       }
 
       .doc-switcher {
         display: grid;
-        grid-template-columns: minmax(0, 1.5fr) minmax(180px, 1fr) auto;
-        gap: 10px;
+        grid-template-columns: minmax(150px, 0.72fr) minmax(180px, 0.92fr) minmax(240px, 1.3fr);
+        gap: 8px;
         align-items: center;
+        min-width: 0;
       }
 
       .doc-switcher > * {
         min-width: 0;
       }
 
-      .doc-switcher .doc-switcher-actions {
-        justify-content: flex-end;
+      .doc-switcher select,
+      .doc-switcher input,
+      .doc-title-toolbar input,
+      .doc-title-input {
+        min-height: var(--control-height-compact);
       }
 
       .task-composer-grid {
@@ -457,8 +489,8 @@
         grid-template-columns: auto minmax(0, 1fr);
         gap: 10px;
         align-items: center;
-        min-height: 40px;
-        padding: 10px 12px;
+        min-height: 0;
+        padding: 8px 10px;
         border: 1px solid var(--line);
         border-radius: 10px;
         background: linear-gradient(180deg, #ffffff 0%, #f9fafb 100%);
@@ -498,11 +530,14 @@
         display: grid;
         gap: 12px;
         padding: 16px;
-        min-height: clamp(360px, 52vh, 720px);
+        min-height: 0;
+        height: 100%;
+        max-height: min(100%, var(--review-panel-max-height));
         border: 1px solid rgba(36, 41, 47, 0.08);
         border-radius: 14px;
         background: var(--review-bg);
         box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+        overflow: hidden;
       }
 
       .review-surface-header {
@@ -546,6 +581,7 @@
         display: grid;
         min-height: 0;
         height: 100%;
+        max-height: 100%;
         grid-template-rows: minmax(0, 1fr);
       }
 
@@ -568,6 +604,8 @@
         gap: 12px;
         min-height: 0;
         height: 100%;
+        max-height: 100%;
+        grid-template-rows: minmax(0, 1fr);
       }
 
       .review-surface-note {
@@ -579,6 +617,7 @@
       .review-surface-content {
         min-height: clamp(220px, 34vh, 460px);
         height: 100%;
+        max-height: 100%;
         padding: 16px 18px;
         border: 1px solid rgba(36, 41, 47, 0.12);
         border-radius: 12px;
@@ -670,10 +709,23 @@
         display: grid;
         gap: 8px;
         min-height: 0;
-        overflow: auto;
+        overflow-y: auto;
+        overflow-x: hidden;
         padding-right: 4px;
         align-content: start;
         scrollbar-gutter: stable;
+        scrollbar-width: thin;
+      }
+
+      .task-comment-list::-webkit-scrollbar {
+        width: 10px;
+      }
+
+      .task-comment-list::-webkit-scrollbar-thumb {
+        background: rgba(89, 99, 110, 0.28);
+        border: 2px solid transparent;
+        border-radius: 999px;
+        background-clip: content-box;
       }
 
       .task-comment-empty {
@@ -820,6 +872,8 @@
         white-space: pre-wrap;
         word-break: break-word;
         background: var(--panel-soft);
+        max-height: clamp(84px, 15vh, 168px);
+        overflow: auto;
       }
 
       .task-comment-preview.source {
@@ -837,6 +891,7 @@
         gap: 8px;
         padding-top: 8px;
         border-top: 1px solid rgba(31, 35, 40, 0.08);
+        min-height: 0;
       }
 
       .task-comment-detail:empty {
@@ -845,6 +900,8 @@
 
       .task-comment-detail .detail-note {
         margin: 0;
+        max-height: clamp(84px, 14vh, 160px);
+        overflow: auto;
       }
 
       .task-comment-inline-actions button {
@@ -879,12 +936,31 @@
       }
 
       .editor-panel,
+      .task-panel,
       .editor-panel .panel-body {
         height: 100%;
       }
 
+      .editor-panel,
+      .editor-panel .panel-body {
+        min-height: 0;
+        max-height: 100%;
+        overflow: hidden;
+      }
+
       .editor-panel .panel-body {
         grid-template-rows: auto auto minmax(0, 1fr);
+      }
+
+      .task-panel .panel-body.stack {
+        height: 100%;
+        grid-template-rows: auto auto minmax(0, 1fr) auto;
+        overflow: hidden;
+      }
+
+      #task-detail-panel {
+        min-height: 0;
+        overflow: auto;
       }
 
       .compact-field {
@@ -1204,7 +1280,7 @@
         gap: 10px;
         min-height: 0;
         max-height: min(58vh, 560px);
-        grid-template-rows: auto auto minmax(0, 1fr);
+        grid-template-rows: auto auto minmax(0, 1fr) auto;
         overflow: hidden;
         overscroll-behavior: contain;
         scrollbar-gutter: stable;
@@ -1374,7 +1450,7 @@
         display: flex;
         align-items: center;
         gap: 10px;
-        padding: 12px 16px;
+        padding: 10px 14px;
         cursor: pointer;
         font-weight: 600;
         font-size: 14px;
@@ -1391,42 +1467,52 @@
       }
 
       .drawer-body {
-        padding: 16px;
+        padding: 12px 14px 14px;
         display: grid;
-        gap: 12px;
+        gap: 10px;
       }
 
       .drawer-body .task-composer-grid {
         display: grid;
-        grid-template-columns: minmax(112px, 0.76fr) minmax(0, 1.24fr);
+        grid-template-columns: minmax(120px, 0.72fr) minmax(220px, 1fr) minmax(260px, 1.2fr);
         gap: 10px;
-        align-items: start;
+        align-items: end;
       }
 
       .drawer-body .task-composer-grid > :nth-child(3) {
-        grid-column: 1 / -1;
+        grid-column: auto;
       }
 
       .drawer-body .task-composer-toolbar {
-        display: flex;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
         gap: 10px;
         align-items: center;
-        justify-content: space-between;
-        flex-wrap: wrap;
       }
 
       .drawer-body .selection-status {
-        flex: 1 1 auto;
-        min-height: 36px;
+        min-height: 0;
       }
 
       .drawer-body textarea {
-        min-height: 40px;
+        min-height: var(--control-height-compact);
       }
 
       .drawer-body label {
         margin-bottom: 4px;
         font-size: 12px;
+      }
+
+      .drawer-body .task-composer-grid > div {
+        display: grid;
+        gap: 4px;
+        min-width: 0;
+      }
+
+      .drawer-body select,
+      .drawer-body button,
+      .drawer-body textarea {
+        min-height: var(--control-height-compact);
       }
 
       .drawer-body .task-template-row {
@@ -1440,7 +1526,7 @@
       .drawer-body .task-template-row button {
         width: auto;
         min-width: 86px;
-        min-height: 38px;
+        min-height: var(--control-height-compact);
       }
 
       .drawer-body .version-list {
@@ -1480,9 +1566,10 @@
       .selection-toolbar {
         position: absolute;
         z-index: 50;
-        display: flex;
-        gap: 2px;
-        padding: 4px 6px;
+        display: grid;
+        gap: 8px;
+        min-width: min(460px, calc(100vw - 24px));
+        padding: 8px;
         border: 1px solid var(--line);
         border-radius: 10px;
         background: var(--panel);
@@ -1507,6 +1594,24 @@
         display: flex;
         align-items: center;
         justify-content: center;
+      }
+
+      .selection-toolbar-actions {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+      }
+
+      .selection-toolbar-fields {
+        display: grid;
+        grid-template-columns: minmax(120px, 156px) minmax(0, 1fr);
+        gap: 8px;
+        align-items: center;
+      }
+
+      .selection-toolbar-fields select,
+      .selection-toolbar-fields input {
+        min-height: 34px;
       }
 
       .sel-toolbar-btn:hover {
@@ -1577,16 +1682,33 @@
 
       /* ── Comment Rail refinements ── */
       .comment-rail {
-        overflow: auto;
+        overflow: hidden;
       }
 
       .comment-rail .task-panel .panel-body.stack {
-        max-height: calc(100vh - 120px);
+        height: 100%;
+        max-height: 100%;
+      }
+
+      .comment-rail #task-detail-panel {
+        min-height: 0;
+      }
+
+      @media (max-width: 1180px) {
+        .drawer-body .task-composer-grid {
+          grid-template-columns: minmax(140px, 0.8fr) minmax(0, 1fr);
+        }
+
+        .drawer-body .task-composer-grid > :nth-child(3) {
+          grid-column: 1 / -1;
+        }
       }
 
       @media (max-width: 1200px) {
         .workspace {
           grid-template-columns: 1fr;
+          height: auto;
+          max-height: none;
           grid-template-areas:
             "editor"
             "sidebar";
@@ -1595,11 +1717,14 @@
         .sidebar {
           position: static;
           top: auto;
+          height: auto;
           max-height: none;
         }
 
         .editor-column {
           min-height: 0;
+          height: auto;
+          max-height: none;
         }
 
         .task-list,
@@ -1616,8 +1741,6 @@
         }
 
         .editor-toolbar,
-        .editor-toolbar-top,
-        .editor-toolbar-bottom,
         .task-composer-toolbar,
         .doc-switcher,
         .task-list-tools,
@@ -1632,20 +1755,14 @@
           align-items: stretch;
         }
 
-        .doc-switcher .doc-switcher-actions,
-        .doc-switcher {
-          grid-template-columns: 1fr;
-        }
-
-        .editor-toolbar-top,
-        .editor-toolbar-bottom,
-        .doc-switcher .doc-switcher-actions,
+        .editor-toolbar,
         .doc-switcher {
           grid-template-columns: 1fr;
         }
 
         .editor-status-pills {
           justify-content: flex-start;
+          flex-wrap: wrap;
         }
 
         .diff-columns {
@@ -1653,11 +1770,17 @@
         }
 
         .doc-switcher > div,
+        .editor-toolbar-actions,
         .task-actions button,
         .inline-actions button,
         .modal-actions button {
           width: 100%;
           min-width: 0;
+        }
+
+        .editor-toolbar-actions {
+          flex-wrap: wrap;
+          justify-content: flex-start;
         }
 
         .drawer-body .task-composer-grid {
@@ -1722,17 +1845,20 @@
         }
 
         .doc-title-toolbar,
+        .editor-toolbar-actions,
         .editor-status-pills,
         .doc-title-actions {
           flex-direction: column;
           align-items: stretch;
         }
 
+        .editor-toolbar-actions,
         .doc-title-actions {
           width: 100%;
           justify-content: stretch;
         }
 
+        .editor-toolbar-actions button,
         .doc-title-actions button {
           width: 100%;
           min-width: 0;

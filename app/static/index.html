@@ -15,11 +15,18 @@
       <button class="inline-popover-btn secondary" data-popover-action="retry" data-i18n="retry">Retry</button>
       <button class="inline-popover-btn secondary" data-popover-action="detail" data-i18n="jump_to_task">Open Task</button>
     </div>
-    <div id="selection-toolbar" class="selection-toolbar hidden" role="toolbar">
-      <button class="sel-toolbar-btn" data-sel-action="rewrite" title="Rewrite">✏️</button>
-      <button class="sel-toolbar-btn" data-sel-action="summarize" title="Summarize">📝</button>
-      <button class="sel-toolbar-btn" data-sel-action="expand" title="Expand">📖</button>
-      <button class="sel-toolbar-btn" data-sel-action="translate" title="Translate">🌐</button>
+    <div id="selection-toolbar" class="selection-toolbar hidden" role="toolbar" aria-label="Selection actions">
+      <div class="selection-toolbar-actions">
+        <button class="sel-toolbar-btn" data-sel-action="rewrite" title="Rewrite" aria-label="Rewrite">✏️</button>
+        <button class="sel-toolbar-btn" data-sel-action="summarize" title="Summarize" aria-label="Summarize">📝</button>
+        <button class="sel-toolbar-btn" data-sel-action="expand" title="Expand" aria-label="Expand">📖</button>
+        <button class="sel-toolbar-btn" data-sel-action="translate" title="Translate" aria-label="Translate">🌐</button>
+        <button class="sel-toolbar-btn" data-sel-action="custom" title="Custom" aria-label="Custom">⚙️</button>
+      </div>
+      <div class="selection-toolbar-fields">
+        <select id="selection-toolbar-template" aria-label="Template"></select>
+        <input id="selection-toolbar-instruction" data-i18n="task_instruction_placeholder" placeholder="e.g. Make it more formal..." aria-label="Additional instructions" />
+      </div>
     </div>
     <div id="key-modal" class="modal-backdrop hidden">
       <section class="modal-card" aria-labelledby="key-modal-title" aria-modal="true" role="dialog">
@@ -98,38 +105,34 @@
             <section class="panel editor-panel">
               <div class="panel-body stack">
                 <div class="editor-toolbar">
-                  <div class="editor-toolbar-top">
-                    <div class="doc-switcher">
-                      <div class="compact-field">
-                        <label class="visually-hidden" for="doc-selector" data-i18n="existing_docs">Existing Docs</label>
-                        <select id="doc-selector">
-                          <option value="" data-i18n="please_select_doc">Please select document</option>
-                        </select>
-                      </div>
-                      <div class="compact-field">
-                        <label class="visually-hidden" for="new-title" data-i18n="new_doc_title">New Title</label>
-                        <input id="new-title" data-i18n="new_doc_placeholder" placeholder="Enter title to create" />
-                      </div>
-                      <div class="doc-switcher-actions inline-actions">
-                        <button id="create-doc" class="primary" data-i18n="create">Create</button>
-                      </div>
+                  <div class="doc-switcher">
+                    <div class="compact-field">
+                      <label class="visually-hidden" for="doc-selector" data-i18n="existing_docs">Existing Docs</label>
+                      <select id="doc-selector">
+                        <option value="" data-i18n="please_select_doc">Please select document</option>
+                      </select>
                     </div>
-                    <div class="editor-status-pills">
-                      <span id="doc-save-pill" class="pill">No changes</span>
-                      <span id="doc-revision-pill" class="pill" data-i18n="no_doc_selected">No document selected</span>
-                      <span id="review-surface-pill" class="pill" data-i18n="editor_task_markers_empty">No task markers</span>
+                    <div class="compact-field">
+                      <label class="visually-hidden" for="new-title" data-i18n="new_doc_title">New Title</label>
+                      <input id="new-title" data-i18n="new_doc_placeholder" placeholder="Enter title to create" />
                     </div>
+                    <label class="visually-hidden" for="doc-title" data-i18n="title">Title</label>
+                    <input id="doc-title" class="doc-title-input" data-i18n="no_doc_selected" placeholder="No document selected" />
                   </div>
 
-                  <div class="editor-toolbar-bottom doc-title-toolbar">
-                    <label class="visually-hidden" for="doc-title" data-i18n="title">Title</label>
-                    <input id="doc-title" data-i18n="no_doc_selected" placeholder="No document selected" />
-                    <div class="doc-title-actions">
+                  <div class="editor-toolbar-actions doc-title-actions">
+                      <button id="create-doc" class="primary" data-i18n="create">Create</button>
                       <button id="save-doc" class="primary" data-i18n="save_doc_short">Save</button>
                       <button id="export-doc" class="secondary" data-i18n="export_markdown_short">Export</button>
                       <button id="delete-doc" class="danger" data-i18n="delete_doc_short">Delete</button>
+                      <button id="review-mode-edit" class="secondary toolbar-mode-button" type="button" data-i18n="review_mode_edit">Edit</button>
                       <button id="review-mode-review" class="secondary toolbar-mode-button" type="button" data-i18n="review_mode_review">Review</button>
-                    </div>
+                  </div>
+
+                  <div class="editor-status-pills">
+                    <span id="doc-save-pill" class="pill">No changes</span>
+                    <span id="doc-revision-pill" class="pill" data-i18n="no_doc_selected">No document selected</span>
+                    <span id="review-surface-pill" class="pill" data-i18n="editor_task_markers_empty">No task markers</span>
                   </div>
                 </div>
 
@@ -702,6 +705,7 @@
 
       function refreshLocalizedRuntimeUi() {
         renderTaskTemplates();
+        updateSelectionToolbarLabels();
         if (!templateModalEl.classList.contains('hidden')) {
           renderTemplateList();
         }
@@ -719,6 +723,22 @@
           docRevisionPillEl.textContent = t("no_doc_selected_pill");
           setStatus(t("no_doc_selected"));
         }
+      }
+
+      function updateSelectionToolbarLabels() {
+        const labelByAction = {
+          rewrite: t('quick_rewrite'),
+          summarize: t('quick_summarize'),
+          expand: t('quick_expand'),
+          translate: t('quick_translate'),
+          custom: t('task_action'),
+        };
+        selectionToolbarEl?.querySelectorAll('[data-sel-action]').forEach((button) => {
+          const action = button.getAttribute('data-sel-action') || '';
+          const label = labelByAction[action] || action;
+          button.setAttribute('title', label);
+          button.setAttribute('aria-label', label);
+        });
       }
 
       document.getElementById("lang-toggle").addEventListener("click", () => {
@@ -757,7 +777,7 @@
         tasks: [],
         taskSignature: "",
         serverTemplates: [],
-        taskPollMs: 15000,
+        taskPollMs: 5000,
         taskPollTimer: null,
         isTaskPollRunning: false,
         taskEventAbortController: null,
@@ -766,6 +786,8 @@
         reviewMode: 'edit',
         realtimeSyncTimer: null,
         pendingRealtimeSync: null,
+        autoRelocatePromise: null,
+        localDocumentMutation: null,
         taskPollIntervalId: null,
         _popoverTaskId: null,
       };
@@ -827,6 +849,9 @@
       const diffEl = document.getElementById("task-diff");
       const diffStateEl = document.getElementById("diff-state");
       const workspaceSyncPillEl = document.getElementById("workspace-sync-pill");
+      const selectionToolbarEl = document.getElementById('selection-toolbar');
+      const selectionToolbarTemplateEl = document.getElementById('selection-toolbar-template');
+      const selectionToolbarInstructionEl = document.getElementById('selection-toolbar-instruction');
       const versionListEl = document.getElementById("version-list");
       const versionCountPillEl = document.getElementById("version-count-pill");
       const taskCommentListEl = document.getElementById("task-comment-list");
@@ -1084,6 +1109,133 @@
         };
       }
 
+      function markLocalDocumentMutation(docId, revision) {
+        if (!docId || !revision) {
+          state.localDocumentMutation = null;
+          return;
+        }
+        state.localDocumentMutation = {
+          docId,
+          revision,
+          expiresAt: Date.now() + 8000,
+        };
+      }
+
+      function shouldIgnoreLocalDocumentMutation(docId, revision) {
+        const mutation = state.localDocumentMutation;
+        if (!mutation) {
+          return false;
+        }
+        if (Date.now() > mutation.expiresAt) {
+          state.localDocumentMutation = null;
+          return false;
+        }
+        if (mutation.docId === docId && mutation.revision === revision) {
+          state.localDocumentMutation = null;
+          return true;
+        }
+        return false;
+      }
+
+      function mergeInstructionParts(parts) {
+        const cleaned = parts
+          .map((value) => (typeof value === 'string' ? value.trim() : ''))
+          .filter(Boolean);
+        if (!cleaned.length) {
+          return null;
+        }
+        return [...new Set(cleaned)].join('\n\n');
+      }
+
+      function getSelectionToolbarTemplate() {
+        const templateId = normalizeTemplateId(selectionToolbarTemplateEl?.value || '');
+        if (!templateId || templateId === MANAGE_TEMPLATE_OPTION) {
+          return null;
+        }
+        return getTemplateCatalog().find((template) => normalizeTemplateId(template.id) === templateId) || null;
+      }
+
+      function syncSelectionToolbarFromComposer() {
+        if (selectionToolbarTemplateEl) {
+          const nextValue = normalizeTemplateId(taskTemplateEl.value || '');
+          selectionToolbarTemplateEl.value = [...selectionToolbarTemplateEl.options].some((option) => option.value === nextValue)
+            ? nextValue
+            : '';
+        }
+        if (selectionToolbarInstructionEl) {
+          selectionToolbarInstructionEl.value = taskInstructionEl.value || '';
+        }
+      }
+
+      function syncComposerFromSelectionToolbar(action) {
+        if (action && [...taskActionEl.options].some((option) => option.value === action)) {
+          taskActionEl.value = action;
+          localStorage.setItem(LAST_TASK_ACTION_KEY, action);
+        }
+        if (selectionToolbarTemplateEl && [...taskTemplateEl.options].some((option) => option.value === selectionToolbarTemplateEl.value)) {
+          taskTemplateEl.value = selectionToolbarTemplateEl.value;
+        }
+        if (selectionToolbarInstructionEl) {
+          taskInstructionEl.value = selectionToolbarInstructionEl.value || '';
+        }
+      }
+
+      function buildSelectionTaskPayload(action) {
+        const template = getSelectionToolbarTemplate();
+        return {
+          action,
+          instruction: mergeInstructionParts([
+            template?.instruction || '',
+            selectionToolbarInstructionEl?.value || '',
+          ]),
+        };
+      }
+
+      function hasActiveReviewTextSelection() {
+        if (!reviewSurfaceEl) {
+          return false;
+        }
+        const selection = window.getSelection();
+        if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
+          return false;
+        }
+        const range = selection.getRangeAt(0);
+        const container = range.commonAncestorContainer;
+        const element = container.nodeType === Node.ELEMENT_NODE ? container : container.parentElement;
+        return Boolean(element && reviewSurfaceEl.contains(element));
+      }
+
+      function selectReviewTaskText(task) {
+        if (!reviewSurfaceEl || !task) {
+          return false;
+        }
+        const marker = reviewSurfaceEl.querySelector(`[data-review-task-id="${task.id}"]`);
+        if (!marker) {
+          return false;
+        }
+        marker.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        marker.focus({ preventScroll: true });
+        const selection = window.getSelection();
+        if (!selection) {
+          return true;
+        }
+        const range = document.createRange();
+        range.selectNodeContents(marker);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        return true;
+      }
+
+      function revealTaskSelection(task) {
+        if (!task) {
+          return;
+        }
+        if (state.reviewMode === 'review' && selectReviewTaskText(task)) {
+          return;
+        }
+        setEditorSelectionForTask(task, { openEditMode: false, focusEditor: state.reviewMode === 'edit' });
+      }
+
       function setReviewMode(mode, options = {}) {
         const { focusEditor = false } = options;
         state.reviewMode = mode === 'edit' ? 'edit' : 'review';
@@ -1113,14 +1265,16 @@
       }
 
       function setEditorSelectionForTask(task, options = {}) {
-        const { openEditMode = true } = options;
+        const { openEditMode = false, focusEditor = true } = options;
         if (!task) {
           return;
         }
         if (openEditMode) {
           setReviewMode('edit');
         }
-        docBodyInput.focus();
+        if (focusEditor) {
+          docBodyInput.focus();
+        }
         docBodyInput.setSelectionRange(task.start_offset, task.end_offset);
         docBodyInput.dispatchEvent(new Event('select', { bubbles: true }));
       }
@@ -1237,7 +1391,7 @@
           return;
         }
         if (actionKey === 'jump_to_text') {
-          setEditorSelectionForTask(task, { openEditMode: true });
+          revealTaskSelection(task);
           return;
         }
         if (actionKey === 'accept') {
@@ -1379,7 +1533,7 @@
           }
           button.addEventListener('click', (event) => {
             event.stopPropagation();
-            setEditorSelectionForTask(task);
+            revealTaskSelection(task);
             safeRun(() => selectTask(taskId));
           });
         });
@@ -1475,6 +1629,9 @@
           };
           node.addEventListener('click', (event) => {
             event.stopPropagation();
+            if (hasActiveReviewTextSelection()) {
+              return;
+            }
             if (task.status === 'done' || task.status === 'failed' || task.status === 'cancelled' || task.status === 'rejected') {
               showInlinePopover(taskId, node);
             } else {
@@ -1489,15 +1646,6 @@
           });
         });
 
-        const reviewContentEl = reviewSurfaceEl.querySelector('.review-surface-content');
-        if (reviewContentEl) {
-          reviewContentEl.addEventListener('click', (event) => {
-            if (event.target.closest('[data-review-task-id]')) {
-              return;
-            }
-            setReviewMode('edit', { focusEditor: true });
-          });
-        }
       }
 
       // ── Inline Popover ──
@@ -1530,22 +1678,27 @@
       // ── Selection Toolbar ──
       /** Show the floating quick-action toolbar near the cursor position. */
       function showSelectionToolbar(x, y) {
-        const toolbar = document.getElementById('selection-toolbar');
+        if (!selectionToolbarEl) {
+          return;
+        }
+        syncSelectionToolbarFromComposer();
         const scrollTop = window.scrollY || document.documentElement.scrollTop;
         const scrollLeft = window.scrollX || document.documentElement.scrollLeft;
-        toolbar.style.top = (y + scrollTop - 48) + 'px';
-        toolbar.style.left = (x + scrollLeft) + 'px';
-        toolbar.classList.remove('hidden');
+        selectionToolbarEl.style.top = (y + scrollTop - 56) + 'px';
+        selectionToolbarEl.style.left = (x + scrollLeft) + 'px';
+        selectionToolbarEl.classList.remove('hidden');
       }
 
       /** Hide the selection toolbar. */
       function hideSelectionToolbar() {
-        document.getElementById('selection-toolbar').classList.add('hidden');
+        selectionToolbarEl?.classList.add('hidden');
       }
 
       /** Create a task directly from the current text selection using a single action. */
       async function quickCreateTask(action) {
         if (!state.docId) return;
+        const payload = buildSelectionTaskPayload(action);
+        syncComposerFromSelectionToolbar(action);
         hideSelectionToolbar();
         const start = docBodyInput.selectionStart;
         const end = docBodyInput.selectionEnd;
@@ -1554,8 +1707,8 @@
         await api(`/api/docs/${state.docId}/tasks`, {
           method: 'POST',
           body: JSON.stringify({
-            action: action,
-            instruction: state.docTaskDefaults?.instruction || null,
+            action: payload.action,
+            instruction: payload.instruction,
             source_text: docBodyInput.value.slice(start, end),
             start_offset: start,
             end_offset: end,
@@ -1644,6 +1797,7 @@
       }
 
       function renderTaskTemplates() {
+        const currentValue = normalizeTemplateId(taskTemplateEl.value || '');
         const options = [
           `<option value="">${escapeHtml(t("no_template_opt"))}</option>`,
           ...getBuiltinTemplates().map(
@@ -1655,7 +1809,21 @@
           `<option value="${MANAGE_TEMPLATE_OPTION}">${escapeHtml(t("manage_templates_option"))}</option>`,
         ];
         taskTemplateEl.innerHTML = options.join('');
-        taskTemplateEl.value = '';
+        taskTemplateEl.value = [...taskTemplateEl.options].some((option) => option.value === currentValue)
+          ? currentValue
+          : '';
+        renderSelectionToolbarTemplates();
+      }
+
+      function renderSelectionToolbarTemplates() {
+        if (!selectionToolbarTemplateEl) {
+          return;
+        }
+        const currentValue = normalizeTemplateId(selectionToolbarTemplateEl.value || taskTemplateEl.value || '');
+        selectionToolbarTemplateEl.innerHTML = taskTemplateEl.innerHTML;
+        selectionToolbarTemplateEl.value = [...selectionToolbarTemplateEl.options].some((option) => option.value === currentValue)
+          ? currentValue
+          : '';
       }
 
       function resetTemplateForm() {
@@ -2059,6 +2227,11 @@
           return;
         }
         if (eventName === 'document.changed') {
+          const nextRevision = Number(payload.revision || 0) || null;
+          if (payload.doc_id === state.docId && nextRevision && shouldIgnoreLocalDocumentMutation(payload.doc_id, nextRevision)) {
+            queueRealtimeSync({ refreshDocs: true, refreshTasks: true });
+            return;
+          }
           if (payload.kind === 'deleted') {
             queueRealtimeSync({ reloadAll: payload.doc_id === state.docId, refreshDocs: payload.doc_id !== state.docId });
             return;
@@ -2177,6 +2350,10 @@
           }
           state.realtimeMode = 'poll';
           updateAutoRefreshPill();
+          // If stream transport drops, immediately perform one pull sync before waiting for interval polling.
+          if (state.docId) {
+            queueRealtimeSync({ refreshTasks: true, refreshVersions: true, forceRefreshSelected: true });
+          }
           throw error;
         } finally {
           if (state.taskEventAbortController === controller) {
@@ -2345,10 +2522,19 @@
       }
 
       function canRelocateTask(task) {
-        return Boolean(task?.context)
-          && task.status !== 'accepted'
-          && task.status !== 'processing'
-          && task.doc_revision !== task.context.document_revision;
+        if (!task) {
+          return false;
+        }
+        if (task.status === 'accepted' || task.status === 'processing') {
+          return false;
+        }
+        if (task.is_stale) {
+          return true;
+        }
+        if (task.context) {
+          return task.doc_revision !== task.context.document_revision;
+        }
+        return false;
       }
 
       function getHeaders() {
@@ -2459,6 +2645,7 @@
           syncSavedDocumentSnapshot(doc);
           syncCurrentBlocks();
           applyDocumentTaskDefaults(doc);
+          syncSelectionToolbarFromComposer();
           updateSelectionInfo();
           hideSelectionToolbar();
           hideInlinePopover();
@@ -2582,7 +2769,7 @@
       function buildTaskActionConfigs(task, taskId, recoveryPreview) {
         const relocationAvailable = Boolean(recoveryPreview?.can_relocate || canRelocateTask(task));
         const actions = [
-          { key: 'jump_to_text', label: t("jump_to_text"), handler: () => setEditorSelectionForTask(task, { openEditMode: true }), className: 'secondary' },
+          { key: 'jump_to_text', label: t("jump_to_text"), handler: () => revealTaskSelection(task), className: 'secondary' },
         ];
         if (task.status === 'done' && !task.is_stale) {
           actions.push({ key: 'accept', label: t("accept"), handler: () => acceptTask(taskId), className: 'primary' });
@@ -2642,7 +2829,6 @@
 
       async function selectTask(taskId) {
         state.selectedTaskId = taskId;
-        setReviewMode('review');
         renderEditorTaskMarkers();
         renderTaskCommentRail(state.tasks);
         const task = await api(`/api/tasks/${taskId}`);
@@ -2719,30 +2905,41 @@
           return null;
         }
         const title = docTitleInput.value.trim();
+        const optimisticRevision = typeof state.revision === 'number' ? state.revision + 1 : null;
+        if (optimisticRevision) {
+          markLocalDocumentMutation(state.docId, optimisticRevision);
+        }
         state.isSavingDoc = true;
         updateDocumentDirtyUi();
         state.pendingSavePromise = (async () => {
-          const doc = await api(`/api/docs/${state.docId}`, {
-            method: 'PUT',
-            body: JSON.stringify({
-              title,
-              raw_markdown: docBodyInput.value,
-              expected_revision: state.revision,
-              actor: 'browser',
-              note,
-            }),
-          });
-          state.revision = doc.revision;
-          state.docBlocks = doc.blocks;
-          docRevisionPillEl.textContent = t("revision_pill", { rev: doc.revision });
-          syncSavedDocumentSnapshot(doc);
-          syncCurrentBlocks();
-          updateSelectionInfo();
-          await Promise.all([loadDocsOnly(), loadTasks({ forceRefreshSelected: true }), loadVersions()]);
-          if (!silent) {
-            setStatus(t("doc_saved_msg", { rev: doc.revision }), 'success');
+          try {
+            const doc = await api(`/api/docs/${state.docId}`, {
+              method: 'PUT',
+              body: JSON.stringify({
+                title,
+                raw_markdown: docBodyInput.value,
+                expected_revision: state.revision,
+                actor: 'browser',
+                note,
+              }),
+            });
+            markLocalDocumentMutation(doc.id, doc.revision);
+            state.revision = doc.revision;
+            state.docBlocks = doc.blocks;
+            docRevisionPillEl.textContent = t("revision_pill", { rev: doc.revision });
+            syncSavedDocumentSnapshot(doc);
+            syncCurrentBlocks();
+            updateSelectionInfo();
+            await Promise.all([loadDocsOnly(), loadTasks({ forceRefreshSelected: true }), loadVersions()]);
+            await autoRelocateStaleTasks();
+            if (!silent) {
+              setStatus(t("doc_saved_msg", { rev: doc.revision }), 'success');
+            }
+            return doc;
+          } catch (error) {
+            state.localDocumentMutation = null;
+            throw error;
           }
-          return doc;
         })();
         try {
           return await state.pendingSavePromise;
@@ -2799,6 +2996,60 @@
         state.selectedTaskId = null;
         await loadTasks();
         setStatus(t("cleanup_summary", result), 'success');
+      }
+
+      async function autoRelocateStaleTasks() {
+        if (!state.docId) {
+          return 0;
+        }
+        if (state.autoRelocatePromise) {
+          return state.autoRelocatePromise;
+        }
+        const candidates = state.tasks.filter((task) => task.is_stale && canRelocateTask(task));
+        if (!candidates.length) {
+          return 0;
+        }
+
+        state.autoRelocatePromise = (async () => {
+          const relocatableIds = [];
+          for (const task of candidates) {
+            try {
+              const preview = await api(`/api/tasks/${task.id}/recovery-preview`);
+              if (preview.can_relocate && preview.recommended_mode === 'relocate') {
+                relocatableIds.push(task.id);
+              }
+            } catch {
+              // Keep best-effort behavior: a single preview failure should not block other stale tasks.
+            }
+          }
+          if (!relocatableIds.length) {
+            return 0;
+          }
+
+          let selectedTaskUpdated = false;
+          for (const taskId of relocatableIds) {
+            try {
+              await api(`/api/tasks/${taskId}/recover`, {
+                method: 'POST',
+                body: JSON.stringify({ mode: 'relocate', actor: 'browser' }),
+              });
+              if (taskId === state.selectedTaskId) {
+                selectedTaskUpdated = true;
+              }
+            } catch {
+              // Keep best-effort behavior: continue relocating the remaining tasks.
+            }
+          }
+
+          await loadTasks({ autoSelect: false, forceRefreshSelected: selectedTaskUpdated });
+          return relocatableIds.length;
+        })();
+
+        try {
+          return await state.autoRelocatePromise;
+        } finally {
+          state.autoRelocatePromise = null;
+        }
       }
 
       async function createTask() {
@@ -2957,9 +3208,29 @@
           return;
         }
         const template = getTemplateCatalog().find(t => normalizeTemplateId(t.id) === taskTemplateEl.value);
-        if (template) { taskActionEl.value = template.action; taskInstructionEl.value = template.instruction; }
+        if (template) {
+          taskActionEl.value = template.action;
+          taskInstructionEl.value = template.instruction;
+          localStorage.setItem(LAST_TASK_ACTION_KEY, template.action);
+        }
+        syncSelectionToolbarFromComposer();
+      });
+      selectionToolbarTemplateEl?.addEventListener('change', () => {
+        if (selectionToolbarTemplateEl.value !== MANAGE_TEMPLATE_OPTION) {
+          return;
+        }
+        selectionToolbarTemplateEl.value = '';
+        safeRun(async () => {
+          await loadTaskTemplates({ allowLegacyImport: false });
+          openTemplateModal();
+        });
       });
       taskListEl.addEventListener('change', () => { if (taskListEl.value) safeRun(() => selectTask(Number(taskListEl.value))); });
+      taskActionEl.addEventListener('change', () => {
+        localStorage.setItem(LAST_TASK_ACTION_KEY, taskActionEl.value);
+        syncSelectionToolbarFromComposer();
+      });
+      taskInstructionEl.addEventListener('input', syncSelectionToolbarFromComposer);
       docTitleInput.addEventListener('input', handleDocumentInputChange);
       docBodyInput.addEventListener('input', () => {
         updateSelectionInfo();
@@ -2987,7 +3258,7 @@
       });
 
       // ── Selection toolbar events ──
-      document.getElementById('selection-toolbar').addEventListener('click', (event) => {
+      selectionToolbarEl?.addEventListener('click', (event) => {
         const btn = event.target.closest('[data-sel-action]');
         if (!btn) return;
         safeRun(() => quickCreateTask(btn.dataset.selAction));
@@ -3005,8 +3276,7 @@
         });
       });
       document.addEventListener('mousedown', (event) => {
-        const toolbar = document.getElementById('selection-toolbar');
-        if (!toolbar.classList.contains('hidden') && !toolbar.contains(event.target) && event.target !== docBodyInput) {
+        if (selectionToolbarEl && !selectionToolbarEl.classList.contains('hidden') && !selectionToolbarEl.contains(event.target) && event.target !== docBodyInput) {
           hideSelectionToolbar();
         }
       });
@@ -3057,6 +3327,9 @@
       
       renderI18n();
       restoreTaskComposerState();
+      renderSelectionToolbarTemplates();
+      syncSelectionToolbarFromComposer();
+      updateSelectionToolbarLabels();
       clearEditor();
       setReviewMode(state.reviewMode);
       updateAutoRefreshPill();
