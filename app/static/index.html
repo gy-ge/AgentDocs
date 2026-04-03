@@ -825,6 +825,7 @@
       const reviewPanelBodyEl = document.getElementById("review-panel-body");
       const reviewModeReviewButtonEl = document.getElementById("review-mode-review");
       const reviewModeEditButtonEl = document.getElementById("review-mode-edit");
+      const composerDrawerEl = document.getElementById("composer-drawer");
 
       apiKeyInput.value = localStorage.getItem("agentdocs.apiKey") || "";
 
@@ -1273,8 +1274,10 @@
 
         const actionIcons = { rewrite: '✏️', summarize: '📝', expand: '📖', translate: '🌐', custom: '⚙️' };
         const orderedTasks = [...tasks].sort((left, right) => {
-          if (left.start_offset !== right.start_offset) {
-            return left.start_offset - right.start_offset;
+          const leftOffset = left.start_offset ?? 0;
+          const rightOffset = right.start_offset ?? 0;
+          if (leftOffset !== rightOffset) {
+            return leftOffset - rightOffset;
           }
           return left.id - right.id;
         });
@@ -2896,9 +2899,8 @@
           selectionStatusEl.classList.add('is-active');
         }
         // Auto-open composer when text is selected
-        const composerDrawer = document.getElementById('composer-drawer');
-        if (composerDrawer && start !== end && state.docId) {
-          composerDrawer.open = true;
+        if (composerDrawerEl && start !== end && state.docId) {
+          composerDrawerEl.open = true;
         }
         if (state.selectedTaskId) {
           const selectedTask = state.tasks.find((task) => task.id === state.selectedTaskId);
@@ -2987,7 +2989,8 @@
         safeRun(() => quickCreateTask(btn.dataset.selAction));
       });
       docBodyInput.addEventListener('mouseup', (event) => {
-        setTimeout(() => {
+        // Delay to let the browser finalize the selection range after mouseup
+        requestAnimationFrame(() => {
           const start = docBodyInput.selectionStart;
           const end = docBodyInput.selectionEnd;
           if (start !== end && state.docId) {
@@ -2995,7 +2998,7 @@
           } else {
             hideSelectionToolbar();
           }
-        }, 10);
+        });
       });
       document.addEventListener('mousedown', (event) => {
         const toolbar = document.getElementById('selection-toolbar');
