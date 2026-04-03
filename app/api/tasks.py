@@ -145,6 +145,7 @@ def accept_task(
         note=payload.note,
     )
     document = service.document_service.get_document(db, task.doc_id)
+    document_changed = document.revision != payload.expected_revision
     task_event_broker.publish_task(
         kind="accepted",
         task_id=task.id,
@@ -152,9 +153,9 @@ def accept_task(
         status=task.status,
         doc_revision=document.revision,
         agent_name=task.agent_name,
-        document_changed=document.revision != task.doc_revision,
+        document_changed=document_changed,
     )
-    if document.revision != task.doc_revision:
+    if document_changed:
         task_event_broker.publish_document(
             kind="accepted_task_applied",
             doc_id=document.id,

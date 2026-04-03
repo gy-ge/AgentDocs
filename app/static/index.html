@@ -368,7 +368,7 @@
           doc_saved_msg: "Document saved.",
           rollback_to_this: "Rollback to here",
           no_remarks: "No remarks",
-          rollback_success: "Rolled back to version #{id}.",
+          rollback_success: "Rolled back to revision {rev}.",
           accept: "Accept",
           reject: "Reject",
           cancel: "Cancel",
@@ -435,6 +435,11 @@
           source_changed_reason: "Source content changed.",
           document_changed_reason: "Document content changed.",
           requeue_recommendation: "Current range can be recreated as a single block task.",
+          relocated_block_position: "Relocated via block position.",
+          relocated_heading_match: "Relocated via heading match.",
+          relocated_unique_match: "Relocated via unique document match.",
+          relocated_selection_match: "Current selection still matches.",
+          relocated_default: "Relocated based on document text.",
           select_task_first: "Select a task first",
           no_block_context: "No block context",
           unsaved_changes_warning: "You have unsaved document changes.",
@@ -572,7 +577,7 @@
           doc_saved_msg: "文档已保存。",
           rollback_to_this: "回滚到这里",
           no_remarks: "无备注",
-          rollback_success: "已回滚到版本 #{id}。",
+          rollback_success: "已回滚至版本 {rev}。",
           accept: "接受",
           reject: "拒绝",
           cancel: "取消",
@@ -639,6 +644,11 @@
           source_changed_reason: "原始选区内容已经变化，旧任务结果需要重新核对。",
           document_changed_reason: "当前正文已经变化，旧任务结果不能直接套用。",
           requeue_recommendation: "当前区间仍可作为单一 block 任务，可直接按当前正文重建。",
+          relocated_block_position: "按原 block 位置重新定位。",
+          relocated_heading_match: "按同标题 block 重新定位。",
+          relocated_unique_match: "按全文唯一命中重新定位。",
+          relocated_selection_match: "当前选区仍然匹配。",
+          relocated_default: "已按当前正文重新定位。",
           select_task_first: "请先选择一个任务",
           no_block_context: "当前任务没有 block 上下文",
           unsaved_changes_warning: "当前文档还有未保存修改。",
@@ -2325,24 +2335,17 @@
       }
 
       function describeRelocationStrategy(strategy) {
-        if (currentLang === 'zh') {
-           if (strategy === 'same_block_position_match') return '按原 block 位置重新定位';
-           if (strategy === 'same_heading_unique_match') return '按同标题 block 重新定位';
-           if (strategy === 'document_unique_match') return '按全文唯一命中重新定位';
-           if (strategy === 'current_selection_match') return '当前选区仍然匹配';
-           return '已按当前正文重新定位';
-        }
-        if (strategy === 'same_block_position_match') return 'Relocated via block position';
-        if (strategy === 'same_heading_unique_match') return 'Relocated via heading match';
-        if (strategy === 'document_unique_match') return 'Relocated via unique document match';
-        if (strategy === 'current_selection_match') return 'Current selection still matches';
-        return 'Relocated based on document text';
+        if (strategy === 'same_block_position_match') return t('relocated_block_position');
+        if (strategy === 'same_heading_unique_match') return t('relocated_heading_match');
+        if (strategy === 'document_unique_match') return t('relocated_unique_match');
+        if (strategy === 'current_selection_match') return t('relocated_selection_match');
+        return t('relocated_default');
       }
 
       function describeRecoveryRecommendation(preview) {
         if (!preview) return '';
         if (preview.recommended_mode === 'relocate' && preview.relocation_strategy) {
-          return `${describeRelocationStrategy(preview.relocation_strategy)}.`;
+          return describeRelocationStrategy(preview.relocation_strategy);
         }
         if (preview.recommended_mode === 'requeue_from_current') {
           return t("requeue_recommendation");
@@ -2690,7 +2693,7 @@
           renderDiffPreview(task, diff);
         } else {
           state.selectedTaskDiff = null;
-          diffStateEl.textContent = t("diff_" + task.status) || task.status;
+          diffStateEl.textContent = t("diff_" + task.status);
           renderDiffPlaceholder(task.error_message || t("diff_placeholder"));
           setTaskSummary(t("diff_" + task.status), recoveryHint || "", task.status === 'failed' ? 'error' : 'warn', [], summaryExtras);
         }
