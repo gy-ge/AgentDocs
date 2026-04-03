@@ -9,6 +9,18 @@
     <link rel="stylesheet" href="/index.css" />
   </head>
   <body>
+    <div id="inline-popover" class="inline-popover hidden" role="menu">
+      <button class="inline-popover-btn primary" data-popover-action="accept" data-i18n="accept">Accept</button>
+      <button class="inline-popover-btn secondary" data-popover-action="reject" data-i18n="reject">Reject</button>
+      <button class="inline-popover-btn secondary" data-popover-action="retry" data-i18n="retry">Retry</button>
+      <button class="inline-popover-btn secondary" data-popover-action="detail" data-i18n="jump_to_task">Open Task</button>
+    </div>
+    <div id="selection-toolbar" class="selection-toolbar hidden" role="toolbar">
+      <button class="sel-toolbar-btn" data-sel-action="rewrite" title="Rewrite">✏️</button>
+      <button class="sel-toolbar-btn" data-sel-action="summarize" title="Summarize">📝</button>
+      <button class="sel-toolbar-btn" data-sel-action="expand" title="Expand">📖</button>
+      <button class="sel-toolbar-btn" data-sel-action="translate" title="Translate">🌐</button>
+    </div>
     <div id="key-modal" class="modal-backdrop hidden">
       <section class="modal-card" aria-labelledby="key-modal-title" aria-modal="true" role="dialog">
         <form id="key-form" class="stack" style="gap: 14px">
@@ -82,107 +94,6 @@
         <div id="status" class="status" data-i18n="waiting_connection">Waiting for connection.</div>
 
         <section class="workspace">
-          <aside class="sidebar">
-            <section class="panel task-composer-panel">
-              <div class="panel-body stack">
-                <div class="task-composer-toolbar">
-                  <div class="section-title">
-                    <h2 data-i18n="review_compose">Review Composer</h2>
-                  </div>
-                  <button id="cleanup-stale" class="secondary" data-i18n="cleanup_stale">Cleanup Stale</button>
-                </div>
-
-                <div id="selection-status" class="selection-status" aria-live="polite">
-                  <span class="selection-status-label" data-i18n="current_selection">Current Selection</span>
-                  <span id="selection-info" class="selection-status-value" data-i18n="no_selection">No text selected</span>
-                </div>
-
-                <div class="task-composer-grid">
-                  <div>
-                    <label for="task-action" data-i18n="task_action">Task Action</label>
-                    <select id="task-action">
-                      <option value="rewrite">rewrite</option>
-                      <option value="summarize">summarize</option>
-                      <option value="expand">expand</option>
-                      <option value="translate">translate</option>
-                      <option value="custom">custom</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label for="task-template" data-i18n="quick_templates_short">Templates</label>
-                    <div class="task-template-row">
-                      <select id="task-template"></select>
-                      <button id="create-task" class="primary" data-i18n="create_task_short">Create</button>
-                    </div>
-                  </div>
-                  <div>
-                    <label for="task-instruction" data-i18n="additional_instructions">Additional Instructions</label>
-                    <textarea id="task-instruction" rows="1" data-i18n="task_instruction_placeholder" placeholder="e.g. Make it more formal..."></textarea>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <section class="panel task-panel">
-              <div class="panel-body stack">
-                <div class="section-header">
-                  <div class="section-title">
-                    <h2 data-i18n="review_comments">Review Comments</h2>
-                  </div>
-                  <div class="inline-actions">
-                    <span id="task-count-pill" class="pill" data-i18n="tasks_count_initial">Tasks 0</span>
-                  </div>
-                </div>
-
-                <div class="task-list-wrap">
-                  <label class="visually-hidden" for="task-list" data-i18n="current_doc_tasks">Current Document Tasks</label>
-                  <select id="task-list">
-                    <option value="" data-i18n="select_doc_first">Select document first</option>
-                  </select>
-                  <div id="task-group-summary" class="panel-caption" data-i18n="task_group_hint">Tasks grouped by status.</div>
-                </div>
-
-                <div id="task-comment-list" class="task-comment-list"></div>
-
-                <div id="task-detail-panel" class="visually-hidden" aria-hidden="true">
-                  <div class="section-header" style="display: none; margin-top: 8px;">
-                    <span id="diff-state" class="pill" data-i18n="no_task_selected">No task selected</span>
-                  </div>
-                  <div id="task-summary" class="detail-note">
-                    <strong data-i18n="action_recommendation">Recommendation</strong>
-                    <div data-i18n="task_summary_placeholder">Insights and actions will appear here when a task is selected.</div>
-                  </div>
-                  <div id="task-metadata" class="task-meta">
-                    <div class="task-meta-row">
-                      <span class="task-meta-label" data-i18n="task_info">Task Info</span>
-                      <div class="task-meta-value" data-i18n="task_meta_placeholder">Metadata will be shown here.</div>
-                    </div>
-                  </div>
-                  <div id="task-actions" class="task-actions"></div>
-                  <div id="task-diff" class="diff" data-i18n="diff_placeholder">Comparison of sources and results will appear here.</div>
-                </div>
-              </div>
-            </section>
-
-            <section class="panel version-panel">
-              <div class="panel-body stack">
-                <details id="version-details">
-                  <summary data-i18n="version_history">Version History</summary>
-                  <div class="details-body stack">
-                    <div class="section-header">
-                      <div class="section-title">
-                        <h3 data-i18n="historical_versions">Historical Versions</h3>
-                        <p data-i18n="version_panel_hint">Show milestones first and fold routine snapshots into a secondary section.</p>
-                      </div>
-                      <span id="version-count-pill" class="pill" data-i18n="versions_count_initial">Versions 0</span>
-                    </div>
-                    <div id="version-list" class="version-list"></div>
-                  </div>
-                </details>
-              </div>
-            </section>
-          </aside>
-
           <section class="editor-column">
             <section class="panel editor-panel">
               <div class="panel-body stack">
@@ -239,6 +150,105 @@
               </div>
             </section>
           </section>
+
+          <aside class="sidebar comment-rail">
+            <section class="panel task-panel">
+              <div class="panel-body stack">
+                <div class="section-header">
+                  <div class="section-title">
+                    <h2 data-i18n="review_comments">Review Comments</h2>
+                  </div>
+                  <div class="inline-actions">
+                    <span id="task-count-pill" class="pill" data-i18n="tasks_count_initial">Tasks 0</span>
+                  </div>
+                </div>
+
+                <div class="task-list-wrap">
+                  <label class="visually-hidden" for="task-list" data-i18n="current_doc_tasks">Current Document Tasks</label>
+                  <select id="task-list">
+                    <option value="" data-i18n="select_doc_first">Select document first</option>
+                  </select>
+                  <div id="task-group-summary" class="panel-caption" data-i18n="task_group_hint">Tasks grouped by status.</div>
+                </div>
+
+                <div id="task-comment-list" class="task-comment-list"></div>
+
+                <div id="task-detail-panel" class="visually-hidden" aria-hidden="true">
+                  <div class="section-header" style="display: none; margin-top: 8px;">
+                    <span id="diff-state" class="pill" data-i18n="no_task_selected">No task selected</span>
+                  </div>
+                  <div id="task-summary" class="detail-note">
+                    <strong data-i18n="action_recommendation">Recommendation</strong>
+                    <div data-i18n="task_summary_placeholder">Insights and actions will appear here when a task is selected.</div>
+                  </div>
+                  <div id="task-metadata" class="task-meta">
+                    <div class="task-meta-row">
+                      <span class="task-meta-label" data-i18n="task_info">Task Info</span>
+                      <div class="task-meta-value" data-i18n="task_meta_placeholder">Metadata will be shown here.</div>
+                    </div>
+                  </div>
+                  <div id="task-actions" class="task-actions"></div>
+                  <div id="task-diff" class="diff" data-i18n="diff_placeholder">Comparison of sources and results will appear here.</div>
+                </div>
+              </div>
+            </section>
+          </aside>
+        </section>
+
+        <section class="bottom-drawer">
+          <details id="composer-drawer" class="drawer-section">
+            <summary>
+              <span data-i18n="review_compose">Review Composer</span>
+              <span id="selection-info-badge" class="pill"></span>
+            </summary>
+            <div class="drawer-body">
+              <div class="task-composer-toolbar">
+                <div id="selection-status" class="selection-status" aria-live="polite">
+                  <span class="selection-status-label" data-i18n="current_selection">Current Selection</span>
+                  <span id="selection-info" class="selection-status-value" data-i18n="no_selection">No text selected</span>
+                </div>
+                <button id="cleanup-stale" class="secondary" data-i18n="cleanup_stale">Cleanup Stale</button>
+              </div>
+              <div class="task-composer-grid">
+                <div>
+                  <label for="task-action" data-i18n="task_action">Task Action</label>
+                  <select id="task-action">
+                    <option value="rewrite">rewrite</option>
+                    <option value="summarize">summarize</option>
+                    <option value="expand">expand</option>
+                    <option value="translate">translate</option>
+                    <option value="custom">custom</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="task-template" data-i18n="quick_templates_short">Templates</label>
+                  <div class="task-template-row">
+                    <select id="task-template"></select>
+                    <button id="create-task" class="primary" data-i18n="create_task_short">Create</button>
+                  </div>
+                </div>
+                <div>
+                  <label for="task-instruction" data-i18n="additional_instructions">Additional Instructions</label>
+                  <textarea id="task-instruction" rows="1" data-i18n="task_instruction_placeholder" placeholder="e.g. Make it more formal..."></textarea>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <details id="version-drawer" class="drawer-section">
+            <summary>
+              <span data-i18n="version_history">Version History</span>
+              <span id="version-count-pill" class="pill" data-i18n="versions_count_initial">Versions 0</span>
+            </summary>
+            <div class="drawer-body">
+              <div class="section-header">
+                <div class="section-title">
+                  <h3 data-i18n="historical_versions">Historical Versions</h3>
+                </div>
+              </div>
+              <div id="version-list" class="version-list"></div>
+            </div>
+          </details>
         </section>
       </div>
     </main>
@@ -441,6 +451,13 @@
           editor_task_focus: "Focused Marker",
           editor_task_preview: "Preview",
           editor_task_legend: "Task Status Overview",
+          popover_detail: "Details",
+          quick_rewrite: "Rewrite",
+          quick_summarize: "Summarize",
+          quick_expand: "Expand",
+          quick_translate: "Translate",
+          review_badge: "{count}",
+          composer_drawer_title: "Task Composer",
         },
         zh: {
           app_description: "AgentDocs 是一个面向个人使用的文档工作台，用于管理 Markdown 文档、Agent 任务、版本和恢复流程。",
@@ -638,6 +655,13 @@
           editor_task_focus: "当前聚焦标记",
           editor_task_preview: "预览",
           editor_task_legend: "任务状态概览",
+          popover_detail: "详情",
+          quick_rewrite: "改写",
+          quick_summarize: "摘要",
+          quick_expand: "展开",
+          quick_translate: "翻译",
+          review_badge: "{count}",
+          composer_drawer_title: "任务创建",
         }
       };
 
