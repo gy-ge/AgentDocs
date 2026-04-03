@@ -2865,7 +2865,8 @@
         });
         await loadTasks({ forceRefreshSelected: false });
         await selectTask(result.new_task?.id || result.source_task.id);
-        setStatus(mode === 'relocate' ? describeRelocationStrategy(result.relocation_strategy) : t("task_recreated_msg", { newId: result.new_task?.id }), 'success');
+        const newTaskId = result.new_task?.id ?? result.source_task.id;
+        setStatus(mode === 'relocate' ? describeRelocationStrategy(result.relocation_strategy) : t("task_recreated_msg", { newId: newTaskId }), 'success');
       }
 
       async function relocateTask(taskId) {
