@@ -757,6 +757,7 @@
         realtimeSyncTimer: null,
         pendingRealtimeSync: null,
         taskPollIntervalId: null,
+        _popoverTaskId: null,
       };
 
       const taskGroupMeta = [
@@ -1270,13 +1271,12 @@
           return;
         }
 
+        const actionIcons = { rewrite: '✏️', summarize: '📝', expand: '📖', translate: '🌐', custom: '⚙️' };
         const orderedTasks = [...tasks].sort((left, right) => {
-          const leftTime = left.created_at ? Date.parse(left.created_at) : 0;
-          const rightTime = right.created_at ? Date.parse(right.created_at) : 0;
-          if (rightTime !== leftTime) {
-            return rightTime - leftTime;
+          if (left.start_offset !== right.start_offset) {
+            return left.start_offset - right.start_offset;
           }
-          return right.id - left.id;
+          return left.id - right.id;
         });
         taskCommentListEl.innerHTML = orderedTasks
           .map((task) => {
@@ -1284,6 +1284,7 @@
             const statusKey = getTaskMarkerStatusKey(task);
             const block = findBlockForOffset(task.start_offset);
             const blockLabel = block?.heading || t('review_card_all');
+            const actionIcon = actionIcons[task.action] || '📋';
             const recoveryPreview = state.selectedTaskDetail?.id === task.id ? state.selectedTaskRecovery : null;
             const topActions = [`<button class="secondary" data-comment-open="${task.id}">${escapeHtml(t('jump_to_text'))}</button>`];
             if (task.status === 'done' && !task.is_stale) {
@@ -1299,9 +1300,6 @@
               `
               : '';
             const summaryText = summarizeTaskCardText(task.result || task.source_text);
-            const summaryLabel = task.result && task.result !== task.source_text
-              ? t('review_card_result')
-              : t('review_card_source');
             const expandedBody = isActive
               ? `
                 <div class="task-comment-preview-group">
@@ -1316,16 +1314,14 @@
               `
               : `
                 <div class="task-comment-summary">
-                  <span class="task-comment-summary-label">${escapeHtml(summaryLabel)}</span>
                   <span class="task-comment-summary-text">${escapeHtml(summaryText)}</span>
                 </div>
               `;
             return `
-              <article class="task-comment-card${isActive ? ' is-active' : ' is-collapsed'}" data-comment-task-id="${task.id}" tabindex="0" role="button" aria-expanded="${isActive ? 'true' : 'false'}" aria-label="#${task.id} ${escapeHtml(task.action)}">
+              <article class="task-comment-card task-comment-card--${statusKey}${isActive ? ' is-active' : ' is-collapsed'}" data-comment-task-id="${task.id}" tabindex="0" role="button" aria-expanded="${isActive ? 'true' : 'false'}" aria-label="#${task.id} ${escapeHtml(task.action)}">
                 <div class="task-comment-header">
                   <div>
-                    <div class="task-comment-title">#${task.id} · ${escapeHtml(task.action)}</div>
-                    <div class="task-comment-subtitle">${escapeHtml(blockLabel)} · ${escapeHtml(t('offset_label', { start: task.start_offset, end: task.end_offset }))}</div>
+                    <div class="task-comment-title">${actionIcon} ${escapeHtml(task.action)} · ${escapeHtml(blockLabel)}</div>
                   </div>
                   <span class="task-comment-status task-comment-status--${statusKey}">${escapeHtml(describeTaskOptionStatus(task))}</span>
                 </div>
@@ -1473,8 +1469,13 @@
           const openTask = async () => {
             await selectTask(taskId);
           };
-          node.addEventListener('click', () => {
-            safeRun(openTask);
+          node.addEventListener('click', (event) => {
+            event.stopPropagation();
+            if (task.status === 'done' || task.status === 'failed' || task.status === 'cancelled' || task.status === 'rejected') {
+              showInlinePopover(taskId, node);
+            } else {
+              safeRun(openTask);
+            }
           });
           node.addEventListener('keydown', (event) => {
             if (event.key === 'Enter' || event.key === ' ') {
@@ -1492,6 +1493,89 @@
             }
             setReviewMode('edit', { focusEditor: true });
           });
+        }
+      }
+
+      // ── Inline Popover ──
+      function showInlinePopover(taskId, anchorEl) {
+        const popover = document.getElementById('inline-popover');
+        const task = state.tasks.find(item => item.id === taskId);
+        if (!task || !anchorEl) { hideInlinePopover(); return; }
+        popover.classList.remove('hidden');
+        const rect = anchorEl.getBoundingClientRect();
+        const scrollTop = window.scrollY || document.documentElement.scrollTop;
+        const scrollLeft = window.scrollX || document.documentElement.scrollLeft;
+        popover.style.top = (rect.top + scrollTop - popover.offsetHeight - 8) + 'px';
+        popover.style.left = (rect.left + scrollLeft + rect.width / 2) + 'px';
+        popover.querySelectorAll('[data-popover-action]').forEach(btn => {
+          const action = btn.dataset.popoverAction;
+          if (action === 'accept') btn.style.display = (task.status === 'done' && !task.is_stale) ? '' : 'none';
+          else if (action === 'reject') btn.style.display = task.status === 'done' ? '' : 'none';
+          else if (action === 'retry') btn.style.display = ['failed','cancelled','rejected'].includes(task.status) ? '' : 'none';
+        });
+        state._popoverTaskId = taskId;
+      }
+
+      function hideInlinePopover() {
+        document.getElementById('inline-popover').classList.add('hidden');
+        state._popoverTaskId = null;
+      }
+
+      // ── Selection Toolbar ──
+      function showSelectionToolbar(x, y) {
+        const toolbar = document.getElementById('selection-toolbar');
+        const scrollTop = window.scrollY || document.documentElement.scrollTop;
+        const scrollLeft = window.scrollX || document.documentElement.scrollLeft;
+        toolbar.style.top = (y + scrollTop - 48) + 'px';
+        toolbar.style.left = (x + scrollLeft) + 'px';
+        toolbar.classList.remove('hidden');
+      }
+
+      function hideSelectionToolbar() {
+        document.getElementById('selection-toolbar').classList.add('hidden');
+      }
+
+      async function quickCreateTask(action) {
+        if (!state.docId) return;
+        hideSelectionToolbar();
+        const start = docBodyInput.selectionStart;
+        const end = docBodyInput.selectionEnd;
+        if (start === end) return;
+        await flushDocumentChanges();
+        await api(`/api/docs/${state.docId}/tasks`, {
+          method: 'POST',
+          body: JSON.stringify({
+            action: action,
+            instruction: state.docTaskDefaults?.instruction || null,
+            source_text: docBodyInput.value.slice(start, end),
+            start_offset: start,
+            end_offset: end,
+            doc_revision: state.revision,
+          }),
+        });
+        state.selectedTaskId = null;
+        state.selectedTaskDetail = null;
+        state.selectedTaskRecovery = null;
+        state.selectedTaskDiff = null;
+        await loadTasks({ autoSelect: false });
+        setStatus(t("task_created_msg"), 'success');
+      }
+
+      // ── Review Badge ──
+      function updateReviewBadge() {
+        if (!reviewModeReviewButtonEl) return;
+        const doneCount = state.tasks.filter(item => item.status === 'done' && !item.is_stale).length;
+        const existingBadge = reviewModeReviewButtonEl.querySelector('.review-badge');
+        if (doneCount > 0) {
+          if (existingBadge) { existingBadge.textContent = doneCount; }
+          else {
+            const badge = document.createElement('span');
+            badge.className = 'review-badge';
+            badge.textContent = doneCount;
+            reviewModeReviewButtonEl.appendChild(badge);
+          }
+        } else if (existingBadge) {
+          existingBadge.remove();
         }
       }
 
@@ -2190,6 +2274,7 @@
         renderTaskGroupSummary(tasks);
         renderEditorTaskMarkers();
         renderTaskCommentRail(tasks);
+        updateReviewBadge();
         if (!tasks.length) {
           taskListEl.innerHTML = `<option value="">${escapeHtml(t("no_tasks_in_doc"))}</option>`;
           return;
@@ -2810,6 +2895,11 @@
           selectionInfoEl.textContent = t("selection_at", { start, end, len: end - start }) + (blockText ? " · " + blockText : "");
           selectionStatusEl.classList.add('is-active');
         }
+        // Auto-open composer when text is selected
+        const composerDrawer = document.getElementById('composer-drawer');
+        if (composerDrawer && start !== end && state.docId) {
+          composerDrawer.open = true;
+        }
         if (state.selectedTaskId) {
           const selectedTask = state.tasks.find((task) => task.id === state.selectedTaskId);
           if (selectedTask && taskIntersectsRange(selectedTask, start, end)) {
@@ -2870,11 +2960,80 @@
         handleDocumentInputChange();
       });
       docBodyInput.addEventListener('select', updateSelectionInfo);
+
+      // ── Inline popover events ──
+      document.getElementById('inline-popover').addEventListener('click', (event) => {
+        const btn = event.target.closest('[data-popover-action]');
+        if (!btn || !state._popoverTaskId) return;
+        const action = btn.dataset.popoverAction;
+        const taskId = state._popoverTaskId;
+        hideInlinePopover();
+        if (action === 'accept') safeRun(() => acceptTask(taskId));
+        else if (action === 'reject') safeRun(() => rejectTask(taskId));
+        else if (action === 'retry') safeRun(() => retryTask(taskId));
+        else if (action === 'detail') safeRun(() => selectTask(taskId));
+      });
+      document.addEventListener('click', (event) => {
+        const popover = document.getElementById('inline-popover');
+        if (!popover.classList.contains('hidden') && !popover.contains(event.target) && !event.target.closest('[data-review-task-id]')) {
+          hideInlinePopover();
+        }
+      });
+
+      // ── Selection toolbar events ──
+      document.getElementById('selection-toolbar').addEventListener('click', (event) => {
+        const btn = event.target.closest('[data-sel-action]');
+        if (!btn) return;
+        safeRun(() => quickCreateTask(btn.dataset.selAction));
+      });
+      docBodyInput.addEventListener('mouseup', (event) => {
+        setTimeout(() => {
+          const start = docBodyInput.selectionStart;
+          const end = docBodyInput.selectionEnd;
+          if (start !== end && state.docId) {
+            showSelectionToolbar(event.clientX, event.clientY);
+          } else {
+            hideSelectionToolbar();
+          }
+        }, 10);
+      });
+      document.addEventListener('mousedown', (event) => {
+        const toolbar = document.getElementById('selection-toolbar');
+        if (!toolbar.classList.contains('hidden') && !toolbar.contains(event.target) && event.target !== docBodyInput) {
+          hideSelectionToolbar();
+        }
+      });
+
+      // ── Keyboard shortcuts ──
       document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+          hideInlinePopover();
+          hideSelectionToolbar();
+        }
         if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
           event.preventDefault();
           if (state.docId) {
             safeRun(saveDoc);
+          }
+        }
+        // Ctrl+Shift+A = Accept current task
+        if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'a') {
+          event.preventDefault();
+          if (state.selectedTaskId) {
+            const task = state.tasks.find(item => item.id === state.selectedTaskId);
+            if (task && task.status === 'done' && !task.is_stale) {
+              safeRun(() => acceptTask(state.selectedTaskId));
+            }
+          }
+        }
+        // Ctrl+Shift+X = Reject current task
+        if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'x') {
+          event.preventDefault();
+          if (state.selectedTaskId) {
+            const task = state.tasks.find(item => item.id === state.selectedTaskId);
+            if (task && task.status === 'done') {
+              safeRun(() => rejectTask(state.selectedTaskId));
+            }
           }
         }
       });
