@@ -2520,6 +2520,104 @@ def test_complete_task_rejects_non_processing_task(client, auth_headers):
     assert response.json()["error"]["code"] == "invalid_state"
 
 
+def test_accept_noop_after_manual_edit_does_not_signal_document_changed(
+    client, auth_headers, monkeypatch
+):
+    """A no-op accept (result equals source text) must emit document_changed=False
+    even when task.doc_revision is behind the current document revision due to an
+    intervening manual edit.  Previously the flag compared task.doc_revision with
+    the current revision, producing a false-positive document_changed=True."""
+    from app.api import tasks as task_routes
+
+    raw_markdown = "# Title\n## Section\nHello world\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+    task_data, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "Hello")
+
+    # Bump the document revision via a content edit (task.doc_revision stays at 1)
+    updated_markdown = raw_markdown + "\nNew paragraph.\n"
+    client.put(
+        f"/api/docs/{doc_id}",
+        headers=auth_headers,
+        json={
+            "title": "Doc",
+            "raw_markdown": updated_markdown,
+            "expected_revision": 1,
+            "actor": "browser",
+            "note": "add paragraph",
+        },
+    )
+
+    # Pick up and complete the task with result == source_text (no-op accept)
+    client.post("/api/tasks/next", headers=auth_headers, json={"agent_name": "agent-one"})
+    client.post(
+        f"/api/tasks/{task_data['id']}/complete",
+        headers=auth_headers,
+        json={"result": "Hello", "error_message": None},
+    )
+
+    published: list[dict] = []
+    original_publish = task_routes.task_event_broker.publish_task
+
+    def capture(**kwargs):
+        published.append(kwargs)
+        return original_publish(**kwargs)
+
+    monkeypatch.setattr(task_routes.task_event_broker, "publish_task", capture)
+
+    response = client.post(
+        f"/api/tasks/{task_data['id']}/accept",
+        headers=auth_headers,
+        json={"expected_revision": 2, "actor": "browser"},
+    )
+    assert response.status_code == 200
+    assert response.json()["data"]["status"] == "accepted"
+
+    assert len(published) == 1
+    assert published[0]["kind"] == "accepted"
+    assert published[0]["document_changed"] is False
+
+
+def test_accept_with_changed_result_signals_document_changed(
+    client, auth_headers, monkeypatch
+):
+    """An accept that actually modifies the document must emit document_changed=True."""
+    from app.api import tasks as task_routes
+
+    raw_markdown = "# Title\n## Section\nHello world\n"
+    created = create_document(client, auth_headers, raw_markdown)
+    doc_id = created["id"]
+    task_data, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "Hello")
+
+    client.post("/api/tasks/next", headers=auth_headers, json={"agent_name": "agent-one"})
+    client.post(
+        f"/api/tasks/{task_data['id']}/complete",
+        headers=auth_headers,
+        json={"result": "Hi", "error_message": None},
+    )
+
+    published: list[dict] = []
+    original_publish = task_routes.task_event_broker.publish_task
+
+    def capture(**kwargs):
+        published.append(kwargs)
+        return original_publish(**kwargs)
+
+    monkeypatch.setattr(task_routes.task_event_broker, "publish_task", capture)
+
+    response = client.post(
+        f"/api/tasks/{task_data['id']}/accept",
+        headers=auth_headers,
+        json={"expected_revision": 1, "actor": "browser"},
+    )
+    assert response.status_code == 200
+    assert response.json()["data"]["status"] == "accepted"
+
+    assert len(published) == 1
+    assert published[0]["kind"] == "accepted"
+    assert published[0]["document_changed"] is True
+
+
 def test_ui_does_not_contain_undefined_function_references(client):
     """The UI page should not reference undefined functions like syncKeyState."""
     response = client.get("/")
@@ -2532,3 +2630,26 @@ def test_ui_contains_visibilitychange_listener(client):
     response = client.get("/")
     assert response.status_code == 200
     assert "addEventListener('visibilitychange', updateAutoRefreshPill)" in response.text
+
+
+def test_ui_relocation_strategy_uses_i18n(client):
+    """describeRelocationStrategy should use the t() i18n system, not hardcoded language checks."""
+    response = client.get("/")
+    assert response.status_code == 200
+    # The old hardcoded strings should no longer appear in describeRelocationStrategy
+    assert "按原 block 位置重新定位'" not in response.text
+    assert "按同标题 block 重新定位'" not in response.text
+    assert "'Relocated via block position'" not in response.text
+    # The new i18n keys should be present
+    assert "relocated_block_position" in response.text
+    assert "relocated_heading_match" in response.text
+    assert "relocated_unique_match" in response.text
+    assert "relocated_selection_match" in response.text
+    assert "relocated_default" in response.text
+
+
+def test_ui_rollback_success_uses_revision_placeholder(client):
+    """The rollback_success i18n template should use {rev} for the new revision, not #{id}."""
+    response = client.get("/")
+    assert response.status_code == 200
+    assert "revision {rev}" in response.text or "版本 {rev}" in response.text

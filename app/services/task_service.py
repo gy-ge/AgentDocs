@@ -683,7 +683,7 @@ class TaskService:
             db.query(Task)
             .filter(Task.doc_id == document_id)
             .filter(Task.id != accepted_task_id)
-            .filter(Task.status.in_(sorted(self.RELOCATABLE_STATUSES)))
+            .filter(Task.status.in_(self.RELOCATABLE_STATUSES))
             .order_by(Task.id.asc())
             .all()
         )
