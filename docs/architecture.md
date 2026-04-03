@@ -75,5 +75,18 @@ Stale checks apply to pending, processing, and done tasks.
 - app/services/task_events.py: in-memory broker for authenticated SSE task/document update streams
 - app/services/task_service.py: task lifecycle, stale detection, diff generation, batch accept, cleanup, relocation, and recovery
 - app/services/markdown.py: lightweight heading-based block parser
-- app/static/index.html: minimal browser workbench
+- app/static/index.html: browser workbench with Word-style review UI
+- app/static/index.css: workbench styling
 - scripts/simulate_agent.py: local worker for API integration testing
+
+## Browser Workbench
+
+The single-page workbench (index.html plus index.css) uses a Word-style layout:
+
+- The editor occupies the main area for Markdown editing.
+- A 280 px comment rail on the right shows task cards sorted by document offset, each with a status color bar and action icon.
+- The review composer and version history live in collapsible bottom drawers that auto-expand when needed.
+- In review mode, clicking a completed review mark opens an inline popover with Accept, Reject, Retry, and Detail actions.
+- In edit mode, selecting text shows a floating toolbar for one-click task creation (rewrite, summarize, expand, translate).
+- A review badge on the toolbar shows how many done tasks are waiting for review.
+- Keyboard shortcuts: Ctrl+S save, Ctrl+Shift+A accept, Ctrl+Shift+X reject, Escape dismiss.

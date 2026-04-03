@@ -75,6 +75,19 @@ stale 检测只对 pending、processing 和 done 任务生效。
 - app/services/task_events.py：基于内存的任务/文档 SSE 事件总线
 - app/services/task_service.py：任务状态机、stale 检测、diff、批量 accept、清理、重定位和恢复
 - app/services/markdown.py：轻量级标题分块解析器
-- app/static/index.html：最小浏览器工作台
+- app/static/index.html：浏览器工作台，采用 Word 风格审阅界面
+- app/static/index.css：工作台样式
 - scripts/simulate_agent.py：本地 API 联调用模拟 worker
+
+## 浏览器工作台
+
+单页工作台（index.html 与 index.css）采用 Word 风格布局：
+
+- 编辑器占据主区域，用于 Markdown 编辑。
+- 右侧 280 px 评论栏按文档偏移排列任务卡片，每张带有状态色条和操作图标。
+- 审阅创建器和版本历史位于底部可折叠抽屉中，需要时自动展开。
+- 审阅模式下，点击已完成审阅标记会弹出行内浮窗，提供 Accept、Reject、Retry 和 Detail 操作。
+- 编辑模式下，选中文本时会出现悬浮工具栏，一键创建任务（改写、摘要、展开、翻译）。
+- 工具栏上的审阅徽章显示等待审阅的已完成任务数量。
+- 键盘快捷键：Ctrl+S 保存、Ctrl+Shift+A 接受、Ctrl+Shift+X 拒绝、Escape 关闭。
 
