@@ -419,29 +419,11 @@
         gap: 12px;
       }
 
-      .task-composer-panel .panel-body {
-        padding: 16px;
-      }
-
-      .task-composer-panel .panel-body.stack {
-        gap: 10px;
-      }
-
       .task-composer-toolbar {
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
         gap: 10px;
         align-items: center;
-      }
-
-      .task-composer-panel .task-composer-grid {
-        grid-template-columns: minmax(112px, 0.76fr) minmax(0, 1.24fr);
-        gap: 10px;
-        align-items: start;
-      }
-
-      .task-composer-panel .task-composer-grid > :nth-child(3) {
-        grid-column: 1 / -1;
       }
 
       .task-composer-grid > div {
@@ -450,16 +432,6 @@
 
       .task-composer-grid textarea {
         min-height: 40px;
-      }
-
-      .task-composer-panel label {
-        margin-bottom: 4px;
-        font-size: 12px;
-      }
-
-      .task-composer-panel textarea {
-        min-height: 46px;
-        line-height: 1.45;
       }
 
       .task-template-row {
@@ -490,12 +462,6 @@
         border: 1px solid var(--line);
         border-radius: 10px;
         background: linear-gradient(180deg, #ffffff 0%, #f9fafb 100%);
-      }
-
-      .task-composer-panel .selection-status {
-        min-height: 36px;
-        padding: 8px 10px;
-        gap: 8px;
       }
 
       .selection-status-label {
@@ -1313,16 +1279,10 @@
         background-clip: padding-box;
       }
 
-      .task-composer-panel .section-title p,
       .task-panel .section-title p,
-      .task-composer-panel .panel-caption,
       .task-panel .panel-caption,
       #task-group-summary {
         display: none;
-      }
-
-      .version-panel .panel-body {
-        padding-top: 12px;
       }
 
       details {
@@ -1698,14 +1658,6 @@
         .modal-actions button {
           width: 100%;
           min-width: 0;
-        }
-
-        .task-composer-panel .task-composer-grid {
-          grid-template-columns: 1fr;
-        }
-
-        .task-composer-panel .task-composer-grid > :nth-child(3) {
-          grid-column: auto;
         }
 
         .drawer-body .task-composer-grid {
