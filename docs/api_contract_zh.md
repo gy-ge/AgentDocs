@@ -52,17 +52,6 @@ Base URL：
 - revision
 - updated_at
 
-### GET /api/tasks/events
-
-返回 text/event-stream 响应，用于浏览器侧实时同步。
-
-规则：
-
-- 与其他 /api 路由一样，需要 Authorization: Bearer <API_KEY>
-- 建立订阅后会立即发送 ready 事件
-- 成功写操作后会发送 task.changed、tasks.changed 和 document.changed 事件
-- 浏览器工作台优先使用该事件流，同步失败时再退回轮询
-
 ### POST /api/docs
 
 请求：
@@ -256,6 +245,17 @@ Base URL：
 
 返回带 stale 元数据的任务列表。
 
+### GET /api/tasks/events
+
+返回 text/event-stream 响应，用于浏览器侧实时同步。
+
+规则：
+
+- 与其他 /api 路由一样，需要 Authorization: Bearer <API_KEY>
+- 建立订阅后会立即发送 ready 事件
+- 成功写操作后会发送 task.changed、tasks.changed 和 document.changed 事件
+- 浏览器工作台优先使用该事件流，同步失败时再退回轮询
+
 ### GET /api/tasks/{task_id}
 
 返回完整任务以及 context。
@@ -278,6 +278,10 @@ Base URL：
 - stale_reason
 - recommended_action
 - context
+- created_at
+- started_at
+- completed_at
+- resolved_at
 
 context 字段包括：
 

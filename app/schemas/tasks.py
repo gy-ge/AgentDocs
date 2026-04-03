@@ -1,10 +1,9 @@
 from datetime import datetime
-from typing import Annotated, Literal
+from typing import Literal
 
-from pydantic import BaseModel, Field, StringConstraints
+from pydantic import BaseModel, Field
 
-
-NonEmptyText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+from app.schemas.common import NonEmptyText
 
 
 class TaskCreate(BaseModel):

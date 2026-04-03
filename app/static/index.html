@@ -1399,15 +1399,6 @@
             safeRun(() => rejectTask(taskId));
           });
         });
-
-        taskCommentListEl.querySelectorAll('[data-card-action]').forEach((button) => {
-          const taskId = Number(button.getAttribute('data-card-task-id'));
-          const actionKey = button.getAttribute('data-card-action');
-          button.addEventListener('click', (event) => {
-            event.stopPropagation();
-            handleCardAction(taskId, actionKey);
-          });
-        });
       }
 
       function buildReviewMarkup(task, currentText) {
@@ -2469,6 +2460,8 @@
           syncCurrentBlocks();
           applyDocumentTaskDefaults(doc);
           updateSelectionInfo();
+          hideSelectionToolbar();
+          hideInlinePopover();
           resetTaskDetails();
           if (nextOptions.refreshDocs) {
             await loadDocsOnly();
@@ -2796,6 +2789,7 @@
         anchor.href = url;
         anchor.download = fileName;
         anchor.click();
+        window.URL.revokeObjectURL(url);
         setStatus(t("export_success", { name: fileName }), 'success');
       }
 
@@ -2871,7 +2865,7 @@
         });
         await loadTasks({ forceRefreshSelected: false });
         await selectTask(result.new_task?.id || result.source_task.id);
-        setStatus(mode === 'relocate' ? describeRelocationStrategy(result.relocation_strategy) : t("task_recreated_msg", { newId: result.new_task.id }), 'success');
+        setStatus(mode === 'relocate' ? describeRelocationStrategy(result.relocation_strategy) : t("task_recreated_msg", { newId: result.new_task?.id }), 'success');
       }
 
       async function relocateTask(taskId) {
@@ -2885,7 +2879,7 @@
           method: 'POST',
           body: JSON.stringify({ expected_revision: state.revision, actor: 'browser', note: note || `rollback to ${versionId}` }),
         });
-        setStatus(t("rollback_success", { id: versionId, rev: doc.revision }), 'success');
+        setStatus(t("rollback_success", { rev: doc.revision }), 'success');
         await selectDoc(state.docId);
       }
 
