@@ -173,7 +173,7 @@
 
       .workspace {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) 380px;
+        grid-template-columns: minmax(0, 1fr) 280px;
         gap: 18px;
         align-items: start;
         grid-template-areas: "editor sidebar";
@@ -1396,6 +1396,234 @@
         display: none;
       }
 
+      /* ── Bottom Drawer ── */
+      .bottom-drawer {
+        display: grid;
+        gap: 12px;
+        margin-top: 18px;
+      }
+
+      .drawer-section {
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--panel);
+        box-shadow: var(--shadow);
+      }
+
+      .drawer-section > summary {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 16px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 14px;
+        list-style: none;
+        user-select: none;
+      }
+
+      .drawer-section > summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .drawer-section[open] > summary {
+        border-bottom: 1px solid var(--line);
+      }
+
+      .drawer-body {
+        padding: 16px;
+        display: grid;
+        gap: 12px;
+      }
+
+      .drawer-body .task-composer-grid {
+        display: grid;
+        grid-template-columns: minmax(112px, 0.76fr) minmax(0, 1.24fr);
+        gap: 10px;
+        align-items: start;
+      }
+
+      .drawer-body .task-composer-grid > :nth-child(3) {
+        grid-column: 1 / -1;
+      }
+
+      .drawer-body .task-composer-toolbar {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+      }
+
+      .drawer-body .selection-status {
+        flex: 1 1 auto;
+        min-height: 36px;
+      }
+
+      .drawer-body textarea {
+        min-height: 40px;
+      }
+
+      .drawer-body label {
+        margin-bottom: 4px;
+        font-size: 12px;
+      }
+
+      .drawer-body .task-template-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px;
+        align-items: center;
+        min-width: 0;
+      }
+
+      .drawer-body .task-template-row button {
+        width: auto;
+        min-width: 86px;
+        min-height: 38px;
+      }
+
+      .drawer-body .version-list {
+        max-height: 320px;
+      }
+
+      /* ── Inline Popover ── */
+      .inline-popover {
+        position: absolute;
+        z-index: 50;
+        display: flex;
+        gap: 4px;
+        padding: 6px 8px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--panel);
+        box-shadow: var(--shadow-lg);
+        transform: translateX(-50%);
+        white-space: nowrap;
+      }
+
+      .inline-popover.hidden {
+        display: none;
+      }
+
+      .inline-popover-btn {
+        width: auto;
+        min-width: 0;
+        min-height: 30px;
+        padding: 0 10px;
+        font-size: 12px;
+        font-weight: 600;
+        border-radius: 8px;
+      }
+
+      /* ── Selection Toolbar ── */
+      .selection-toolbar {
+        position: absolute;
+        z-index: 50;
+        display: flex;
+        gap: 2px;
+        padding: 4px 6px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--panel);
+        box-shadow: var(--shadow-lg);
+        transform: translateX(-50%);
+      }
+
+      .selection-toolbar.hidden {
+        display: none;
+      }
+
+      .sel-toolbar-btn {
+        width: auto;
+        min-width: 36px;
+        min-height: 32px;
+        padding: 0 8px;
+        font-size: 16px;
+        border-radius: 8px;
+        border: 1px solid transparent;
+        background: transparent;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .sel-toolbar-btn:hover {
+        background: var(--panel-soft);
+        border-color: var(--line);
+      }
+
+      /* ── Status Color Bar on Comment Cards ── */
+      .task-comment-card {
+        border-left: 3px solid var(--line);
+      }
+
+      .task-comment-card--done,
+      .task-comment-card--accepted {
+        border-left-color: var(--success);
+      }
+
+      .task-comment-card--pending,
+      .task-comment-card--processing {
+        border-left-color: var(--warning);
+      }
+
+      .task-comment-card--failed,
+      .task-comment-card--rejected,
+      .task-comment-card--cancelled,
+      .task-comment-card--stale {
+        border-left-color: var(--danger);
+      }
+
+      /* ── Review Badge ── */
+      .review-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 18px;
+        height: 18px;
+        margin-left: 4px;
+        padding: 0 5px;
+        border-radius: 999px;
+        background: var(--danger);
+        color: #fff;
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 1;
+      }
+
+      /* ── Review Mark Hover Enhancement ── */
+      .review-mark[data-review-task-id]:hover,
+      .review-change-group[data-review-task-id]:hover {
+        box-shadow: 0 0 0 3px rgba(36, 41, 47, 0.18);
+      }
+
+      .review-mark--pending:hover {
+        background: rgba(9, 105, 218, 0.18);
+      }
+
+      .review-mark--processing:hover {
+        background: rgba(154, 103, 0, 0.2);
+      }
+
+      .review-change-group[data-review-task-id]:hover .review-mark--delete {
+        background: rgba(207, 34, 46, 0.16);
+      }
+
+      .review-change-group[data-review-task-id]:hover .review-mark--insert {
+        background: rgba(26, 127, 55, 0.2);
+      }
+
+      /* ── Comment Rail refinements ── */
+      .comment-rail {
+        overflow: auto;
+      }
+
+      .comment-rail .task-panel .panel-body.stack {
+        max-height: calc(100vh - 120px);
+      }
+
       @media (max-width: 1200px) {
         .workspace {
           grid-template-columns: 1fr;
@@ -1477,6 +1705,14 @@
         }
 
         .task-composer-panel .task-composer-grid > :nth-child(3) {
+          grid-column: auto;
+        }
+
+        .drawer-body .task-composer-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .drawer-body .task-composer-grid > :nth-child(3) {
           grid-column: auto;
         }
 
