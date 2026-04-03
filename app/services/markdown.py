@@ -1,3 +1,9 @@
+"""Lightweight heading-based Markdown block parser.
+
+Splits a Markdown document into sequential blocks at heading boundaries.
+Each block tracks its heading text, level, position index, and byte offsets.
+"""
+
 from dataclasses import dataclass
 
 

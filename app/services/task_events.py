@@ -1,3 +1,5 @@
+"""In-memory SSE event broker for real-time task and document update streams."""
+
 import asyncio
 import json
 from dataclasses import dataclass

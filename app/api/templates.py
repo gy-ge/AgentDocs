@@ -1,3 +1,5 @@
+"""Task template CRUD endpoints under ``/api/task-templates``."""
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 

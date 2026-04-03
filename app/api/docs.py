@@ -1,3 +1,9 @@
+"""Document and task API endpoints.
+
+Provides document CRUD, task creation, stale cleanup,
+and batch-accept operations under ``/api/docs``.
+"""
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 

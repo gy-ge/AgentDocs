@@ -1,3 +1,11 @@
+"""Response serialization functions.
+
+Each ``serialize_*`` function converts an ORM model or service result
+dictionary into its corresponding Pydantic schema.  Callers should
+then use ``.model_dump(mode="json")`` on the returned schema before
+embedding it in the JSON response body.
+"""
+
 from app.schemas.docs import BlockRead, DocumentListItem, DocumentRead
 from app.schemas.templates import TaskTemplateRead
 from app.schemas.tasks import (
