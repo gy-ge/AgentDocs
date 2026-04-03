@@ -292,6 +292,9 @@ def test_task_actions_stay_usable_on_narrow_viewport(ui_stack):
 
 
 def test_review_comments_show_latest_task_first(ui_stack):
+    """Comment rail sorts cards by document offset (ascending), so the card
+    nearest to the top of the document appears first regardless of creation
+    order."""
     base_url = ui_stack["base_url"]
     raw_markdown = "# Comment Order\n\n## Section A\nAlpha beta gamma.\n\n## Section B\nDelta epsilon zeta.\n"
     doc = _api_request(
@@ -306,7 +309,7 @@ def test_review_comments_show_latest_task_first(ui_stack):
     delta_start = raw_markdown.index("Delta epsilon zeta.")
     delta_end = delta_start + len("Delta epsilon zeta.")
 
-    _api_request(
+    first_task = _api_request(
         base_url,
         f"/api/docs/{doc['id']}/tasks",
         method="POST",
@@ -319,7 +322,7 @@ def test_review_comments_show_latest_task_first(ui_stack):
             "doc_revision": 1,
         },
     )
-    latest_task = _api_request(
+    _api_request(
         base_url,
         f"/api/docs/{doc['id']}/tasks",
         method="POST",
@@ -342,7 +345,7 @@ def test_review_comments_show_latest_task_first(ui_stack):
         page.locator("#doc-selector").select_option(str(doc["id"]))
         page.locator("#task-comment-list [data-comment-task-id]").nth(1).wait_for(timeout=5000)
         first_card = page.locator("#task-comment-list [data-comment-task-id]").first
-        assert first_card.get_attribute("data-comment-task-id") == str(latest_task["id"])
-        assert "Delta epsilon zeta." in first_card.text_content()
+        assert first_card.get_attribute("data-comment-task-id") == str(first_task["id"])
+        assert "Alpha beta gamma." in first_card.text_content()
 
         browser.close()
