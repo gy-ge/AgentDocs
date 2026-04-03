@@ -5,7 +5,7 @@ description = "个人 Markdown 协作服务"
 authors = [
     { name = "葛广言", email = "gy.ge@outlook.com" }
 ]
-requires-python = ">=3.14"
+requires-python = ">=3.10"
 dependencies = [
     "alembic>=1.18.4",
     "fastapi>=0.116.0",

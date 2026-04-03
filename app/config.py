@@ -20,6 +20,17 @@ class Settings(BaseSettings):
         return f"sqlite:///{db_path.as_posix()}"
 
 
+def ensure_sqlite_parent_dir(sqlite_path: str) -> None:
+    if sqlite_path == ":memory:":
+        return
+
+    parent_dir = Path(sqlite_path).expanduser().parent
+    if parent_dir == Path("."):
+        return
+
+    parent_dir.mkdir(parents=True, exist_ok=True)
+
+
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
     return Settings()

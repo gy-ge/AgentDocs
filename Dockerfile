@@ -1,4 +1,4 @@
-FROM ghcr.io/astral-sh/uv:python3.14-bookworm-slim AS base
+FROM ghcr.io/astral-sh/uv:python3.10-bookworm-slim AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -11,8 +11,8 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 
 COPY . .
-RUN chmod +x docker/entrypoint.sh \
-    && mkdir -p /app/data \
+RUN sed -i 's/\r$//' docker/entrypoint.sh \
+    && chmod +x docker/entrypoint.sh \
     && uv sync --frozen --no-dev
 
 EXPOSE 8000

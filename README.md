@@ -29,10 +29,17 @@ Explicitly out of scope for the current version:
 
 ## Requirements
 
-- Python 3.14+
+- Python 3.10+
 - uv
 
-## Setup
+## Quick Start
+
+If Python 3.10 is not installed yet, install and pin it first:
+
+```bash
+uv python install 3.10
+uv python pin 3.10
+```
 
 Install dependencies:
 
@@ -46,6 +53,12 @@ Create the environment file:
 cp .env.example .env
 ```
 
+On Windows PowerShell, use:
+
+```powershell
+Copy-Item .env.example .env
+```
+
 Default values from .env.example:
 
 - APP_NAME=AgentDocs
@@ -53,7 +66,7 @@ Default values from .env.example:
 - API_KEY=change-me
 - SQLITE_PATH=data/doc.db
 
-## Run
+The default `SQLITE_PATH` is `data/doc.db`. The app now creates missing parent directories automatically on first migration or startup, so you do not need to create `data/` by hand.
 
 Apply migrations before starting the app:
 
@@ -67,23 +80,31 @@ Start the backend:
 uv run uvicorn app.main:app --reload
 ```
 
-Then open http://127.0.0.1:8000.
+Then open http://127.0.0.1:8000 and enter the `API_KEY` from `.env` in the browser's Connection Settings dialog. With the default example config, that value is `change-me`.
+
+Run the full test suite:
+
+```bash
+uv run pytest
+```
+
+If this is your first run with browser tests, install the Playwright Chromium runtime first:
+
+```bash
+uv run playwright install chromium
+```
 
 ## Docker Deployment
 
-Create the environment file first:
-
-```bash
-cp .env.example .env
-```
-
-Build and start the container:
+From the repository root, run:
 
 ```bash
 docker compose up --build -d
 ```
 
-The container entrypoint runs `alembic upgrade head` automatically before starting Uvicorn.
+`docker-compose.yml` now builds from the local repository `Dockerfile` by default, instead of expecting a pre-published GHCR image.
+
+The container entrypoint runs `alembic upgrade head` automatically before starting Uvicorn. You still need to create `.env` first, using the same steps from Quick Start.
 
 After opening http://127.0.0.1:8000 for the first time, enter the shared API key from `.env` in the browser's Connection Settings dialog. With the default example config, that value is `change-me`.
 
@@ -97,82 +118,11 @@ docker compose down
 
 The SQLite database is persisted in the named Docker volume `agentdocs-data`, mounted at `/app/data` inside the container.
 
-If you want to rebuild after dependency or code changes:
+## Troubleshooting Startup
 
-```bash
-docker compose up --build -d
-```
-
-## GitHub Container Registry
-
-The repository now includes [docker-publish.yml](.github/workflows/docker-publish.yml), which publishes images to GitHub Container Registry instead of Docker Hub.
-
-Recommended setup:
-
-- Keep the package public in GitHub Packages if you want anonymous `docker pull` access.
-- Use pushes to `main` only for validation, and Git tags like `v0.1.0` for actual image releases.
-- Rely on the built-in `GITHUB_TOKEN`; no extra registry secret is required for the workflow.
-
-Workflow behavior:
-
-- Pull requests run tests and a Docker build validation, but do not publish images.
-- Pushes to `main` run tests and a Docker build validation, but do not publish images.
-- Version tags like `v0.1.0` publish semver tags to GHCR.
-- Manual runs can publish a custom tag and optionally refresh `latest`.
-- After each actual publish, the workflow pulls the published digest and starts the container once as a smoke test.
-
-After the first successful publish, the image will be available under:
-
-```text
-ghcr.io/<owner>/<repository>:latest
-```
-
-Example usage:
-
-```bash
-docker pull ghcr.io/<owner>/<repository>:latest
-docker run --rm -p 8000:8000 --env-file .env ghcr.io/<owner>/<repository>:latest
-```
-
-Recommended release flow:
-
-```bash
-git tag v0.1.0
-git push origin v0.1.0
-```
-
-How `latest` is updated:
-
-- Pushing a normal version tag such as `v0.1.0` updates the semver tags and `latest` together.
-- Manual publishing does not update `latest` unless you explicitly set `publish_latest=true` in the workflow input.
-- If you want to move `latest` to an already-tested build without changing the semver tags, run the workflow manually with a maintenance tag and enable `publish_latest`.
-
-Manual publishing is best reserved for exceptional cases such as republishing the same code with an explicit maintenance tag.
-
-If the package stays private, users can still pull it after logging in with a GitHub personal access token that has `read:packages`.
-
-Run the published image locally
-
-You can override the image tag with the `IMAGE_TAG` environment variable (or set it in `.env`). Example commands:
-
-```bash
-# pull specific published tag (default: latest)
-IMAGE_TAG=v0.1.0 docker compose pull
-
-# start the service with the pulled image
-IMAGE_TAG=v0.1.0 docker compose up -d
-
-# follow logs
-docker compose logs -f
-
-# stop and remove
-docker compose down
-```
-
-Notes:
-
-- If the repository package is private, `docker compose pull` will prompt for credentials; authenticate with `docker login ghcr.io` using a Personal Access Token that has `read:packages`.
-- By default the compose file uses `ghcr.io/gy-ge/agentdocs:${IMAGE_TAG:-latest}` so you can omit `IMAGE_TAG` to run `latest`.
+- If `uv sync` says your Python version does not satisfy the project requirement, run `uv python install 3.10` and then rerun `uv sync`.
+- If you override `SQLITE_PATH`, make sure the parent directory is writable; the default local setup now creates missing directories automatically, but it cannot bypass filesystem permission errors.
+- If the page loads but API requests return 401, enter the `API_KEY` from `.env` in the browser connection settings. The default example value is `change-me`.
 
 ## Authentication
 
@@ -202,15 +152,7 @@ uv run python scripts/simulate_agent.py --api-key change-me --mode fail
 
 ## UI E2E Tests
 
-The repository now includes Playwright-based browser E2E coverage for the static workbench.
-
-Install the Chromium runtime once:
-
-```bash
-uv run python -m playwright install chromium
-```
-
-Run the browser E2E suite:
+Run the browser E2E suite directly with:
 
 ```bash
 uv run pytest tests/test_ui_e2e.py
@@ -245,22 +187,3 @@ The external agent protocol is intentionally small.
 5. If the task becomes stale because the document changed, the browser or operator can inspect GET /api/tasks/{task_id}/diff, GET /api/tasks/{task_id}/recovery-preview, POST /api/tasks/{task_id}/relocate, or POST /api/tasks/{task_id}/recover.
 
 Action and instruction are free-form strings. Typical action names in this repository are rewrite, translate, summarize, extract, and fix.
-
-## Current Status
-
-Current implementation includes:
-
-- Document list, create, update, delete, version history, and rollback
-- Task create, next, complete, accept, reject, cancel, retry, diff, relocate, recovery preview, and recover
-- Batch accept-ready and document-wide stale cleanup
-- Persistent task templates and per-document default task settings
-- Word-style browser workbench with inline review popover, selection toolbar, comment rail, bottom drawers, review badge, and keyboard shortcuts
-- Integration tests for API flows, migrations, and simulated agent behavior
-
-## Development Order
-
-Recommended next priorities:
-
-1. Add more regression tests around stale recovery and batch acceptance edge cases.
-2. Continue simplifying the high-frequency task review flow in the browser UI.
-3. Keep README and docs in sync whenever API fields or task states change.

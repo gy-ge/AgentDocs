@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
-from app.config import get_settings
+from app.config import ensure_sqlite_parent_dir, get_settings
 
 
 class Base(DeclarativeBase):
@@ -9,6 +9,8 @@ class Base(DeclarativeBase):
 
 
 settings = get_settings()
+
+ensure_sqlite_parent_dir(settings.sqlite_path)
 engine = create_engine(settings.sqlite_url, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 

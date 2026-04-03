@@ -29,10 +29,17 @@ AgentDocs 是一个面向单个作者与单个外部 Agent 工作流的极简 Ma
 
 ## 环境要求
 
-- Python 3.14+
+- Python 3.10+
 - uv
 
-## 安装
+## 快速开始
+
+如果本机还没有 Python 3.10，先安装并固定版本：
+
+```bash
+uv python install 3.10
+uv python pin 3.10
+```
 
 安装依赖：
 
@@ -46,6 +53,12 @@ uv sync
 cp .env.example .env
 ```
 
+Windows PowerShell 可用：
+
+```powershell
+Copy-Item .env.example .env
+```
+
 .env.example 默认值：
 
 - APP_NAME=AgentDocs
@@ -53,7 +66,7 @@ cp .env.example .env
 - API_KEY=change-me
 - SQLITE_PATH=data/doc.db
 
-## 运行
+默认 `SQLITE_PATH=data/doc.db`。现在项目会在首次迁移或启动时自动创建缺失的父目录，因此不需要手工新建 `data/`。
 
 启动前先执行迁移：
 
@@ -67,23 +80,31 @@ uv run alembic upgrade head
 uv run uvicorn app.main:app --reload
 ```
 
-然后访问 http://127.0.0.1:8000。
+然后访问 http://127.0.0.1:8000，并在浏览器弹出的连接设置里填写 `.env` 中的 `API_KEY`。按默认示例配置，这个值是 `change-me`。
+
+运行完整测试：
+
+```bash
+uv run pytest
+```
+
+如果是第一次跑包含浏览器用例的测试，先安装 Playwright Chromium：
+
+```bash
+uv run playwright install chromium
+```
 
 ## Docker 部署
 
-先创建环境变量文件：
-
-```bash
-cp .env.example .env
-```
-
-构建并启动容器：
+在仓库根目录执行：
 
 ```bash
 docker compose up --build -d
 ```
 
-容器入口会在启动 Uvicorn 之前自动执行 `alembic upgrade head`。
+`docker-compose.yml` 现在默认基于当前仓库里的 `Dockerfile` 本地构建镜像，不再依赖预先发布的 GHCR 镜像。
+
+容器入口会在启动 Uvicorn 之前自动执行 `alembic upgrade head`。运行前仍需要先准备好 `.env` 文件，步骤与上面的快速开始一致。
 
 第一次打开 http://127.0.0.1:8000 时，需要在浏览器弹出的连接设置里输入 `.env` 中的共享 API Key。按默认示例配置，这个值是 `change-me`。
 
@@ -97,82 +118,11 @@ docker compose down
 
 SQLite 数据库会持久化在名为 `agentdocs-data` 的 Docker volume 中，并挂载到容器内的 `/app/data`。
 
-如果代码或依赖有变化，需要重新构建：
+## 启动排查
 
-```bash
-docker compose up --build -d
-```
-
-## GitHub Container Registry 发布
-
-仓库现在包含 [docker-publish.yml](.github/workflows/docker-publish.yml)，会把镜像发布到 GitHub Container Registry，而不是 Docker Hub。
-
-推荐做法：
-
-- 如果希望任何人都能直接 `docker pull`，请在 GitHub Packages 中把这个包设为 public。
-- `main` 分支只做校验，用 `v0.1.0` 这类 Git tag 发布正式镜像。
-- 工作流直接使用内置 `GITHUB_TOKEN` 登录 GHCR，不需要额外配置镜像仓库密钥。
-
-工作流行为：
-
-- Pull Request 只做测试与 Docker 构建校验，不会推送镜像。
-- 推送到 `main` 时只做测试与 Docker 构建校验，不会推送镜像。
-- 推送 `v0.1.0` 这类版本标签时会向 GHCR 发布对应的 semver 标签。
-- 手动触发时可以发布自定义标签，并可选择是否同时刷新 `latest`。
-- 每次真正发布后，工作流都会按 digest 拉取已发布镜像，并实际启动一次容器做 smoke test。
-
-首次发布成功后，镜像地址为：
-
-```text
-ghcr.io/<owner>/<repository>:latest
-```
-
-使用示例：
-
-```bash
-docker pull ghcr.io/<owner>/<repository>:latest
-docker run --rm -p 8000:8000 --env-file .env ghcr.io/<owner>/<repository>:latest
-```
-
-推荐发布流程：
-
-```bash
-git tag v0.1.0
-git push origin v0.1.0
-```
-
-`latest` 标签如何同步：
-
-- 推送 `v0.1.0` 这类正式版本标签时，会同时更新 semver 标签和 `latest`。
-- 手动触发发布时，默认不会更新 `latest`；只有显式把 `publish_latest` 设为 `true` 才会同步。
-- 如果你想在不改 semver 版本标签的前提下，把 `latest` 指向一份已经验证过的构建，可以手动触发工作流，填写一个维护用标签，并勾选 `publish_latest`。
-
-手动发布更适合少数例外场景，例如对同一份代码补发一个明确的维护标签。
-
-如果包保持 private，使用者仍可先用带有 `read:packages` 权限的 GitHub Personal Access Token 登录后再拉取。
-
-本地运行已发布镜像
-
-可以用环境变量 `IMAGE_TAG` 覆盖默认镜像标签（或在 `.env` 中设置）。示例：
-
-```bash
-# 拉取指定标签（默认 latest）
-IMAGE_TAG=v0.1.0 docker compose pull
-
-# 启动服务
-IMAGE_TAG=v0.1.0 docker compose up -d
-
-# 查看日志
-docker compose logs -f
-
-# 停止并移除
-docker compose down
-```
-
-注意：
-
-- 如果仓库包是私有的，`docker compose pull` 需要验证，先用带有 `read:packages` 权限的 Personal Access Token 登录 `ghcr.io`。
-- 默认 `docker-compose.yml` 使用 `ghcr.io/gy-ge/agentdocs:${IMAGE_TAG:-latest}`，不设置 `IMAGE_TAG` 将拉取 `latest`。
+- 如果 `uv sync` 提示当前 Python 版本不满足要求，先执行 `uv python install 3.10`，然后重新运行 `uv sync`。
+- 如果你自定义了 `SQLITE_PATH`，请确保该路径的父目录可写；当前默认配置会自动创建缺失目录，但不会绕过权限问题。
+- 如果浏览器能打开页面但 API 请求返回 401，请在连接设置里填写 `.env` 中的 `API_KEY`，默认示例值是 `change-me`。
 
 ## 认证方式
 
@@ -202,15 +152,7 @@ uv run python scripts/simulate_agent.py --api-key change-me --mode fail
 
 ## UI 端到端测试
 
-仓库现在包含基于 Playwright 的浏览器端到端测试，用于覆盖静态工作台的关键交互。
-
-首次运行前先安装 Chromium 运行时：
-
-```bash
-uv run python -m playwright install chromium
-```
-
-执行浏览器 E2E：
+单独执行浏览器 E2E：
 
 ```bash
 uv run pytest tests/test_ui_e2e.py
@@ -245,20 +187,3 @@ uv run pytest tests/test_ui_e2e.py
 5. 如果文档变化导致任务 stale，可结合 GET /api/tasks/{task_id}/diff、GET /api/tasks/{task_id}/recovery-preview、POST /api/tasks/{task_id}/relocate 和 POST /api/tasks/{task_id}/recover 处理。
 
 action 和 instruction 都是自由文本。这个仓库里常见的 action 名称有 rewrite、translate、summarize、extract 和 fix。
-
-## 当前状态
-
-目前实现包含：
-
-- 文档列表、创建、更新、删除、版本历史与回滚
-- 任务 create、next、complete、accept、reject、cancel、retry、diff、relocate、recovery preview 与 recover
-- 批量 accept-ready 与文档级 stale cleanup
-- 持久化任务模板与文档默认任务设置
-- Word 风格浏览器工作台：行内审阅浮窗、选区快捷工具栏、评论栏、底部折叠抽屉、审阅徽章与键盘快捷键
-- 覆盖 API 流程、迁移和模拟 Agent 的集成测试
-
-## 建议后续顺序
-
-1. 继续补 stale recovery 和批量接受边界场景的回归测试。
-2. 继续压缩浏览器端高频任务审核路径。
-3. 每次接口字段或任务状态变更后，同步更新 README 与 docs。

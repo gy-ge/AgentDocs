@@ -4,7 +4,7 @@ from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
-from app.config import get_settings
+from app.config import ensure_sqlite_parent_dir, get_settings
 from app.db import Base
 import app.models  # noqa: F401
 
@@ -18,6 +18,7 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 settings = get_settings()
+ensure_sqlite_parent_dir(settings.sqlite_path)
 config.set_main_option("sqlalchemy.url", settings.sqlite_url)
 target_metadata = Base.metadata
 
