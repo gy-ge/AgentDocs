@@ -1,3 +1,10 @@
+"""Task lifecycle service.
+
+Handles task creation, pickup, completion, accept, reject, cancel, retry,
+batch-accept, stale detection, cleanup, relocation, diff generation, and
+recovery (relocate / requeue-from-current).
+"""
+
 from hashlib import sha256
 from difflib import unified_diff
 

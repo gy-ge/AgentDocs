@@ -1,3 +1,5 @@
+"""Task template CRUD service."""
+
 from sqlalchemy.orm import Session
 
 from app.errors import ApiError

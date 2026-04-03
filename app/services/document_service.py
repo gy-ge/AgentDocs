@@ -1,3 +1,5 @@
+"""Document CRUD, version management, rollback, and markdown block parsing."""
+
 from sqlalchemy.orm import Session
 
 from app.errors import ApiError

@@ -1,3 +1,10 @@
+"""Task lifecycle API endpoints.
+
+Provides task listing, pickup, completion, accept, reject, cancel,
+retry, relocate, diff, recovery preview, and recover operations
+under ``/api/tasks``.
+"""
+
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session

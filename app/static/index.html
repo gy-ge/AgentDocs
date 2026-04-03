@@ -1500,6 +1500,7 @@
       }
 
       // ── Inline Popover ──
+      /** Show the inline action popover above a review mark element. */
       function showInlinePopover(taskId, anchorEl) {
         const popover = document.getElementById('inline-popover');
         const task = state.tasks.find(item => item.id === taskId);
@@ -1519,12 +1520,14 @@
         state._popoverTaskId = taskId;
       }
 
+      /** Hide the inline popover and clear the tracked task id. */
       function hideInlinePopover() {
         document.getElementById('inline-popover').classList.add('hidden');
         state._popoverTaskId = null;
       }
 
       // ── Selection Toolbar ──
+      /** Show the floating quick-action toolbar near the cursor position. */
       function showSelectionToolbar(x, y) {
         const toolbar = document.getElementById('selection-toolbar');
         const scrollTop = window.scrollY || document.documentElement.scrollTop;
@@ -1534,10 +1537,12 @@
         toolbar.classList.remove('hidden');
       }
 
+      /** Hide the selection toolbar. */
       function hideSelectionToolbar() {
         document.getElementById('selection-toolbar').classList.add('hidden');
       }
 
+      /** Create a task directly from the current text selection using a single action. */
       async function quickCreateTask(action) {
         if (!state.docId) return;
         hideSelectionToolbar();
@@ -1565,6 +1570,7 @@
       }
 
       // ── Review Badge ──
+      /** Update the numeric badge on the Review mode button showing actionable done-task count. */
       function updateReviewBadge() {
         if (!reviewModeReviewButtonEl) return;
         const doneCount = state.tasks.filter(item => item.status === 'done' && !item.is_stale).length;
