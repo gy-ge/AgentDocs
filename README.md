@@ -15,7 +15,8 @@ Implemented now:
 - Human accept, reject, cancel, retry, and rollback operations
 - Task diff preview, batch-accept preview, stale detection, stale cleanup, relocation, and requeue-from-current recovery
 - Server-persisted task templates and document-level default task settings
-- Minimal browser UI and a simulated agent script for local testing
+- Word-style browser workbench with inline review popover, selection toolbar, comment rail, bottom drawers, review badge, and keyboard shortcuts
+- Simulated agent script for local testing
 
 Explicitly out of scope for the current version:
 
@@ -253,6 +254,7 @@ Current implementation includes:
 - Task create, next, complete, accept, reject, cancel, retry, diff, relocate, recovery preview, and recover
 - Batch accept-ready and document-wide stale cleanup
 - Persistent task templates and per-document default task settings
+- Word-style browser workbench with inline review popover, selection toolbar, comment rail, bottom drawers, review badge, and keyboard shortcuts
 - Integration tests for API flows, migrations, and simulated agent behavior
 
 ## Development Order
