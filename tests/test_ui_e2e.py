@@ -202,7 +202,6 @@ def ui_stack(tmp_path):
     env["SQLITE_PATH"] = str(db_path)
     env["API_KEY"] = API_KEY
     env["APP_NAME"] = "AgentDocs UI E2E"
-    env["APP_ENV"] = "test"
 
     subprocess.run(
         [str(PYTHON_EXE), "-m", "alembic", "upgrade", "head"],

@@ -10,7 +10,10 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 
-COPY . .
+COPY alembic.ini ./
+COPY app ./app
+COPY alembic ./alembic
+COPY docker ./docker
 RUN sed -i 's/\r$//' docker/entrypoint.sh \
     && chmod +x docker/entrypoint.sh \
     && uv sync --frozen --no-dev

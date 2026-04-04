@@ -1,14 +1,25 @@
 services:
   agentdocs:
-    # Pull the published image from GHCR. Override IMAGE_TAG in your environment
-    # or .env to use a specific tag (default: latest)
+    # Pull the published image from GHCR. Override IMAGE_TAG in the shell or
+    # an optional .env file placed next to this compose file.
     image: ghcr.io/gy-ge/agentdocs:${IMAGE_TAG:-latest}
-    container_name: agentdocs
-    env_file:
-      - .env
+    pull_policy: always
+    environment:
+      # Only runtime-used values are injected as container environment variables.
+      # Docker Compose may read them from a same-directory .env file, but the
+      # .env file itself is not mounted into the container.
+      APP_NAME: ${APP_NAME:-AgentDocs}
+      API_KEY: ${API_KEY:-change-me}
+      # Keep the SQLite file under /app/data so it stays inside the persistent
+      # Docker volume mounted below.
+      SQLITE_PATH: ${SQLITE_PATH:-/app/data/doc.db}
     ports:
-      - "8000:8000"
+      # Expose the app on a configurable host port while keeping the container
+      # port fixed at 8000.
+      - "${AGENTDOCS_PORT:-8000}:8000"
     volumes:
+      # Persist SQLite data in a Docker-managed volume. If you prefer a host
+      # bind mount for local inspection, replace the left side with ./data.
       - agentdocs-data:/app/data
     healthcheck:
       test: ["CMD", "/app/.venv/bin/python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/').read()"]
@@ -19,4 +30,5 @@ services:
     restart: unless-stopped
 
 volumes:
+  # Named volume used by SQLITE_PATH=/app/data/doc.db by default.
   agentdocs-data:

@@ -62,7 +62,6 @@ Copy-Item .env.example .env
 Default values from .env.example:
 
 - APP_NAME=AgentDocs
-- APP_ENV=development
 - API_KEY=change-me
 - SQLITE_PATH=data/doc.db
 
@@ -96,17 +95,63 @@ uv run playwright install chromium
 
 ## Docker Deployment
 
-From the repository root, run:
+You can run the published image from the repository root or from a brand-new empty folder. A source checkout is not required as long as you have this compose file.
+
+### Minimal Standalone Steps
+
+On macOS or Linux:
 
 ```bash
-docker compose up --build -d
+mkdir agentdocs
+cd agentdocs
+cp /path/to/docker-compose.yml .
+docker compose up -d
 ```
 
-`docker-compose.yml` now builds from the local repository `Dockerfile` by default, instead of expecting a pre-published GHCR image.
+On Windows PowerShell:
 
-The container entrypoint runs `alembic upgrade head` automatically before starting Uvicorn. You still need to create `.env` first, using the same steps from Quick Start.
+```powershell
+New-Item -ItemType Directory agentdocs | Out-Null
+Set-Location agentdocs
+Copy-Item C:/path/to/docker-compose.yml ./docker-compose.yml
+docker compose up -d
+```
 
-After opening http://127.0.0.1:8000 for the first time, enter the shared API key from `.env` in the browser's Connection Settings dialog. With the default example config, that value is `change-me`.
+That is enough for a first boot. If you do nothing else, Docker will pull the image, create a named volume for the database, and publish the app on port 8000.
+
+Save [docker-compose.yml](docker-compose.yml) into the target folder, then run:
+
+```bash
+docker compose up -d
+```
+
+The compose file pulls the published GHCR image by default. It does not mount a `.env` file into the container. Instead, Docker Compose reads variables from an optional `.env` file in the same folder as `docker-compose.yml` and injects them as container environment variables.
+
+The compose file also sets `pull_policy: always`, so `docker compose up -d` will check for a newer image tag before starting the container.
+
+If you want to override the defaults, create a `.env` file next to `docker-compose.yml` with content like:
+
+```dotenv
+IMAGE_TAG=latest
+AGENTDOCS_PORT=8000
+APP_NAME=AgentDocs
+API_KEY=change-me
+SQLITE_PATH=/app/data/doc.db
+```
+
+If you do not create `.env`, the compose file still works with the same defaults.
+
+For a safe first-time deployment, the important defaults are:
+
+- `AGENTDOCS_PORT=8000`
+- `API_KEY=change-me`
+- `SQLITE_PATH=/app/data/doc.db`
+
+`APP_ENV` has been removed from the published compose path because the current application does not use it. If you still have `APP_ENV` in an older local `.env`, it is safe to delete.
+
+The container entrypoint runs `alembic upgrade head` automatically before starting Uvicorn.
+
+After opening http://127.0.0.1:8000 for the first time, enter the shared API key from your compose environment in the browser's Connection Settings dialog. With the default config, that value is `change-me`.
 
 Useful commands:
 
@@ -116,13 +161,19 @@ docker compose ps
 docker compose down
 ```
 
-The SQLite database is persisted in the named Docker volume `agentdocs-data`, mounted at `/app/data` inside the container.
+The SQLite database is persisted in the named Docker volume `agentdocs-data`, mounted at `/app/data` inside the container. The compose default sets `SQLITE_PATH=/app/data/doc.db` so the database stays inside that persistent volume.
+
+If you override `SQLITE_PATH`, keep it under `/app/data` unless you intentionally want non-persistent container-local storage.
+
+If you prefer to inspect the database file directly on the host, you can replace the volume mapping in [docker-compose.yml](docker-compose.yml) from `agentdocs-data:/app/data` to `./data:/app/data`. Keep `SQLITE_PATH=/app/data/doc.db` unchanged in that case.
 
 ## Troubleshooting Startup
 
 - If `uv sync` says your Python version does not satisfy the project requirement, run `uv python install 3.10` and then rerun `uv sync`.
 - If you override `SQLITE_PATH`, make sure the parent directory is writable; the default local setup now creates missing directories automatically, but it cannot bypass filesystem permission errors.
-- If the page loads but API requests return 401, enter the `API_KEY` from `.env` in the browser connection settings. The default example value is `change-me`.
+- If port 8000 is already in use, set `AGENTDOCS_PORT` in the compose-side `.env`, for example `AGENTDOCS_PORT=8080`, then open that port in the browser.
+- If you use the host bind mount form `./data:/app/data`, create the local `data` directory if your Docker setup does not auto-create it with writable permissions.
+- If the page loads but API requests return 401, enter the `API_KEY` from the compose-side `.env` or your shell environment in the browser connection settings. The default value is `change-me`.
 
 ## Authentication
 

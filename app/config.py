@@ -6,7 +6,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     app_name: str = "AgentDocs"
-    app_env: str = "development"
     api_key: str = "change-me"
     sqlite_path: str = "data/doc.db"
 

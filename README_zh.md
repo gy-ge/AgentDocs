@@ -62,7 +62,6 @@ Copy-Item .env.example .env
 .env.example 默认值：
 
 - APP_NAME=AgentDocs
-- APP_ENV=development
 - API_KEY=change-me
 - SQLITE_PATH=data/doc.db
 
@@ -96,17 +95,63 @@ uv run playwright install chromium
 
 ## Docker 部署
 
-在仓库根目录执行：
+你可以在仓库根目录运行，也可以只拿这一份 compose 文件到一个全新的空目录里运行；不要求先检出完整源码仓库。
+
+### 最小独立部署步骤
+
+macOS 或 Linux：
 
 ```bash
-docker compose up --build -d
+mkdir agentdocs
+cd agentdocs
+cp /path/to/docker-compose.yml .
+docker compose up -d
 ```
 
-`docker-compose.yml` 现在默认拉取预先发布的 GHCR 镜像。
+Windows PowerShell：
 
-容器入口会在启动 Uvicorn 之前自动执行 `alembic upgrade head`。运行前仍需要先准备好 `.env` 文件，步骤与上面的快速开始一致。
+```powershell
+New-Item -ItemType Directory agentdocs | Out-Null
+Set-Location agentdocs
+Copy-Item C:/path/to/docker-compose.yml ./docker-compose.yml
+docker compose up -d
+```
 
-第一次打开 http://127.0.0.1:8000 时，需要在浏览器弹出的连接设置里输入 `.env` 中的共享 API Key。按默认示例配置，这个值是 `change-me`。
+第一次启动只需要这些步骤。默认情况下，Docker 会拉取镜像、创建数据库用的命名卷，并把服务发布到 8000 端口。
+
+把 [docker-compose.yml](docker-compose.yml) 放到目标目录后，执行：
+
+```bash
+docker compose up -d
+```
+
+这份 compose 文件默认拉取已经发布到 GHCR 的镜像。它不会把 `.env` 文件挂载进容器；真正的行为是：Docker Compose 会读取与 `docker-compose.yml` 同目录下可选的 `.env` 文件，用其中的值替换变量后，再把结果作为容器环境变量注入进去。
+
+compose 还设置了 `pull_policy: always`，因此每次执行 `docker compose up -d` 时都会先检查对应标签是否有更新镜像。
+
+如果你想覆盖默认值，可以在 `docker-compose.yml` 同目录创建一个 `.env`，内容示例：
+
+```dotenv
+IMAGE_TAG=latest
+AGENTDOCS_PORT=8000
+APP_NAME=AgentDocs
+API_KEY=change-me
+SQLITE_PATH=/app/data/doc.db
+```
+
+如果不创建 `.env`，compose 也可以直接用内置默认值启动。
+
+首次部署时，最关键的默认值是：
+
+- `AGENTDOCS_PORT=8000`
+- `API_KEY=change-me`
+- `SQLITE_PATH=/app/data/doc.db`
+
+由于当前应用并不会使用 `APP_ENV` 切换运行行为，所以它已经从发布版 compose 路径中移除。如果你本地旧的 `.env` 里还保留了 `APP_ENV`，可以直接删掉。
+
+容器入口会在启动 Uvicorn 之前自动执行 `alembic upgrade head`。
+
+第一次打开 http://127.0.0.1:8000 时，需要在浏览器弹出的连接设置里输入 compose 环境里的共享 API Key。默认值是 `change-me`。
 
 常用命令：
 
@@ -116,13 +161,19 @@ docker compose ps
 docker compose down
 ```
 
-SQLite 数据库会持久化在名为 `agentdocs-data` 的 Docker volume 中，并挂载到容器内的 `/app/data`。
+SQLite 数据库会持久化在名为 `agentdocs-data` 的 Docker volume 中，并挂载到容器内的 `/app/data`。compose 默认把 `SQLITE_PATH` 设为 `/app/data/doc.db`，因此数据库会落在持久化卷里。
+
+如果你要自定义 `SQLITE_PATH`，除非你明确想使用容器内临时存储，否则应当继续放在 `/app/data` 下面。
+
+如果你希望直接在宿主机上查看数据库文件，可以把 [docker-compose.yml](docker-compose.yml) 里的卷映射从 `agentdocs-data:/app/data` 改成 `./data:/app/data`。这种情况下保留 `SQLITE_PATH=/app/data/doc.db` 不变即可。
 
 ## 启动排查
 
 - 如果 `uv sync` 提示当前 Python 版本不满足要求，先执行 `uv python install 3.10`，然后重新运行 `uv sync`。
 - 如果你自定义了 `SQLITE_PATH`，请确保该路径的父目录可写；当前默认配置会自动创建缺失目录，但不会绕过权限问题。
-- 如果浏览器能打开页面但 API 请求返回 401，请在连接设置里填写 `.env` 中的 `API_KEY`，默认示例值是 `change-me`。
+- 如果 8000 端口已被占用，可以在 compose 侧 `.env` 中设置 `AGENTDOCS_PORT=8080` 一类的值，然后改用对应端口访问。
+- 如果你使用了 `./data:/app/data` 这种宿主机目录挂载，而 Docker 环境没有自动创建可写目录，请先手工创建本地 `data` 目录。
+- 如果浏览器能打开页面但 API 请求返回 401，请在连接设置里填写 compose 侧 `.env` 或当前 shell 环境中设置的 `API_KEY`，默认值是 `change-me`。
 
 ## 认证方式
 

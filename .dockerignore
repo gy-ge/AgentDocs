@@ -8,7 +8,15 @@ __pycache__/
 *.py[cod]
 *.db
 .env
+.env.example
 data/
 lighthouse-mobile/
 lighthouse-mobile-after/
 lighthouse-mobile-final/
+docs/
+tests/
+scripts/
+README.md
+README_zh.md
+plan.md
+docker-compose.yml
