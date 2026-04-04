@@ -12,7 +12,7 @@ AgentDocs 是一个围绕单份 Markdown 文档、单个人工审核者和单个
 - 允许外部 Agent 轮询领取任务、回写结果或上报失败
 - 通过认证后的 SSE 流向浏览器推送任务与文档更新事件
 - 在 Agent 结果真正改写文档前，要求人工显式 accept，包括批量合并前预览和批量合并后的回滚入口
-- 检测 stale 任务，并提供清理、重定位、预览和按当前正文重建能力
+- 检测 stale 任务，并在文档变更后自动同步可恢复任务、在派发前自动恢复 pending 任务，同时保留清理、预览和手动恢复能力给操作端
 
 系统不会做的事情：
 
@@ -65,8 +65,9 @@ stale 检测只对 pending、processing 和 done 任务生效。
 
 - 如果当前文档切片仍然匹配 source_text 和 source_hash，则任务不是 stale。
 - 如果不匹配，后端会返回 selection_removed、selection_shifted 或 source_changed。
+- 当文档正文变化时，服务端会立即尝试同步可恢复任务；对 pending 任务还会在派发前再做一次自动修复。
 - 重定位会依次尝试原 block 位置、唯一同标题 block，以及全文唯一文本命中。
-- 如果仅重定位还不够，recover 接口可以先关闭旧任务，再按当前选区重建一条新的 pending 任务。
+- 如果仅重定位还不够，pending 任务会在安全前提下自动按当前选区重建；recover 接口则继续服务于 stale 非 pending 任务的人工恢复。
 
 ## 主要组件
 

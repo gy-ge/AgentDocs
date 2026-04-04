@@ -23,7 +23,9 @@ from app.services.document_service import DocumentService
 from app.services.task_events import task_event_broker
 from app.services.task_service import TaskService
 
-router = APIRouter(prefix="/api/docs", tags=["docs"], dependencies=[Depends(require_api_key)])
+router = APIRouter(
+    prefix="/api/docs", tags=["docs"], dependencies=[Depends(require_api_key)]
+)
 service = DocumentService()
 task_service = TaskService()
 
@@ -31,7 +33,10 @@ task_service = TaskService()
 @router.get("")
 def list_docs(db: Session = Depends(get_db)):
     documents = service.list_documents(db)
-    data = [serialize_document_list_item(document).model_dump(mode="json") for document in documents]
+    data = [
+        serialize_document_list_item(document).model_dump(mode="json")
+        for document in documents
+    ]
     return {"ok": True, "data": data}
 
 
@@ -59,7 +64,10 @@ def create_doc(payload: DocumentCreate, db: Session = Depends(get_db)):
 def get_doc(doc_id: int, db: Session = Depends(get_db)):
     document = service.get_document(db, doc_id)
     blocks = service.parse_document(document.raw_markdown)
-    return {"ok": True, "data": serialize_document(document, blocks).model_dump(mode="json")}
+    return {
+        "ok": True,
+        "data": serialize_document(document, blocks).model_dump(mode="json"),
+    }
 
 
 @router.put("/{doc_id}")
@@ -73,13 +81,23 @@ def update_doc(doc_id: int, payload: DocumentUpdate, db: Session = Depends(get_d
         actor=payload.actor,
         note=payload.note,
     )
+    if document.revision != payload.expected_revision:
+        task_service.sync_tasks_after_document_change(
+            db,
+            document_id=document.id,
+            raw_markdown=document.raw_markdown,
+            revision=document.revision,
+        )
     task_event_broker.publish_document(
         kind="updated",
         doc_id=document.id,
         revision=document.revision,
     )
     blocks = service.parse_document(document.raw_markdown)
-    return {"ok": True, "data": serialize_document(document, blocks).model_dump(mode="json")}
+    return {
+        "ok": True,
+        "data": serialize_document(document, blocks).model_dump(mode="json"),
+    }
 
 
 @router.delete("/{doc_id}")
@@ -110,7 +128,10 @@ def update_doc_task_defaults(
         revision=document.revision,
     )
     blocks = service.parse_document(document.raw_markdown)
-    return {"ok": True, "data": serialize_document(document, blocks).model_dump(mode="json")}
+    return {
+        "ok": True,
+        "data": serialize_document(document, blocks).model_dump(mode="json"),
+    }
 
 
 @router.post("/{doc_id}/tasks")
@@ -165,7 +186,10 @@ def preview_accept_ready_doc_tasks(
         end_offset=payload.end_offset,
         limit=payload.limit,
     )
-    return {"ok": True, "data": serialize_batch_accept_preview(result).model_dump(mode="json")}
+    return {
+        "ok": True,
+        "data": serialize_batch_accept_preview(result).model_dump(mode="json"),
+    }
 
 
 @router.post("/{doc_id}/tasks/accept-ready")

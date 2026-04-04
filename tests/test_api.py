@@ -71,7 +71,9 @@ def test_authentication_is_required(client):
     }
 
 
-def test_task_event_stream_route_returns_event_stream(client, auth_headers, monkeypatch):
+def test_task_event_stream_route_returns_event_stream(
+    client, auth_headers, monkeypatch
+):
     def fake_stream():
         yield 'event: ready\ndata: {"stream":"tasks"}\n\n'
         yield 'event: task.changed\ndata: {"kind":"picked_up","task_id":1}\n\n'
@@ -93,7 +95,9 @@ def test_task_event_broker_stream_emits_ready_and_task_updates():
         broker.open()
         stream = broker.stream()
 
-        ready_event_name, ready_payload = read_task_event(iter((await anext(stream)).splitlines()))
+        ready_event_name, ready_payload = read_task_event(
+            iter((await anext(stream)).splitlines())
+        )
         assert ready_event_name == "ready"
         assert ready_payload == {"stream": "tasks"}
 
@@ -105,7 +109,9 @@ def test_task_event_broker_stream_emits_ready_and_task_updates():
             doc_revision=2,
             agent_name="agent-one",
         )
-        task_event_name, task_payload = read_task_event(iter((await anext(stream)).splitlines()))
+        task_event_name, task_payload = read_task_event(
+            iter((await anext(stream)).splitlines())
+        )
         assert task_event_name == "task.changed"
         assert task_payload == {
             "kind": "picked_up",
@@ -130,7 +136,9 @@ def test_task_event_broker_stream_emits_document_updates():
         read_task_event(iter((await anext(stream)).splitlines()))
         broker.publish_document(kind="updated", doc_id=5, revision=4)
 
-        document_event_name, document_payload = read_task_event(iter((await anext(stream)).splitlines()))
+        document_event_name, document_payload = read_task_event(
+            iter((await anext(stream)).splitlines())
+        )
         assert document_event_name == "document.changed"
         assert document_payload == {
             "kind": "updated",
@@ -394,7 +402,9 @@ def test_task_accept_updates_document_and_versions(client, auth_headers):
 
     doc_response = client.get(f"/api/docs/{doc_id}", headers=auth_headers)
     assert doc_response.status_code == 200
-    assert doc_response.json()["data"]["raw_markdown"] == "# Title\n## Section\nHi world\n"
+    assert (
+        doc_response.json()["data"]["raw_markdown"] == "# Title\n## Section\nHi world\n"
+    )
     assert doc_response.json()["data"]["revision"] == 2
 
     versions_response = client.get(f"/api/docs/{doc_id}/versions", headers=auth_headers)
@@ -407,7 +417,9 @@ def test_task_reject_and_cancel_do_not_change_document(client, auth_headers):
     created = create_document(client, auth_headers, raw_markdown)
     doc_id = created["id"]
 
-    pending_task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "Hello")
+    pending_task, _, _ = create_task(
+        client, auth_headers, doc_id, raw_markdown, "Hello"
+    )
     cancel_response = client.post(
         f"/api/tasks/{pending_task['id']}/cancel",
         headers=auth_headers,
@@ -488,11 +500,16 @@ def test_accept_ready_tasks_accepts_multiple_safe_done_tasks(client, auth_header
 
     doc_response = client.get(f"/api/docs/{doc_id}", headers=auth_headers)
     assert doc_response.status_code == 200
-    assert doc_response.json()["data"]["raw_markdown"] == "# Title\n## Section\nHi planet\n"
+    assert (
+        doc_response.json()["data"]["raw_markdown"]
+        == "# Title\n## Section\nHi planet\n"
+    )
     assert doc_response.json()["data"]["revision"] == 3
 
 
-def test_accept_ready_tasks_skips_stale_results_and_accepts_safe_ones(client, auth_headers):
+def test_accept_ready_tasks_skips_stale_results_and_accepts_safe_ones(
+    client, auth_headers
+):
     raw_markdown = "# Title\n## A\nHello\n## B\nWorld\n"
     created = create_document(client, auth_headers, raw_markdown)
     doc_id = created["id"]
@@ -545,14 +562,19 @@ def test_accept_ready_tasks_skips_stale_results_and_accepts_safe_ones(client, au
     assert data["accepted"] == 1
     assert data["skipped"] == 1
     assert data["accepted_task_ids"] == [safe_task["id"]]
-    assert data["skipped_tasks"] == [{"task_id": stale_task["id"], "reason": "task_stale"}]
+    assert data["skipped_tasks"] == [
+        {"task_id": stale_task["id"], "reason": "task_stale"}
+    ]
     assert data["document_revision"] == 3
     assert data["rollback_version_id"] == 2
     assert data["rollback_revision"] == 2
 
     doc_response = client.get(f"/api/docs/{doc_id}", headers=auth_headers)
     assert doc_response.status_code == 200
-    assert doc_response.json()["data"]["raw_markdown"] == "# Title\n## A\nHallo\n## B\nPlanet\n"
+    assert (
+        doc_response.json()["data"]["raw_markdown"]
+        == "# Title\n## A\nHallo\n## B\nPlanet\n"
+    )
 
 
 def test_accept_ready_tasks_can_filter_by_action_and_range(client, auth_headers):
@@ -641,7 +663,10 @@ def test_accept_ready_tasks_can_filter_by_action_and_range(client, auth_headers)
 
     doc_response = client.get(f"/api/docs/{doc_id}", headers=auth_headers)
     assert doc_response.status_code == 200
-    assert doc_response.json()["data"]["raw_markdown"] == "# Title\n## First\nGamma\n## Second\nBeta\n"
+    assert (
+        doc_response.json()["data"]["raw_markdown"]
+        == "# Title\n## First\nGamma\n## Second\nBeta\n"
+    )
 
 
 def test_accept_ready_preview_reports_candidates_and_skips(client, auth_headers):
@@ -761,7 +786,7 @@ def test_relocate_done_task_finds_unique_match_in_same_block(client, auth_header
     )
     assert relocate_response.status_code == 200
     relocate_data = relocate_response.json()["data"]
-    assert relocate_data["relocation_strategy"] == "same_block_position_match"
+    assert relocate_data["relocation_strategy"] == "current_selection_match"
     assert relocate_data["task"]["doc_revision"] == 2
     assert relocate_data["task"]["is_stale"] is False
 
@@ -782,7 +807,10 @@ def test_relocate_done_task_finds_unique_match_in_same_block(client, auth_header
 
     doc_response = client.get(f"/api/docs/{doc_id}", headers=auth_headers)
     assert doc_response.status_code == 200
-    assert doc_response.json()["data"]["raw_markdown"] == "# Title\n## Section\nBeta Gamma\n"
+    assert (
+        doc_response.json()["data"]["raw_markdown"]
+        == "# Title\n## Section\nBeta Gamma\n"
+    )
 
 
 def test_relocate_rejected_task_allows_retry_after_manual_edit(client, auth_headers):
@@ -801,6 +829,10 @@ def test_relocate_rejected_task_allows_retry_after_manual_edit(client, auth_head
         headers=auth_headers,
         json={"result": "Hi", "error_message": None},
     )
+    client.post(
+        f"/api/tasks/{task['id']}/reject",
+        headers=auth_headers,
+    )
 
     client.put(
         f"/api/docs/{doc_id}",
@@ -813,17 +845,15 @@ def test_relocate_rejected_task_allows_retry_after_manual_edit(client, auth_head
             "note": "shift content",
         },
     )
-    client.post(
-        f"/api/docs/{doc_id}/tasks/cleanup-stale",
-        headers=auth_headers,
-    )
-
     relocate_response = client.post(
         f"/api/tasks/{task['id']}/relocate",
         headers=auth_headers,
     )
     assert relocate_response.status_code == 200
-    assert relocate_response.json()["data"]["relocation_strategy"] == "same_block_position_match"
+    assert (
+        relocate_response.json()["data"]["relocation_strategy"]
+        == "current_selection_match"
+    )
     assert relocate_response.json()["data"]["task"]["doc_revision"] == 2
 
     retry_response = client.post(
@@ -862,9 +892,13 @@ def test_relocate_returns_conflict_when_source_is_ambiguous(client, auth_headers
     assert relocate_response.json()["error"]["code"] == "conflict"
 
 
-def test_pickup_next_task_includes_context_window_and_block_metadata(client, auth_headers):
+def test_pickup_next_task_includes_context_window_and_block_metadata(
+    client, auth_headers
+):
     raw_markdown = "# Title\n## Background\nAlpha beta gamma\n## Next\nMore\n"
-    created = create_document(client, auth_headers, raw_markdown, title="Knowledge Base")
+    created = create_document(
+        client, auth_headers, raw_markdown, title="Knowledge Base"
+    )
     doc_id = created["id"]
     task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "beta")
 
@@ -906,7 +940,9 @@ def test_pickup_next_task_includes_context_window_and_block_metadata(client, aut
     }
 
 
-def test_pickup_next_task_reports_stale_state_and_current_context(client, auth_headers):
+def test_pickup_next_task_auto_recovers_stale_pending_task_before_dispatch(
+    client, auth_headers
+):
     raw_markdown = "# Title\n## Section\nHello world\n"
     created = create_document(client, auth_headers, raw_markdown, title="Doc")
     doc_id = created["id"]
@@ -933,11 +969,13 @@ def test_pickup_next_task_reports_stale_state_and_current_context(client, auth_h
     assert next_response.status_code == 200
 
     task_data = next_response.json()["data"]
-    assert task_data["id"] == task["id"]
+    assert task_data["id"] != task["id"]
     assert task_data["status"] == "processing"
-    assert task_data["is_stale"] is True
-    assert task_data["stale_reason"] == "source_changed"
-    assert task_data["recommended_action"] == "cancel"
+    assert task_data["doc_revision"] == 2
+    assert task_data["source_text"] == "Hallo"
+    assert task_data["is_stale"] is False
+    assert task_data["stale_reason"] is None
+    assert task_data["recommended_action"] is None
     assert task_data["context"]["document_revision"] == 2
     assert task_data["context"]["current_selection_text"] == "Hallo"
     assert task_data["context"]["block"]["heading"] == "Section"
@@ -946,6 +984,82 @@ def test_pickup_next_task_reports_stale_state_and_current_context(client, auth_h
         {"heading": "Title", "level": 1, "position": 0},
         {"heading": "Section", "level": 2, "position": 1},
     ]
+
+    original_task_response = client.get(
+        f"/api/tasks/{task['id']}", headers=auth_headers
+    )
+    assert original_task_response.status_code == 200
+    assert original_task_response.json()["data"]["status"] == "cancelled"
+
+
+def test_document_update_auto_relocates_pending_task_when_source_moves(
+    client, auth_headers
+):
+    raw_markdown = "# Title\n## Section\nHello world\n"
+    created = create_document(client, auth_headers, raw_markdown, title="Doc")
+    doc_id = created["id"]
+    task, start_offset, end_offset = create_task(
+        client, auth_headers, doc_id, raw_markdown, "Hello"
+    )
+
+    update_response = client.put(
+        f"/api/docs/{doc_id}",
+        headers=auth_headers,
+        json={
+            "title": "Doc",
+            "raw_markdown": "# Title\n## Section\nStart Hello world\n",
+            "expected_revision": 1,
+            "actor": "browser",
+            "note": "manual edit before pickup",
+        },
+    )
+    assert update_response.status_code == 200
+
+    task_response = client.get(f"/api/tasks/{task['id']}", headers=auth_headers)
+    assert task_response.status_code == 200
+    task_data = task_response.json()["data"]
+    assert task_data["status"] == "pending"
+    assert task_data["doc_revision"] == 2
+    assert task_data["is_stale"] is False
+    assert task_data["stale_reason"] is None
+    assert task_data["start_offset"] > start_offset
+    assert task_data["end_offset"] > end_offset
+    assert task_data["context"]["current_selection_text"] == "Hello"
+
+
+def test_document_update_auto_requeues_pending_task_when_source_changes(
+    client, auth_headers
+):
+    raw_markdown = "# Title\n## Section\nHello world\n"
+    created = create_document(client, auth_headers, raw_markdown, title="Doc")
+    doc_id = created["id"]
+    task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "Hello")
+
+    update_response = client.put(
+        f"/api/docs/{doc_id}",
+        headers=auth_headers,
+        json={
+            "title": "Doc",
+            "raw_markdown": "# Title\n## Section\nHallo world\n",
+            "expected_revision": 1,
+            "actor": "browser",
+            "note": "manual edit before pickup",
+        },
+    )
+    assert update_response.status_code == 200
+
+    list_response = client.get(f"/api/tasks?doc_id={doc_id}", headers=auth_headers)
+    assert list_response.status_code == 200
+    tasks = list_response.json()["data"]
+    assert len(tasks) == 2
+
+    original_task = next(item for item in tasks if item["id"] == task["id"])
+    recreated_task = next(item for item in tasks if item["id"] != task["id"])
+    assert original_task["status"] == "cancelled"
+    assert recreated_task["status"] == "pending"
+    assert recreated_task["doc_revision"] == 2
+    assert recreated_task["source_text"] == "Hallo"
+    assert recreated_task["is_stale"] is False
 
 
 def test_get_task_includes_current_context_snapshot(client, auth_headers):
@@ -1084,7 +1198,9 @@ def test_task_templates_crud(client, auth_headers):
     assert list_response.json()["data"] == []
 
 
-def test_task_recovery_preview_prefers_relocation_when_possible(client, auth_headers):
+def test_task_recovery_preview_reports_non_stale_after_server_auto_relocation(
+    client, auth_headers
+):
     raw_markdown = "# Title\n## Section\nHello world\n"
     created = create_document(client, auth_headers, raw_markdown, title="Doc")
     task, _, _ = create_task(client, auth_headers, created["id"], raw_markdown, "Hello")
@@ -1108,17 +1224,30 @@ def test_task_recovery_preview_prefers_relocation_when_possible(client, auth_hea
     )
     assert preview_response.status_code == 200
     preview = preview_response.json()["data"]
-    assert preview["is_stale"] is True
-    assert preview["can_relocate"] is True
-    assert preview["relocation_strategy"] == "same_block_position_match"
-    assert preview["can_requeue_from_current"] is True
-    assert preview["recommended_mode"] == "relocate"
+    assert preview["is_stale"] is False
+    assert preview["can_relocate"] is False
+    assert preview["relocation_strategy"] is None
+    assert preview["can_requeue_from_current"] is False
+    assert preview["recommended_mode"] is None
 
 
-def test_task_recover_requeue_from_current_creates_new_pending_task(client, auth_headers):
+def test_task_recover_requeue_from_current_creates_new_pending_task_for_stale_done_task(
+    client, auth_headers
+):
     raw_markdown = "# Title\n## Section\nHello world\n"
     created = create_document(client, auth_headers, raw_markdown, title="Doc")
     task, _, _ = create_task(client, auth_headers, created["id"], raw_markdown, "Hello")
+
+    client.post(
+        "/api/tasks/next",
+        headers=auth_headers,
+        json={"agent_name": "agent-one"},
+    )
+    client.post(
+        f"/api/tasks/{task['id']}/complete",
+        headers=auth_headers,
+        json={"result": "Hi", "error_message": None},
+    )
 
     update_response = client.put(
         f"/api/docs/{created['id']}",
@@ -1141,8 +1270,8 @@ def test_task_recover_requeue_from_current_creates_new_pending_task(client, auth
     assert recover_response.status_code == 200
     data = recover_response.json()["data"]
     assert data["mode"] == "requeue_from_current"
-    assert data["closed_source_status"] == "cancelled"
-    assert data["source_task"]["status"] == "cancelled"
+    assert data["closed_source_status"] == "rejected"
+    assert data["source_task"]["status"] == "rejected"
     assert data["new_task"]["status"] == "pending"
     assert data["new_task"]["doc_revision"] == 2
     assert data["new_task"]["source_text"] == "Hallo"
@@ -1153,7 +1282,7 @@ def test_task_recover_requeue_from_current_creates_new_pending_task(client, auth
     )
     assert list_response.status_code == 200
     statuses = {item["id"]: item["status"] for item in list_response.json()["data"]}
-    assert statuses[task["id"]] == "cancelled"
+    assert statuses[task["id"]] == "rejected"
     assert data["new_task"]["id"] in statuses
 
 
@@ -1185,7 +1314,7 @@ def test_task_recover_with_relocate_mode_updates_offsets(client, auth_headers):
     assert recover_response.status_code == 200
     data = recover_response.json()["data"]
     assert data["mode"] == "relocate"
-    assert data["relocation_strategy"] == "same_block_position_match"
+    assert data["relocation_strategy"] == "current_selection_match"
     assert data["new_task"] is None
     assert data["source_task"]["start_offset"] > start_offset
     assert data["source_task"]["end_offset"] > end_offset
@@ -1497,12 +1626,16 @@ def test_retry_flow_still_conflicts_after_second_manual_edit(client, auth_header
     assert diff_data["conflict_reason"] == "source_changed"
 
 
-def test_cleanup_stale_tasks_closes_outdated_pending_and_done_tasks(client, auth_headers):
+def test_cleanup_stale_tasks_closes_outdated_pending_and_done_tasks(
+    client, auth_headers
+):
     raw_markdown = "# Title\n## Section\nHello world\n"
     created = create_document(client, auth_headers, raw_markdown)
     doc_id = created["id"]
 
-    pending_task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "world")
+    pending_task, _, _ = create_task(
+        client, auth_headers, doc_id, raw_markdown, "world"
+    )
     done_task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "Hello")
 
     client.post(
@@ -1560,7 +1693,9 @@ def test_cleanup_stale_tasks_closes_outdated_pending_and_done_tasks(client, auth
         "unchanged": 0,
     }
 
-    pending_response = client.get(f"/api/tasks/{pending_task['id']}", headers=auth_headers)
+    pending_response = client.get(
+        f"/api/tasks/{pending_task['id']}", headers=auth_headers
+    )
     assert pending_response.status_code == 200
     assert pending_response.json()["data"]["status"] == "cancelled"
 
@@ -1569,7 +1704,9 @@ def test_cleanup_stale_tasks_closes_outdated_pending_and_done_tasks(client, auth
     assert done_response.json()["data"]["status"] == "rejected"
 
 
-def test_accepted_task_is_not_marked_stale_after_later_document_edits(client, auth_headers):
+def test_accepted_task_is_not_marked_stale_after_later_document_edits(
+    client, auth_headers
+):
     raw_markdown = "# Title\n## Section\nHello world\n"
     created = create_document(client, auth_headers, raw_markdown)
     doc_id = created["id"]
@@ -1621,7 +1758,9 @@ def test_accepted_task_is_not_marked_stale_after_later_document_edits(client, au
     assert diff_response.json()["data"]["can_accept"] is False
 
 
-def test_rejected_task_is_not_marked_stale_after_later_document_edits(client, auth_headers):
+def test_rejected_task_is_not_marked_stale_after_later_document_edits(
+    client, auth_headers
+):
     raw_markdown = "# Title\n## Section\nHello world\n"
     created = create_document(client, auth_headers, raw_markdown)
     doc_id = created["id"]
@@ -1793,7 +1932,9 @@ def test_diff_returns_recommended_action_for_stale_done_task(client, auth_header
     doc_id = created["id"]
     task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "Hello")
 
-    client.post("/api/tasks/next", headers=auth_headers, json={"agent_name": "agent-one"})
+    client.post(
+        "/api/tasks/next", headers=auth_headers, json={"agent_name": "agent-one"}
+    )
     client.post(
         f"/api/tasks/{task['id']}/complete",
         headers=auth_headers,
@@ -1826,7 +1967,9 @@ def test_diff_returns_no_recommended_action_for_clean_done_task(client, auth_hea
     doc_id = created["id"]
     task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "Hello")
 
-    client.post("/api/tasks/next", headers=auth_headers, json={"agent_name": "agent-one"})
+    client.post(
+        "/api/tasks/next", headers=auth_headers, json={"agent_name": "agent-one"}
+    )
     client.post(
         f"/api/tasks/{task['id']}/complete",
         headers=auth_headers,
@@ -2095,12 +2238,16 @@ def test_accept_task_rejects_already_accepted_task(client, auth_headers):
     assert response.json()["error"]["code"] == "invalid_state"
 
 
-def test_accept_task_relocates_following_done_task_after_document_revision_change(client, auth_headers):
+def test_accept_task_relocates_following_done_task_after_document_revision_change(
+    client, auth_headers
+):
     raw_markdown = "# Heading\nAlpha\nBeta\n"
     created = create_document(client, auth_headers, raw_markdown)
     doc_id = created["id"]
     first_task, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "Alpha")
-    second_task, _, second_end = create_task(client, auth_headers, doc_id, raw_markdown, "Beta")
+    second_task, _, second_end = create_task(
+        client, auth_headers, doc_id, raw_markdown, "Beta"
+    )
 
     client.post(
         "/api/tasks/next",
@@ -2130,7 +2277,9 @@ def test_accept_task_relocates_following_done_task_after_document_revision_chang
     )
     assert accept_response.status_code == 200
 
-    second_task_response = client.get(f"/api/tasks/{second_task['id']}", headers=auth_headers)
+    second_task_response = client.get(
+        f"/api/tasks/{second_task['id']}", headers=auth_headers
+    )
     assert second_task_response.status_code == 200
     second_task_data = second_task_response.json()["data"]
     assert second_task_data["status"] == "done"
@@ -2139,7 +2288,9 @@ def test_accept_task_relocates_following_done_task_after_document_revision_chang
     assert second_task_data["stale_reason"] is None
     assert second_task_data["end_offset"] > second_end
 
-    second_diff_response = client.get(f"/api/tasks/{second_task['id']}/diff", headers=auth_headers)
+    second_diff_response = client.get(
+        f"/api/tasks/{second_task['id']}/diff", headers=auth_headers
+    )
     assert second_diff_response.status_code == 200
     assert second_diff_response.json()["data"]["can_accept"] is True
 
@@ -2549,7 +2700,9 @@ def test_accept_noop_after_manual_edit_does_not_signal_document_changed(
     )
 
     # Pick up and complete the task with result == source_text (no-op accept)
-    client.post("/api/tasks/next", headers=auth_headers, json={"agent_name": "agent-one"})
+    client.post(
+        "/api/tasks/next", headers=auth_headers, json={"agent_name": "agent-one"}
+    )
     client.post(
         f"/api/tasks/{task_data['id']}/complete",
         headers=auth_headers,
@@ -2589,7 +2742,9 @@ def test_accept_with_changed_result_signals_document_changed(
     doc_id = created["id"]
     task_data, _, _ = create_task(client, auth_headers, doc_id, raw_markdown, "Hello")
 
-    client.post("/api/tasks/next", headers=auth_headers, json={"agent_name": "agent-one"})
+    client.post(
+        "/api/tasks/next", headers=auth_headers, json={"agent_name": "agent-one"}
+    )
     client.post(
         f"/api/tasks/{task_data['id']}/complete",
         headers=auth_headers,
@@ -2629,7 +2784,9 @@ def test_ui_contains_visibilitychange_listener(client):
     """The UI page should register a visibilitychange event listener for auto-refresh."""
     response = client.get("/")
     assert response.status_code == 200
-    assert "addEventListener('visibilitychange', updateAutoRefreshPill)" in response.text
+    assert (
+        "addEventListener('visibilitychange', updateAutoRefreshPill)" in response.text
+    )
 
 
 def test_ui_relocation_strategy_uses_i18n(client):

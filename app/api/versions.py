@@ -9,9 +9,13 @@ from app.db import get_db
 from app.schemas.versions import RollbackRequest
 from app.services.document_service import DocumentService
 from app.services.task_events import task_event_broker
+from app.services.task_service import TaskService
 
-router = APIRouter(prefix="/api/docs", tags=["versions"], dependencies=[Depends(require_api_key)])
+router = APIRouter(
+    prefix="/api/docs", tags=["versions"], dependencies=[Depends(require_api_key)]
+)
 service = DocumentService()
+task_service = TaskService()
 
 
 @router.get("/{doc_id}/versions")
@@ -36,10 +40,20 @@ def rollback_version(
         actor=payload.actor,
         note=payload.note,
     )
+    if document.revision != payload.expected_revision:
+        task_service.sync_tasks_after_document_change(
+            db,
+            document_id=document.id,
+            raw_markdown=document.raw_markdown,
+            revision=document.revision,
+        )
     task_event_broker.publish_document(
         kind="rolled_back",
         doc_id=document.id,
         revision=document.revision,
     )
     blocks = service.parse_document(document.raw_markdown)
-    return {"ok": True, "data": serialize_document(document, blocks).model_dump(mode="json")}
+    return {
+        "ok": True,
+        "data": serialize_document(document, blocks).model_dump(mode="json"),
+    }

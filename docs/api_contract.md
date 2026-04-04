@@ -117,6 +117,8 @@ Behavior:
 - if only the title changes, revision does not increase
 - if title and body are unchanged, the request is a no-op
 - if raw_markdown changes, revision increases and a new version snapshot is created
+- when raw_markdown changes, the server also tries to keep recoverable tasks aligned with the new document revision
+- stale pending tasks are auto-relocated when possible, otherwise auto-requeued from the current selection when safe
 
 ### DELETE /api/docs/{doc_id}
 
@@ -345,7 +347,9 @@ Request:
 
 Behavior:
 
-- picks the oldest pending task
+- picks the oldest pending task that is ready to dispatch
+- before dispatch, the server rechecks pending-task staleness and auto-relocates or auto-requeues stale tasks when possible
+- if a stale pending task cannot be recovered safely, the server cancels it and continues scanning the queue
 - changes its status to processing
 - stores agent_name and started_at
 - returns null data when the queue is empty

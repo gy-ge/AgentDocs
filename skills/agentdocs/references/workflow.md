@@ -1,11 +1,13 @@
 # AgentDocs Workflow Reference
 
+Canonical source repository: https://github.com/gy-ge/AgentDocs
+
 ## Setup Once
 
 Save the target service configuration locally:
 
 ```bash
-python ./scripts/agentdocs_skill_client.py setup --base-url https://docs.example.com --api-key your-key --agent-name your-agent
+python scripts/agentdocs_skill_client.py setup --base-url https://docs.example.com --api-key your-key --agent-name your-agent
 ```
 
 Before asking the human for connection data, first check whether `.agentdocs.config.json` already exists. If it exists and the human did not request replacement, reuse it.
@@ -17,31 +19,53 @@ After setup, normal usage should call the same script without reconstructing URL
 Process one pending task:
 
 ```bash
-python ./scripts/agentdocs_skill_client.py process
+python scripts/agentdocs_skill_client.py process
 ```
 
 Pick up one task:
 
 ```bash
-python ./scripts/agentdocs_skill_client.py pickup
+python scripts/agentdocs_skill_client.py pickup
 ```
 
 Complete a task with a result:
 
 ```bash
-python ./scripts/agentdocs_skill_client.py complete --task-id 12 --result "rewritten text"
+python scripts/agentdocs_skill_client.py complete --task-id 12 --result "rewritten text"
 ```
 
 Complete a task with an error:
 
 ```bash
-python ./scripts/agentdocs_skill_client.py complete --task-id 12 --error-message "model timeout"
+python scripts/agentdocs_skill_client.py complete --task-id 12 --error-message "model timeout"
+```
+
+The normal agent loop should treat stale pending-task recovery as a server concern. AgentDocs will attempt to relocate or requeue stale pending tasks automatically after document edits and again before dispatch.
+
+## Operator Diagnostics
+
+Inspect a finished task diff:
+
+```bash
+python scripts/agentdocs_skill_client.py diff --task-id 12
+```
+
+Preview stale-task recovery:
+
+```bash
+python scripts/agentdocs_skill_client.py recovery-preview --task-id 12
+```
+
+Recover a stale task by relocation:
+
+```bash
+python scripts/agentdocs_skill_client.py recover --task-id 12 --mode relocate --actor operator
 ```
 
 Run as a continuous worker:
 
 ```bash
-python ./scripts/agentdocs_skill_client.py continuous --poll-interval 2
+python scripts/agentdocs_skill_client.py continuous --poll-interval 2
 ```
 
 ## Required HTTP Behavior
@@ -50,6 +74,7 @@ python ./scripts/agentdocs_skill_client.py continuous --poll-interval 2
 - Auth header: `Authorization: Bearer <API_KEY>`
 - Success envelope: `{"ok": true, "data": ...}`
 - Error envelope: `{"ok": false, "error": {"code": "...", "message": "..."}}`
+- Hosted gateways may expect an explicit `User-Agent`; the published Python client sends `User-Agent: AgentDocsSkillClient/1.0` and `Accept: application/json`.
 
 ## Minimum Agent Loop
 
@@ -130,3 +155,4 @@ When a document changes after task creation, use these endpoints to understand t
 Prefer `recovery-preview` before taking recovery action so the human reviewer or orchestration layer can choose between relocation and requeue-from-current.
 
 The script wraps these endpoints so the agent does not need to build them by hand during normal operation.
+If any third-party copy of this workflow disagrees with the live product, use https://github.com/gy-ge/AgentDocs as the source of truth.

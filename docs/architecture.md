@@ -12,7 +12,7 @@ What the system does:
 - Lets an external agent poll for work, submit a result, or report failure
 - Pushes authenticated task and document updates to the browser through an SSE stream
 - Requires a human-driven accept step before agent output changes the document, including batch preview before bulk merges and rollback after review
-- Detects stale tasks and supports cleanup, relocation, preview, and requeue-from-current recovery
+- Detects stale tasks, auto-syncs recoverable tasks after document changes, auto-recovers pending tasks before dispatch, and still exposes cleanup / preview / manual recovery tools for operators
 
 What the system does not do:
 
@@ -65,8 +65,9 @@ Stale checks apply to pending, processing, and done tasks.
 
 - If the current document slice still matches source_text and source_hash, the task is not stale.
 - If it does not match, the backend reports one of selection_removed, selection_shifted, or source_changed.
+- When document content changes, the server tries to keep recoverable tasks aligned immediately; pending tasks may be auto-relocated or auto-requeued without agent involvement.
 - Relocation first tries the original block position, then a unique same-heading block, then a unique document-wide text match.
-- If relocation is not enough, the recover endpoint can close the old task and create a new pending task from the current selection range.
+- If relocation is not enough, pending tasks can be auto-requeued from the current selection, and the recover endpoint remains available for operator-led recovery of stale non-pending tasks.
 
 ## Main Components
 

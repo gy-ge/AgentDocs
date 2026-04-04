@@ -20,7 +20,14 @@ from app.time_utils import utcnow
 class TaskService:
     TASK_CONTEXT_WINDOW = 200
     RELOCATABLE_STATUSES = {"pending", "done", "failed", "cancelled", "rejected"}
-    RECOVERABLE_STATUSES = {"pending", "processing", "done", "failed", "cancelled", "rejected"}
+    RECOVERABLE_STATUSES = {
+        "pending",
+        "processing",
+        "done",
+        "failed",
+        "cancelled",
+        "rejected",
+    }
 
     def __init__(self) -> None:
         self.document_service = DocumentService()
@@ -46,13 +53,17 @@ class TaskService:
             "recommended_action": self._recommended_action(task.status, is_stale),
         }
 
-    def describe_tasks(self, db: Session, tasks: list[Task]) -> dict[int, dict[str, object]]:
+    def describe_tasks(
+        self, db: Session, tasks: list[Task]
+    ) -> dict[int, dict[str, object]]:
         documents: dict[int, str] = {}
         descriptions: dict[int, dict[str, object]] = {}
         for task in tasks:
             raw_markdown = documents.get(task.doc_id)
             if raw_markdown is None:
-                raw_markdown = self.document_service.get_document(db, task.doc_id).raw_markdown
+                raw_markdown = self.document_service.get_document(
+                    db, task.doc_id
+                ).raw_markdown
                 documents[task.doc_id] = raw_markdown
             is_stale, stale_reason = self._describe_stale_state(task, raw_markdown)
             descriptions[task.id] = {
@@ -84,7 +95,9 @@ class TaskService:
 
         document = self.document_service.get_document(db, task.doc_id)
         current_text = self._current_text(document.raw_markdown, task)
-        is_stale, conflict_reason = self._describe_stale_state(task, document.raw_markdown)
+        is_stale, conflict_reason = self._describe_stale_state(
+            task, document.raw_markdown
+        )
         can_accept = task.status == "done" and not is_stale
         diff = "\n".join(
             unified_diff(
@@ -121,7 +134,9 @@ class TaskService:
         document = self.document_service.get_document(db, doc_id)
         if document.revision != doc_revision:
             raise ApiError(409, "conflict", "document revision mismatch")
-        self._validate_range(document.raw_markdown, source_text, start_offset, end_offset)
+        self._validate_range(
+            document.raw_markdown, source_text, start_offset, end_offset
+        )
         self._validate_single_block(document.raw_markdown, start_offset, end_offset)
 
         task = Task(
@@ -141,21 +156,26 @@ class TaskService:
         return task
 
     def pickup_next_task(self, db: Session, agent_name: str) -> Task | None:
-        task = (
-            db.query(Task)
-            .filter(Task.status == "pending")
-            .order_by(Task.created_at.asc(), Task.id.asc())
-            .first()
-        )
-        if task is None:
-            return None
+        while True:
+            task = (
+                db.query(Task)
+                .filter(Task.status == "pending")
+                .order_by(Task.created_at.asc(), Task.id.asc())
+                .first()
+            )
+            if task is None:
+                return None
 
-        task.status = "processing"
-        task.agent_name = agent_name
-        task.started_at = utcnow()
-        db.commit()
-        db.refresh(task)
-        return task
+            prepared_task = self._prepare_pending_task_for_pickup(db, task)
+            if prepared_task is None:
+                continue
+
+            prepared_task.status = "processing"
+            prepared_task.agent_name = agent_name
+            prepared_task.started_at = utcnow()
+            db.commit()
+            db.refresh(prepared_task)
+            return prepared_task
 
     def complete_task(
         self,
@@ -215,7 +235,9 @@ class TaskService:
         limit: int | None = None,
     ) -> dict[str, object]:
         document = self.document_service.get_document(db, doc_id)
-        self._validate_batch_accept_filters(start_offset=start_offset, end_offset=end_offset)
+        self._validate_batch_accept_filters(
+            start_offset=start_offset, end_offset=end_offset
+        )
         tasks = self._list_batch_accept_tasks(
             db,
             doc_id=doc_id,
@@ -242,7 +264,9 @@ class TaskService:
                 skipped_tasks.append({"task_id": task.id, "reason": "task_stale"})
                 continue
             try:
-                self._apply_task_accept(db, document, task, actor=actor, note=note or "bulk accept")
+                self._apply_task_accept(
+                    db, document, task, actor=actor, note=note or "bulk accept"
+                )
             except ApiError as exc:
                 skipped_tasks.append({"task_id": task.id, "reason": exc.code})
                 continue
@@ -270,7 +294,9 @@ class TaskService:
         limit: int | None = None,
     ) -> dict[str, object]:
         document = self.document_service.get_document(db, doc_id)
-        self._validate_batch_accept_filters(start_offset=start_offset, end_offset=end_offset)
+        self._validate_batch_accept_filters(
+            start_offset=start_offset, end_offset=end_offset
+        )
         tasks = self._list_batch_accept_tasks(
             db,
             doc_id=doc_id,
@@ -323,13 +349,18 @@ class TaskService:
         if task.status == "processing":
             raise ApiError(409, "invalid_state", "processing task cannot be relocated")
         if task.status == "accepted":
-            raise ApiError(409, "invalid_state", "accepted task does not need relocation")
+            raise ApiError(
+                409, "invalid_state", "accepted task does not need relocation"
+            )
         if task.status not in self.RELOCATABLE_STATUSES:
             raise ApiError(409, "invalid_state", "task cannot be relocated")
 
         document = self.document_service.get_document(db, task.doc_id)
         current_text = self._current_text(document.raw_markdown, task)
-        if current_text == task.source_text and self._hash_text(current_text) == task.source_hash:
+        if (
+            current_text == task.source_text
+            and self._hash_text(current_text) == task.source_hash
+        ):
             task.doc_revision = document.revision
             db.commit()
             db.refresh(task)
@@ -337,7 +368,9 @@ class TaskService:
 
         relocation = self._find_relocation_target(db, task, document.raw_markdown)
         if relocation is None:
-            raise ApiError(409, "conflict", "unable to relocate task on current document")
+            raise ApiError(
+                409, "conflict", "unable to relocate task on current document"
+            )
 
         task.start_offset = relocation["start_offset"]
         task.end_offset = relocation["end_offset"]
@@ -351,7 +384,9 @@ class TaskService:
         document = self.document_service.get_document(db, task.doc_id)
         is_stale, stale_reason = self._describe_stale_state(task, document.raw_markdown)
         start_offset, end_offset = self._selection_bounds(document.raw_markdown, task)
-        relocation_strategy = self._detect_relocation_strategy(db, task, document.raw_markdown)
+        relocation_strategy = self._detect_relocation_strategy(
+            db, task, document.raw_markdown
+        )
         can_requeue, requeue_reason = self._can_requeue_from_current(
             task,
             raw_markdown=document.raw_markdown,
@@ -423,7 +458,9 @@ class TaskService:
             is_stale=is_stale,
         )
         if not can_requeue:
-            raise ApiError(409, "conflict", requeue_reason or "task cannot be recovered")
+            raise ApiError(
+                409, "conflict", requeue_reason or "task cannot be recovered"
+            )
 
         now = utcnow()
         closed_source_status = self._close_task_for_requeue(task, now=now)
@@ -538,6 +575,51 @@ class TaskService:
             "unchanged": unchanged,
         }
 
+    def sync_tasks_after_document_change(
+        self,
+        db: Session,
+        *,
+        document_id: int,
+        raw_markdown: str,
+        revision: int,
+    ) -> dict[str, int]:
+        related_tasks = (
+            db.query(Task)
+            .filter(Task.doc_id == document_id)
+            .filter(Task.status.in_(self.RELOCATABLE_STATUSES))
+            .order_by(Task.id.asc())
+            .all()
+        )
+        synchronized = 0
+        relocated = 0
+        recreated = 0
+        unchanged = 0
+
+        for related_task in related_tasks:
+            outcome, _ = self._sync_task_reference_to_document(
+                db,
+                task=related_task,
+                raw_markdown=raw_markdown,
+                revision=revision,
+                allow_requeue=related_task.status == "pending",
+            )
+            if outcome == "synchronized":
+                synchronized += 1
+            elif outcome == "relocated":
+                relocated += 1
+            elif outcome == "recreated":
+                recreated += 1
+            else:
+                unchanged += 1
+
+        db.commit()
+        return {
+            "synchronized": synchronized,
+            "relocated": relocated,
+            "recreated": recreated,
+            "unchanged": unchanged,
+        }
+
     def _validate_batch_accept_filters(
         self,
         *,
@@ -545,8 +627,12 @@ class TaskService:
         end_offset: int | None,
     ) -> None:
         if (start_offset is None) != (end_offset is None):
-            raise ApiError(422, "validation_error", "provide both start_offset and end_offset")
-        if start_offset is not None and (start_offset < 0 or end_offset is None or end_offset <= start_offset):
+            raise ApiError(
+                422, "validation_error", "provide both start_offset and end_offset"
+            )
+        if start_offset is not None and (
+            start_offset < 0 or end_offset is None or end_offset <= start_offset
+        ):
             raise ApiError(422, "validation_error", "invalid batch range")
 
     def _list_batch_accept_tasks(
@@ -559,11 +645,15 @@ class TaskService:
         end_offset: int | None,
         limit: int | None,
     ) -> list[Task]:
-        query = db.query(Task).filter(Task.doc_id == doc_id).filter(Task.status == "done")
+        query = (
+            db.query(Task).filter(Task.doc_id == doc_id).filter(Task.status == "done")
+        )
         if action is not None:
             query = query.filter(Task.action == action)
         if start_offset is not None and end_offset is not None:
-            query = query.filter(Task.start_offset >= start_offset).filter(Task.end_offset <= end_offset)
+            query = query.filter(Task.start_offset >= start_offset).filter(
+                Task.end_offset <= end_offset
+            )
         query = query.order_by(Task.start_offset.desc(), Task.id.desc())
         if limit is not None:
             query = query.limit(limit)
@@ -693,6 +783,7 @@ class TaskService:
                 task=related_task,
                 raw_markdown=raw_markdown,
                 revision=revision,
+                allow_requeue=related_task.status == "pending",
             )
 
     def _sync_task_reference_to_document(
@@ -702,19 +793,89 @@ class TaskService:
         task: Task,
         raw_markdown: str,
         revision: int,
-    ) -> None:
+        allow_requeue: bool = False,
+    ) -> tuple[str, Task | None]:
         current_text = self._current_text(raw_markdown, task)
-        if current_text == task.source_text and self._hash_text(current_text) == task.source_hash:
+        if (
+            current_text == task.source_text
+            and self._hash_text(current_text) == task.source_hash
+        ):
             task.doc_revision = revision
-            return
+            return "synchronized", task
 
         relocation = self._find_relocation_target(db, task, raw_markdown)
         if relocation is None:
-            return
+            if allow_requeue:
+                recreated_task = self._requeue_task_from_current_selection(
+                    db,
+                    task=task,
+                    raw_markdown=raw_markdown,
+                    revision=revision,
+                )
+                if recreated_task is not None:
+                    return "recreated", recreated_task
+            return "unchanged", task
 
         task.start_offset = int(relocation["start_offset"])
         task.end_offset = int(relocation["end_offset"])
         task.doc_revision = revision
+        return "relocated", task
+
+    def _prepare_pending_task_for_pickup(self, db: Session, task: Task) -> Task | None:
+        document = self.document_service.get_document(db, task.doc_id)
+        outcome, prepared_task = self._sync_task_reference_to_document(
+            db,
+            task=task,
+            raw_markdown=document.raw_markdown,
+            revision=document.revision,
+            allow_requeue=True,
+        )
+        if outcome == "recreated":
+            db.commit()
+            return None
+        if outcome == "unchanged":
+            task.status = "cancelled"
+            task.resolved_at = utcnow()
+            db.commit()
+            return None
+        return prepared_task
+
+    def _requeue_task_from_current_selection(
+        self,
+        db: Session,
+        *,
+        task: Task,
+        raw_markdown: str,
+        revision: int,
+    ) -> Task | None:
+        start_offset, end_offset = self._selection_bounds(raw_markdown, task)
+        can_requeue, _ = self._can_requeue_from_current(
+            task,
+            raw_markdown=raw_markdown,
+            start_offset=start_offset,
+            end_offset=end_offset,
+            is_stale=True,
+        )
+        if not can_requeue:
+            return None
+
+        current_selection_text = raw_markdown[start_offset:end_offset]
+        now = utcnow()
+        self._close_task_for_requeue(task, now=now)
+        new_task = Task(
+            doc_id=task.doc_id,
+            doc_revision=revision,
+            start_offset=start_offset,
+            end_offset=end_offset,
+            source_text=current_selection_text,
+            source_hash=self._hash_text(current_selection_text),
+            action=task.action,
+            instruction=task.instruction,
+            status="pending",
+        )
+        db.add(new_task)
+        db.flush()
+        return new_task
 
     def _current_text(self, raw_markdown: str, task: Task) -> str:
         start, end = self._selection_bounds(raw_markdown, task)
@@ -743,14 +904,20 @@ class TaskService:
             "current_selection_text": raw_markdown[start:end],
             "block": block_data,
             "block_markdown": block_markdown,
-            "heading_path": self._build_heading_path(blocks, block.position if block is not None else None),
+            "heading_path": self._build_heading_path(
+                blocks, block.position if block is not None else None
+            ),
             "document_outline": [
                 self._serialize_heading(block_item)
                 for block_item in blocks
                 if block_item.heading
             ],
-            "context_before": raw_markdown[max(0, start - self.TASK_CONTEXT_WINDOW) : start],
-            "context_after": raw_markdown[end : min(len(raw_markdown), end + self.TASK_CONTEXT_WINDOW)],
+            "context_before": raw_markdown[
+                max(0, start - self.TASK_CONTEXT_WINDOW) : start
+            ],
+            "context_after": raw_markdown[
+                end : min(len(raw_markdown), end + self.TASK_CONTEXT_WINDOW)
+            ],
         }
 
     def _selection_bounds(self, raw_markdown: str, task: Task) -> tuple[int, int]:
@@ -760,7 +927,9 @@ class TaskService:
 
     def _find_matching_block(self, raw_markdown: str, task: Task):
         start, end = self._selection_bounds(raw_markdown, task)
-        return self._find_matching_block_from_blocks(parse_blocks(raw_markdown), start, end)
+        return self._find_matching_block_from_blocks(
+            parse_blocks(raw_markdown), start, end
+        )
 
     def _serialize_task_payload(
         self,
@@ -807,7 +976,10 @@ class TaskService:
             return None
 
         current_text = self._current_text(raw_markdown, task)
-        if current_text == task.source_text and self._hash_text(current_text) == task.source_hash:
+        if (
+            current_text == task.source_text
+            and self._hash_text(current_text) == task.source_hash
+        ):
             document = self.document_service.get_document(db, task.doc_id)
             if task.doc_revision != document.revision:
                 return "current_selection_match"
@@ -881,7 +1053,9 @@ class TaskService:
             "position": block.position,
         }
 
-    def _build_heading_path(self, blocks, current_position: int | None) -> list[dict[str, object]]:
+    def _build_heading_path(
+        self, blocks, current_position: int | None
+    ) -> list[dict[str, object]]:
         if current_position is None:
             return []
 
@@ -899,13 +1073,17 @@ class TaskService:
     def _find_relocation_target(
         self, db: Session, task: Task, raw_markdown: str
     ) -> dict[str, object] | None:
-        original_snapshot = self._snapshot_for_revision(db, task.doc_id, task.doc_revision)
+        original_snapshot = self._snapshot_for_revision(
+            db, task.doc_id, task.doc_revision
+        )
         original_block = None
         if original_snapshot is not None:
             original_block = self._find_matching_block(original_snapshot, task)
 
         if original_block is not None:
-            candidate = self._find_same_block_relocation(raw_markdown, task.source_text, original_block)
+            candidate = self._find_same_block_relocation(
+                raw_markdown, task.source_text, original_block
+            )
             if candidate is not None:
                 return candidate
 
@@ -950,7 +1128,8 @@ class TaskService:
         heading_matches = [
             block
             for block in blocks
-            if block.heading == original_block.heading and block.level == original_block.level
+            if block.heading == original_block.heading
+            and block.level == original_block.level
         ]
         if len(heading_matches) != 1:
             return None
@@ -1027,7 +1206,10 @@ class TaskService:
 
     def _detect_stale(self, task: Task, raw_markdown: str) -> tuple[bool, str | None]:
         current_text = self._current_text(raw_markdown, task)
-        if current_text == task.source_text and self._hash_text(current_text) == task.source_hash:
+        if (
+            current_text == task.source_text
+            and self._hash_text(current_text) == task.source_hash
+        ):
             return False, None
         return True, self._build_conflict_reason(task, raw_markdown)
 

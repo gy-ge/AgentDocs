@@ -117,6 +117,8 @@ Base URL：
 - 如果只改标题，不增加 revision
 - 如果标题和正文都没变，视为 no-op
 - 如果 raw_markdown 变化，会增加 revision 并创建新版本快照
+- 当 raw_markdown 变化时，服务端还会尽量把可恢复任务同步到新的文档 revision
+- 对于 stale 的 pending 任务，能重定位就自动重定位；不能重定位但当前选区可安全重建时，会自动按当前选区重建
 
 ### DELETE /api/docs/{doc_id}
 
@@ -345,7 +347,9 @@ context 字段包括：
 
 行为：
 
-- 领取最早的一条 pending 任务
+- 领取当前最早且可安全派发的一条 pending 任务
+- 派发前，服务端会再次检查 pending 任务是否 stale，并在可能时自动重定位或自动重建
+- 如果 stale 的 pending 任务无法安全恢复，服务端会先把它取消，再继续扫描队列
 - 把状态改成 processing
 - 记录 agent_name 和 started_at
 - 如果队列为空，返回 data: null

@@ -239,4 +239,4 @@ The external agent protocol is intentionally small.
 
 Action and instruction are free-form strings. Typical action names in this repository are rewrite, translate, summarize, extract, and fix.
 
-If you want the published AgentDocs integration skill package for this protocol, see [skills/agentdocs-integration/SKILL.md](skills/agentdocs-integration/SKILL.md). It includes a runnable HTTP smoke-test client at [skills/agentdocs-integration/scripts/agentdocs_skill_client.py](skills/agentdocs-integration/scripts/agentdocs_skill_client.py).
+If you want the published AgentDocs skill package for this protocol, see [skills/agentdocs/SKILL.md](skills/agentdocs/SKILL.md). The canonical source is https://github.com/gy-ge/AgentDocs, and it includes a runnable HTTP smoke-test client at [skills/agentdocs/scripts/agentdocs_skill_client.py](skills/agentdocs/scripts/agentdocs_skill_client.py).

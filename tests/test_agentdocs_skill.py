@@ -12,7 +12,7 @@ import pytest
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-SKILL_DIR = PROJECT_ROOT / "skills" / "agentdocs-integration"
+SKILL_DIR = PROJECT_ROOT / "skills" / "agentdocs"
 SKILL_FILE = SKILL_DIR / "SKILL.md"
 SCRIPT_FILE = SKILL_DIR / "scripts" / "agentdocs_skill_client.py"
 VENV_PYTHON = PROJECT_ROOT / ".venv" / "Scripts" / "python.exe"
@@ -167,16 +167,74 @@ def _create_document_and_task(
     return int(task["id"])
 
 
+def _create_document(base_url: str, *, title: str, raw_markdown: str) -> dict:
+    return _api_request(
+        base_url,
+        "/api/docs",
+        method="POST",
+        payload={
+            "title": title,
+            "raw_markdown": raw_markdown,
+            "actor": "skill-test",
+        },
+    )
+
+
+def _create_task(base_url: str, *, doc_id: int, raw_markdown: str, needle: str) -> int:
+    start_offset = raw_markdown.index(needle)
+    end_offset = start_offset + len(needle)
+    task = _api_request(
+        base_url,
+        f"/api/docs/{doc_id}/tasks",
+        method="POST",
+        payload={
+            "action": "rewrite",
+            "instruction": "make it tighter",
+            "source_text": needle,
+            "start_offset": start_offset,
+            "end_offset": end_offset,
+            "doc_revision": 1,
+        },
+    )
+    return int(task["id"])
+
+
+def _update_document(
+    base_url: str,
+    *,
+    doc_id: int,
+    title: str,
+    raw_markdown: str,
+    expected_revision: int,
+) -> dict:
+    return _api_request(
+        base_url,
+        f"/api/docs/{doc_id}",
+        method="PUT",
+        payload={
+            "title": title,
+            "raw_markdown": raw_markdown,
+            "expected_revision": expected_revision,
+            "actor": "skill-test",
+            "note": "make task stale",
+        },
+    )
+
+
 def test_skill_markdown_contains_required_frontmatter_and_assets():
     content = SKILL_FILE.read_text(encoding="utf-8")
 
     assert content.startswith("---\n")
-    assert "name: agentdocs-integration" in content
+    assert "name: agentdocs" in content
     assert "description:" in content
+    assert "https://github.com/gy-ge/AgentDocs" in content
     assert "Check whether `.agentdocs.config.json` already exists" in content
-    assert "python ./scripts/agentdocs_skill_client.py setup" in content
-    assert "python ./scripts/agentdocs_skill_client.py process" in content
-    assert "python ./scripts/agentdocs_skill_client.py continuous" in content
+    assert "python scripts/agentdocs_skill_client.py setup" in content
+    assert "python scripts/agentdocs_skill_client.py process" in content
+    assert "python scripts/agentdocs_skill_client.py continuous" in content
+    assert "python scripts/agentdocs_skill_client.py recovery-preview" in content
+    assert "python scripts/agentdocs_skill_client.py recover" in content
+    assert "server-side logic will try to repair pending tasks" in content
     assert "./scripts/agentdocs_skill_client.py" in content
     assert "./references/workflow.md" in content
 
@@ -312,3 +370,180 @@ def test_skill_client_requires_exactly_one_completion_field():
 
     with pytest.raises(ValueError):
         module.build_complete_payload(result="ok", error_message="bad")
+
+
+def test_skill_client_builds_recover_payload_without_empty_actor():
+    module = _load_skill_module()
+
+    assert module.build_recover_payload(mode="relocate", actor=None) == {
+        "mode": "relocate"
+    }
+    assert module.build_recover_payload(
+        mode="requeue_from_current", actor="skill-test"
+    ) == {"mode": "requeue_from_current", "actor": "skill-test"}
+
+
+def test_skill_client_sends_explicit_user_agent_header(monkeypatch):
+    module = _load_skill_module()
+    observed_headers: dict[str, str] = {}
+
+    class DummyResponse:
+        status = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def read(self):
+            return b'{"ok": true, "data": null}'
+
+    def fake_urlopen(req, timeout=10.0):
+        observed_headers.update(dict(req.header_items()))
+        return DummyResponse()
+
+    monkeypatch.setattr(module.request, "urlopen", fake_urlopen)
+
+    result = module._json_request(
+        "https://docs.example.com",
+        "secret-key",
+        "/api/tasks",
+        timeout=3.0,
+    )
+
+    assert result is None
+    assert observed_headers["User-agent"] == "AgentDocsSkillClient/1.0"
+    assert observed_headers["Accept"] == "application/json"
+
+
+def test_skill_client_handles_recovery_endpoints_against_live_http_stack(skill_stack):
+    module = _load_skill_module()
+    config_path = Path(skill_stack["base_url"].replace("http://", "").replace(":", "_"))
+    config_path = PROJECT_ROOT / ".pytest_cache" / f"recovery-{config_path}.json"
+    module.setup_runtime(
+        base_url=skill_stack["base_url"],
+        api_key=API_KEY,
+        agent_name="skill-recovery-agent",
+        config_path=config_path,
+    )
+
+    original_markdown = "# Recovery\n\nHello world\n"
+    document = _create_document(
+        skill_stack["base_url"],
+        title="Skill Recovery",
+        raw_markdown=original_markdown,
+    )
+    task_id = _create_task(
+        skill_stack["base_url"],
+        doc_id=int(document["id"]),
+        raw_markdown=original_markdown,
+        needle="Hello",
+    )
+
+    updated = _update_document(
+        skill_stack["base_url"],
+        doc_id=int(document["id"]),
+        title="Skill Recovery",
+        raw_markdown="# Recovery\n\nIntro\n\nHello world\n",
+        expected_revision=int(document["revision"]),
+    )
+    assert updated["revision"] == 2
+
+    preview = module.get_task_recovery_preview(task_id=task_id, config_path=config_path)
+    assert preview["is_stale"] is False
+    assert preview["can_relocate"] is False
+
+    relocated = module.relocate_one_task(task_id=task_id, config_path=config_path)
+    assert relocated["task"]["doc_revision"] == 2
+    assert relocated["relocation_strategy"] == "current_selection_match"
+    completed_first = module.process_one_task(mode="append", config_path=config_path)
+    assert completed_first is not None
+    assert completed_first["id"] == task_id
+
+    second_document = _create_document(
+        skill_stack["base_url"],
+        title="Skill Recovery Requeue",
+        raw_markdown=original_markdown,
+    )
+    second_task_id = _create_task(
+        skill_stack["base_url"],
+        doc_id=int(second_document["id"]),
+        raw_markdown=original_markdown,
+        needle="Hello",
+    )
+    completed_second = module.process_one_task(mode="append", config_path=config_path)
+    assert completed_second is not None
+    assert completed_second["id"] == second_task_id
+
+    second_updated = _update_document(
+        skill_stack["base_url"],
+        doc_id=int(second_document["id"]),
+        title="Skill Recovery Requeue",
+        raw_markdown="# Recovery Requeue\n\nHallo world\n",
+        expected_revision=int(second_document["revision"]),
+    )
+    assert second_updated["revision"] == 2
+
+    second_preview = module.get_task_recovery_preview(
+        task_id=second_task_id,
+        config_path=config_path,
+    )
+    assert second_preview["is_stale"] is True
+    assert second_preview["can_requeue_from_current"] is True
+
+    recovered = module.recover_one_task(
+        task_id=second_task_id,
+        mode="requeue_from_current",
+        actor="skill-test",
+        config_path=config_path,
+    )
+    assert recovered["mode"] == "requeue_from_current"
+    assert recovered["source_task"]["status"] == "rejected"
+    assert recovered["new_task"] is not None
+    assert recovered["new_task"]["status"] == "pending"
+
+
+def test_skill_client_processes_auto_recovered_pending_task(skill_stack):
+    module = _load_skill_module()
+    config_path = Path(skill_stack["base_url"].replace("http://", "").replace(":", "_"))
+    config_path = PROJECT_ROOT / ".pytest_cache" / f"auto-recover-{config_path}.json"
+    module.setup_runtime(
+        base_url=skill_stack["base_url"],
+        api_key=API_KEY,
+        agent_name="skill-auto-recover-agent",
+        config_path=config_path,
+    )
+
+    original_markdown = "# Auto Recover\n\nHello world\n"
+    document = _create_document(
+        skill_stack["base_url"],
+        title="Skill Auto Recover",
+        raw_markdown=original_markdown,
+    )
+    _create_task(
+        skill_stack["base_url"],
+        doc_id=int(document["id"]),
+        raw_markdown=original_markdown,
+        needle="Hello",
+    )
+
+    updated = _update_document(
+        skill_stack["base_url"],
+        doc_id=int(document["id"]),
+        title="Skill Auto Recover",
+        raw_markdown="# Auto Recover\n\nHallo world\n",
+        expected_revision=int(document["revision"]),
+    )
+    assert updated["revision"] == 2
+
+    completed_task = module.process_one_task(
+        mode="append",
+        config_path=config_path,
+    )
+
+    assert completed_task is not None
+    assert completed_task["status"] == "done"
+    assert completed_task["doc_revision"] == 2
+    assert completed_task["source_text"] == "Hallo"
+    assert completed_task["result"] == "Hallo [agentdocs-skill: make it tighter]"

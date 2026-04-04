@@ -88,7 +88,11 @@ def _json_request(
     timeout: float = 10.0,
 ) -> Any:
     body = None
-    headers = {"Authorization": f"Bearer {api_key}"}
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Accept": "application/json",
+        "User-Agent": "AgentDocsSkillClient/1.0",
+    }
     if payload is not None:
         body = json.dumps(payload).encode("utf-8")
         headers["Content-Type"] = "application/json"
@@ -135,6 +139,13 @@ def build_complete_payload(
     return {"result": result, "error_message": error_message}
 
 
+def build_recover_payload(*, mode: str, actor: str | None) -> dict[str, Any]:
+    payload: dict[str, Any] = {"mode": mode}
+    if actor:
+        payload["actor"] = actor
+    return payload
+
+
 class AgentDocsClient:
     def __init__(self, *, base_url: str, api_key: str, timeout: float = 10.0) -> None:
         self.base_url = _normalize_base_url(base_url)
@@ -151,6 +162,30 @@ class AgentDocsClient:
             timeout=self.timeout,
         )
 
+    def get_task(self, task_id: int) -> dict[str, Any]:
+        return _json_request(
+            self.base_url,
+            self.api_key,
+            f"/api/tasks/{task_id}",
+            timeout=self.timeout,
+        )
+
+    def get_task_diff(self, task_id: int) -> dict[str, Any]:
+        return _json_request(
+            self.base_url,
+            self.api_key,
+            f"/api/tasks/{task_id}/diff",
+            timeout=self.timeout,
+        )
+
+    def get_task_recovery_preview(self, task_id: int) -> dict[str, Any]:
+        return _json_request(
+            self.base_url,
+            self.api_key,
+            f"/api/tasks/{task_id}/recovery-preview",
+            timeout=self.timeout,
+        )
+
     def complete_task(
         self,
         task_id: int,
@@ -164,6 +199,31 @@ class AgentDocsClient:
             f"/api/tasks/{task_id}/complete",
             method="POST",
             payload=build_complete_payload(result=result, error_message=error_message),
+            timeout=self.timeout,
+        )
+
+    def relocate_task(self, task_id: int) -> dict[str, Any]:
+        return _json_request(
+            self.base_url,
+            self.api_key,
+            f"/api/tasks/{task_id}/relocate",
+            method="POST",
+            timeout=self.timeout,
+        )
+
+    def recover_task(
+        self,
+        task_id: int,
+        *,
+        mode: str,
+        actor: str | None = None,
+    ) -> dict[str, Any]:
+        return _json_request(
+            self.base_url,
+            self.api_key,
+            f"/api/tasks/{task_id}/recover",
+            method="POST",
+            payload=build_recover_payload(mode=mode, actor=actor),
             timeout=self.timeout,
         )
 
@@ -217,6 +277,70 @@ def complete_one_task(
         result=result,
         error_message=error_message,
     )
+
+
+def get_one_task(
+    *, task_id: int, config_path: str | Path = DEFAULT_CONFIG_PATH
+) -> dict[str, Any]:
+    config = resolve_config(config_path=config_path)
+    client = AgentDocsClient(
+        base_url=config["base_url"],
+        api_key=config["api_key"],
+        timeout=float(config["timeout"]),
+    )
+    return client.get_task(int(task_id))
+
+
+def get_task_diff(
+    *, task_id: int, config_path: str | Path = DEFAULT_CONFIG_PATH
+) -> dict[str, Any]:
+    config = resolve_config(config_path=config_path)
+    client = AgentDocsClient(
+        base_url=config["base_url"],
+        api_key=config["api_key"],
+        timeout=float(config["timeout"]),
+    )
+    return client.get_task_diff(int(task_id))
+
+
+def get_task_recovery_preview(
+    *, task_id: int, config_path: str | Path = DEFAULT_CONFIG_PATH
+) -> dict[str, Any]:
+    config = resolve_config(config_path=config_path)
+    client = AgentDocsClient(
+        base_url=config["base_url"],
+        api_key=config["api_key"],
+        timeout=float(config["timeout"]),
+    )
+    return client.get_task_recovery_preview(int(task_id))
+
+
+def relocate_one_task(
+    *, task_id: int, config_path: str | Path = DEFAULT_CONFIG_PATH
+) -> dict[str, Any]:
+    config = resolve_config(config_path=config_path)
+    client = AgentDocsClient(
+        base_url=config["base_url"],
+        api_key=config["api_key"],
+        timeout=float(config["timeout"]),
+    )
+    return client.relocate_task(int(task_id))
+
+
+def recover_one_task(
+    *,
+    task_id: int,
+    mode: str,
+    actor: str | None = None,
+    config_path: str | Path = DEFAULT_CONFIG_PATH,
+) -> dict[str, Any]:
+    config = resolve_config(config_path=config_path)
+    client = AgentDocsClient(
+        base_url=config["base_url"],
+        api_key=config["api_key"],
+        timeout=float(config["timeout"]),
+    )
+    return client.recover_task(int(task_id), mode=mode, actor=actor)
 
 
 def run_continuous(
@@ -315,6 +439,10 @@ def main() -> int:
     )
     show_config_parser.add_argument("--config-path", default=str(DEFAULT_CONFIG_PATH))
 
+    get_task_parser = subparsers.add_parser("get-task", help="Fetch one task")
+    get_task_parser.add_argument("--task-id", type=int, required=True)
+    get_task_parser.add_argument("--config-path", default=str(DEFAULT_CONFIG_PATH))
+
     pickup_parser = subparsers.add_parser("pickup", help="Pick up one pending task")
     pickup_parser.add_argument("--agent-name", default=None)
     pickup_parser.add_argument("--config-path", default=str(DEFAULT_CONFIG_PATH))
@@ -326,6 +454,32 @@ def main() -> int:
     complete_parser.add_argument("--result", default=None)
     complete_parser.add_argument("--error-message", default=None)
     complete_parser.add_argument("--config-path", default=str(DEFAULT_CONFIG_PATH))
+
+    diff_parser = subparsers.add_parser("diff", help="Fetch a finished task diff")
+    diff_parser.add_argument("--task-id", type=int, required=True)
+    diff_parser.add_argument("--config-path", default=str(DEFAULT_CONFIG_PATH))
+
+    recovery_preview_parser = subparsers.add_parser(
+        "recovery-preview", help="Preview stale-task recovery options"
+    )
+    recovery_preview_parser.add_argument("--task-id", type=int, required=True)
+    recovery_preview_parser.add_argument(
+        "--config-path", default=str(DEFAULT_CONFIG_PATH)
+    )
+
+    relocate_parser = subparsers.add_parser("relocate", help="Relocate one stale task")
+    relocate_parser.add_argument("--task-id", type=int, required=True)
+    relocate_parser.add_argument("--config-path", default=str(DEFAULT_CONFIG_PATH))
+
+    recover_parser = subparsers.add_parser("recover", help="Recover one stale task")
+    recover_parser.add_argument("--task-id", type=int, required=True)
+    recover_parser.add_argument(
+        "--mode",
+        choices=["relocate", "requeue_from_current"],
+        required=True,
+    )
+    recover_parser.add_argument("--actor", default=None)
+    recover_parser.add_argument("--config-path", default=str(DEFAULT_CONFIG_PATH))
 
     process_parser = subparsers.add_parser(
         "process", help="Pick up and complete one task"
@@ -365,6 +519,8 @@ def main() -> int:
             "config_exists": has_saved_config(args.config_path),
             "config_file": Path(args.config_path).name,
         }
+    elif args.command == "get-task":
+        result = get_one_task(task_id=args.task_id, config_path=args.config_path)
     elif args.command == "pickup":
         result = pickup_one_task(
             config_path=args.config_path,
@@ -375,6 +531,22 @@ def main() -> int:
             task_id=args.task_id,
             result=args.result,
             error_message=args.error_message,
+            config_path=args.config_path,
+        )
+    elif args.command == "diff":
+        result = get_task_diff(task_id=args.task_id, config_path=args.config_path)
+    elif args.command == "recovery-preview":
+        result = get_task_recovery_preview(
+            task_id=args.task_id,
+            config_path=args.config_path,
+        )
+    elif args.command == "relocate":
+        result = relocate_one_task(task_id=args.task_id, config_path=args.config_path)
+    elif args.command == "recover":
+        result = recover_one_task(
+            task_id=args.task_id,
+            mode=args.mode,
+            actor=args.actor,
             config_path=args.config_path,
         )
     elif args.command == "process":
