@@ -38,6 +38,69 @@ def _wait_for_http_ok(url: str, timeout: float = 20.0) -> None:
     raise RuntimeError(f"Timed out waiting for {url}")
 
 
+def _spawn_ui_stack(tmp_path, *, start_agent: bool) -> dict[str, object]:
+    db_path = tmp_path / ("ui-e2e-agent.db" if start_agent else "ui-e2e-no-agent.db")
+    port = _find_free_port()
+    base_url = f"http://127.0.0.1:{port}"
+    env = os.environ.copy()
+    env["SQLITE_PATH"] = str(db_path)
+    env["API_KEY"] = API_KEY
+    env["APP_NAME"] = "AgentDocs UI E2E"
+
+    subprocess.run(
+        [str(PYTHON_EXE), "-m", "alembic", "upgrade", "head"],
+        cwd=PROJECT_ROOT,
+        env=env,
+        check=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+    server_process = subprocess.Popen(
+        [
+            str(PYTHON_EXE),
+            "-m",
+            "uvicorn",
+            "app.main:app",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            str(port),
+        ],
+        cwd=PROJECT_ROOT,
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    _wait_for_http_ok(f"{base_url}/")
+
+    agent_process = None
+    if start_agent:
+        agent_process = subprocess.Popen(
+            [
+                str(PYTHON_EXE),
+                "scripts/simulate_agent.py",
+                "--base-url",
+                base_url,
+                "--api-key",
+                API_KEY,
+                "--continuous",
+                "--poll-interval",
+                "0.2",
+            ],
+            cwd=PROJECT_ROOT,
+            env=env,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+    return {
+        "base_url": base_url,
+        "server_process": server_process,
+        "agent_process": agent_process,
+    }
+
+
 def _terminate_process(
     process: subprocess.Popen[bytes] | subprocess.Popen[str] | None,
 ) -> None:
@@ -195,64 +258,23 @@ def test_create_doc_modal_cancel_and_confirm(ui_stack):
 
 @pytest.fixture
 def ui_stack(tmp_path):
-    db_path = tmp_path / "ui-e2e.db"
-    port = _find_free_port()
-    base_url = f"http://127.0.0.1:{port}"
-    env = os.environ.copy()
-    env["SQLITE_PATH"] = str(db_path)
-    env["API_KEY"] = API_KEY
-    env["APP_NAME"] = "AgentDocs UI E2E"
-
-    subprocess.run(
-        [str(PYTHON_EXE), "-m", "alembic", "upgrade", "head"],
-        cwd=PROJECT_ROOT,
-        env=env,
-        check=True,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-
-    server_process = subprocess.Popen(
-        [
-            str(PYTHON_EXE),
-            "-m",
-            "uvicorn",
-            "app.main:app",
-            "--host",
-            "127.0.0.1",
-            "--port",
-            str(port),
-        ],
-        cwd=PROJECT_ROOT,
-        env=env,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-    _wait_for_http_ok(f"{base_url}/")
-
-    agent_process = subprocess.Popen(
-        [
-            str(PYTHON_EXE),
-            "scripts/simulate_agent.py",
-            "--base-url",
-            base_url,
-            "--api-key",
-            API_KEY,
-            "--continuous",
-            "--poll-interval",
-            "0.2",
-        ],
-        cwd=PROJECT_ROOT,
-        env=env,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
+    stack = _spawn_ui_stack(tmp_path, start_agent=True)
 
     try:
-        yield {"base_url": base_url}
+        yield {"base_url": stack["base_url"]}
     finally:
-        _terminate_process(agent_process)
-        _terminate_process(server_process)
+        _terminate_process(stack["agent_process"])
+        _terminate_process(stack["server_process"])
+
+
+@pytest.fixture
+def ui_stack_without_agent(tmp_path):
+    stack = _spawn_ui_stack(tmp_path, start_agent=False)
+
+    try:
+        yield {"base_url": stack["base_url"]}
+    finally:
+        _terminate_process(stack["server_process"])
 
 
 def test_task_selection_action_flow_and_autosave(ui_stack):
@@ -292,16 +314,139 @@ def test_task_selection_action_flow_and_autosave(ui_stack):
         assert page.locator("#task-comment-list [data-comment-task-id]").count() == 1
         assert page.locator("#review-surface [data-review-task-id]").count() >= 1
         page.locator("#task-comment-list [data-comment-task-id]").first.click()
-        page.locator("#task-comment-list [data-comment-open]").first.wait_for(
-            timeout=5000
-        )
-        page.locator("#task-comment-list [data-comment-open]").first.click()
+        page.locator(
+            '#task-comment-list [data-comment-action="jump_to_text"]'
+        ).first.wait_for(timeout=5000)
+        page.locator(
+            '#task-comment-list [data-comment-action="jump_to_text"]'
+        ).first.click()
         selected_task_value = page.locator("#task-list").input_value()
         assert selected_task_value != ""
         selected_text = page.locator("#doc-body").evaluate(
             "el => el.value.slice(el.selectionStart, el.selectionEnd)"
         )
         assert selected_text == "Alpha beta gamma."
+
+        browser.close()
+
+
+def test_pending_comment_card_can_cancel_before_agent_pickup(ui_stack_without_agent):
+    base_url = ui_stack_without_agent["base_url"]
+    raw_markdown = "# Pending Cancel Flow\n\nHello world\n"
+    doc = _api_request(
+        base_url,
+        "/api/docs",
+        method="POST",
+        payload={
+            "title": "Pending Cancel Flow",
+            "raw_markdown": raw_markdown,
+            "actor": "browser",
+        },
+    )
+    start = raw_markdown.index("Hello")
+    task = _api_request(
+        base_url,
+        f"/api/docs/{doc['id']}/tasks",
+        method="POST",
+        payload={
+            "action": "translate",
+            "instruction": "cancel from comment rail",
+            "source_text": "Hello",
+            "start_offset": start,
+            "end_offset": start + len("Hello"),
+            "doc_revision": 1,
+        },
+    )
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        page = browser.new_page(viewport={"width": 1440, "height": 1100})
+        page.goto(base_url, wait_until="networkidle")
+
+        _save_api_key(page)
+        page.locator("#doc-selector").select_option(str(doc["id"]))
+        page.get_by_text(f"Loaded document #{doc['id']}.").wait_for(timeout=5000)
+        card = page.locator(f'#task-comment-list [data-comment-task-id="{task["id"]}"]')
+        card.wait_for(timeout=5000)
+        card.click()
+        cancel_button = page.locator(
+            f'#task-comment-list [data-comment-action="cancel"][data-comment-task-id="{task["id"]}"]'
+        )
+        cancel_button.wait_for(timeout=5000)
+        assert cancel_button.is_visible()
+        cancel_button.click()
+
+        page.wait_for_function(
+            """
+            (taskId) => {
+              const card = document.querySelector(`#task-comment-list [data-comment-task-id="${taskId}"] .task-comment-status`);
+              return !!card && (card.textContent || '').trim() === 'Cancelled';
+            }
+            """,
+            arg=task["id"],
+            timeout=5000,
+        )
+
+        browser.close()
+
+
+def test_done_comment_card_can_reject_after_agent_processing(ui_stack):
+    base_url = ui_stack["base_url"]
+    raw_markdown = "# Reject Flow\n\nHello world\n"
+    doc = _api_request(
+        base_url,
+        "/api/docs",
+        method="POST",
+        payload={
+            "title": "Reject Flow",
+            "raw_markdown": raw_markdown,
+            "actor": "browser",
+        },
+    )
+    start = raw_markdown.index("Hello")
+    task = _api_request(
+        base_url,
+        f"/api/docs/{doc['id']}/tasks",
+        method="POST",
+        payload={
+            "action": "translate",
+            "instruction": "reject from comment rail",
+            "source_text": "Hello",
+            "start_offset": start,
+            "end_offset": start + len("Hello"),
+            "doc_revision": 1,
+        },
+    )
+    _wait_for_task_status(base_url, doc["id"], "done")
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        page = browser.new_page(viewport={"width": 1440, "height": 1100})
+        page.goto(base_url, wait_until="networkidle")
+
+        _save_api_key(page)
+        page.locator("#doc-selector").select_option(str(doc["id"]))
+        page.get_by_text(f"Loaded document #{doc['id']}.").wait_for(timeout=5000)
+        card = page.locator(f'#task-comment-list [data-comment-task-id="{task["id"]}"]')
+        card.wait_for(timeout=5000)
+        card.click()
+        reject_button = page.locator(
+            f'#task-comment-list [data-comment-action="reject"][data-comment-task-id="{task["id"]}"]'
+        )
+        reject_button.wait_for(timeout=5000)
+        assert reject_button.is_visible()
+        reject_button.click()
+
+        page.wait_for_function(
+            """
+            (taskId) => {
+              const card = document.querySelector(`#task-comment-list [data-comment-task-id="${taskId}"] .task-comment-status`);
+              return !!card && (card.textContent || '').trim() === 'Rejected';
+            }
+            """,
+            arg=task["id"],
+            timeout=5000,
+        )
 
         browser.close()
 
@@ -402,7 +547,7 @@ def test_task_actions_stay_usable_on_narrow_viewport(ui_stack):
         )
         page.locator("#task-comment-list [data-comment-task-id]").first.click()
         select_text_button = page.locator(
-            "#task-comment-list [data-comment-open]"
+            '#task-comment-list [data-comment-action="jump_to_text"]'
         ).first
         assert select_text_button.is_visible()
         select_text_button.click()

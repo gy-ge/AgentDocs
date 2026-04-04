@@ -1565,11 +1565,11 @@
             const blockLabel = block?.heading || t('review_card_all');
             const actionIcon = actionIcons[task.action] || '📋';
             const recoveryPreview = state.selectedTaskDetail?.id === task.id ? state.selectedTaskRecovery : null;
-            const topActions = [`<button class="secondary" data-comment-open="${task.id}">${escapeHtml(t('jump_to_text'))}</button>`];
-            if (task.status === 'done' && !task.is_stale) {
-              topActions.push(`<button class="primary" data-comment-accept="${task.id}">${escapeHtml(t('accept'))}</button>`);
-              topActions.push(`<button class="secondary" data-comment-reject="${task.id}">${escapeHtml(t('reject'))}</button>`);
-            }
+            const topActions = buildTaskActionConfigs(task, task.id, recoveryPreview)
+              .filter((action) => action.key !== 'cleanup_stale_actions')
+              .map(
+                (action) => `<button class="${escapeHtml(action.className || 'secondary')}" data-comment-action="${escapeHtml(action.key)}" data-comment-task-id="${task.id}">${escapeHtml(action.label)}</button>`
+              );
             const resultPreview = task.result && task.result !== task.source_text
               ? `
                 <div class="task-comment-preview-group">
@@ -1637,32 +1637,24 @@
           });
         });
 
-        taskCommentListEl.querySelectorAll('[data-comment-open]').forEach((button) => {
-          const taskId = Number(button.getAttribute('data-comment-open'));
-          const task = state.tasks.find((item) => item.id === taskId);
-          if (!task) {
+        taskCommentListEl.querySelectorAll('[data-comment-action]').forEach((button) => {
+          const taskId = Number(button.getAttribute('data-comment-task-id'));
+          const actionKey = button.getAttribute('data-comment-action');
+          if (!taskId || !actionKey) {
             return;
           }
           button.addEventListener('click', (event) => {
             event.stopPropagation();
-            revealTaskSelection(task);
-            safeRun(() => selectTask(taskId));
-          });
-        });
-
-        taskCommentListEl.querySelectorAll('[data-comment-accept]').forEach((button) => {
-          const taskId = Number(button.getAttribute('data-comment-accept'));
-          button.addEventListener('click', (event) => {
-            event.stopPropagation();
-            safeRun(() => acceptTask(taskId));
-          });
-        });
-
-        taskCommentListEl.querySelectorAll('[data-comment-reject]').forEach((button) => {
-          const taskId = Number(button.getAttribute('data-comment-reject'));
-          button.addEventListener('click', (event) => {
-            event.stopPropagation();
-            safeRun(() => rejectTask(taskId));
+            if (actionKey === 'jump_to_text') {
+              const task = state.tasks.find((item) => item.id === taskId);
+              if (!task) {
+                return;
+              }
+              revealTaskSelection(task);
+              safeRun(() => selectTask(taskId));
+              return;
+            }
+            safeRun(() => handleCardAction(taskId, actionKey));
           });
         });
 
