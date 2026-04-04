@@ -5,6 +5,7 @@ import socket
 import subprocess
 import sys
 import time
+from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
 from urllib import error, request
@@ -242,12 +243,20 @@ def test_skill_markdown_contains_required_frontmatter_and_assets():
         in content
     )
     assert "CLI failures are emitted as compact JSON on stderr" in content
+    assert "UTC ISO 8601 / RFC 3339 strings with an explicit timezone marker" in content
     assert (
         "Do not call recovery-preview, relocate, or recover from the normal agent loop"
         in content
     )
     assert "./scripts/agentdocs_skill_client.py" in content
     assert "./references/workflow.md" in content
+
+
+def _assert_utc_timestamp(value: str) -> datetime:
+    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    assert parsed.tzinfo is not None
+    assert parsed.utcoffset() == timezone.utc.utcoffset(parsed)
+    return parsed
 
 
 def test_skill_client_can_save_and_load_runtime_config(tmp_path):
@@ -340,9 +349,37 @@ def test_skill_client_processes_one_task_against_live_http_stack(skill_stack):
     assert completed_task["status"] == "done"
     assert completed_task["agent_name"] == "skill-smoke-agent"
     assert completed_task["result"] == "Hello [agentdocs-skill: make it tighter]"
+    _assert_utc_timestamp(completed_task["created_at"])
+    _assert_utc_timestamp(completed_task["started_at"])
+    _assert_utc_timestamp(completed_task["completed_at"])
 
     diff_data = _api_request(skill_stack["base_url"], f"/api/tasks/{task_id}/diff")
     assert diff_data["can_accept"] is True
+
+
+def test_skill_client_reads_timezone_aware_task_timestamps(skill_stack):
+    module = _load_skill_module()
+    config_path = Path(skill_stack["base_url"].replace("http://", "").replace(":", "_"))
+    config_path = PROJECT_ROOT / ".pytest_cache" / f"tz-{config_path}.json"
+    module.setup_runtime(
+        base_url=skill_stack["base_url"],
+        api_key=API_KEY,
+        agent_name="skill-tz-agent",
+        config_path=config_path,
+    )
+    task_id = _create_document_and_task(
+        skill_stack["base_url"],
+        title="Skill Timestamp",
+        raw_markdown="# Skill Timestamp\n\nHello world\n",
+        needle="Hello",
+    )
+
+    task = module.get_one_task(task_id=task_id, config_path=config_path)
+
+    _assert_utc_timestamp(task["created_at"])
+    assert task["started_at"] is None
+    assert task["completed_at"] is None
+    assert task["resolved_at"] is None
 
 
 def test_skill_client_can_report_failure_against_live_http_stack(skill_stack):

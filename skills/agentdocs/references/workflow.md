@@ -16,6 +16,8 @@ After setup, normal usage should call the same script without reconstructing URL
 
 CLI success responses are JSON on stdout with `ok: true`, `command`, and `data`. CLI failures are JSON on stderr with `ok: false` plus an `error` object.
 
+Datetime fields returned inside `data` use UTC ISO 8601 / RFC 3339 strings with an explicit timezone marker, for example `2026-04-04T10:51:17Z`.
+
 ## Daily Commands
 
 Process one pending task:
@@ -82,6 +84,7 @@ python scripts/agentdocs_skill_client.py recover --task-id 12 --mode relocate --
 - Auth header: `Authorization: Bearer <API_KEY>`
 - Success envelope: `{"ok": true, "data": ...}`
 - Error envelope: `{"ok": false, "error": {"code": "...", "message": "..."}}`
+- Datetime payload fields use UTC ISO 8601 / RFC 3339 strings with an explicit timezone marker such as `Z`.
 - Hosted gateways may expect an explicit `User-Agent`; the published Python client sends `User-Agent: AgentDocsSkillClient/1.0` and `Accept: application/json`.
 - CLI failures should be parsed from stderr as JSON with `ok: false` plus `error.code` and `error.message`.
 
@@ -113,6 +116,8 @@ Useful task fields:
 - `action`
 - `instruction`
 - `source_text`
+- `created_at`
+- `started_at`
 - `context.document_title`
 - `context.document_revision`
 - `context.current_selection_text`

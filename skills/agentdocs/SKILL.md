@@ -40,6 +40,8 @@ The script stores configuration in `.agentdocs.config.json` next to the skill fi
 
 All CLI success responses are JSON with `ok: true`, `command`, and `data`. Parse `data` instead of assuming stdout is a raw task object.
 
+When task payloads include datetime fields such as `created_at`, `started_at`, `completed_at`, or `resolved_at`, AgentDocs returns them as UTC ISO 8601 / RFC 3339 strings with an explicit timezone marker, for example `2026-04-04T10:51:17Z`.
+
 ## Daily Use
 
 After setup, prefer the script entrypoints instead of hand-building requests.
@@ -99,6 +101,7 @@ Manual recovery commands still exist in the bundled client for human operators, 
 - AgentDocs authentication is always `Authorization: Bearer <API_KEY>`.
 - `POST /api/tasks/next` moves a task from `pending` to `processing`.
 - `POST /api/tasks/{task_id}/complete` is valid only while the task is `processing`.
+- Datetime fields returned by the underlying API use UTC ISO 8601 / RFC 3339 strings with an explicit timezone marker such as `Z`.
 - Hosted deployments may sit behind Cloudflare or another gateway; the bundled Python client already sends `Accept: application/json` and `User-Agent: AgentDocsSkillClient/1.0`.
 - CLI success responses are emitted on stdout as JSON with `ok`, `command`, and `data`.
 - CLI failures are emitted as compact JSON on stderr so agents and orchestrators can parse `error.code` and `error.message` without scraping tracebacks.
