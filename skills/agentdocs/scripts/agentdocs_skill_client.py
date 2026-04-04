@@ -1,5 +1,6 @@
 import argparse
 import json
+import sys
 import time
 from pathlib import Path
 from typing import Any
@@ -7,6 +8,76 @@ from urllib import error, request
 
 
 DEFAULT_CONFIG_PATH = Path(__file__).parent.parent / ".agentdocs.config.json"
+
+
+class AgentDocsClientError(RuntimeError):
+    def __init__(
+        self,
+        *,
+        code: str,
+        message: str,
+        status: int | None = None,
+        details: Any | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.code = code
+        self.message = message
+        self.status = status
+        self.details = details
+
+    def to_dict(self) -> dict[str, Any]:
+        payload = {
+            "ok": False,
+            "error": {
+                "code": self.code,
+                "message": self.message,
+            },
+        }
+        if self.status is not None:
+            payload["error"]["status"] = self.status
+        if self.details is not None:
+            payload["error"]["details"] = self.details
+        return payload
+
+
+def build_cli_success(
+    *, command: str, data: Any, event: str | None = None
+) -> dict[str, Any]:
+    payload = {
+        "ok": True,
+        "command": command,
+        "data": data,
+    }
+    if event is not None:
+        payload["event"] = event
+    return payload
+
+
+def _raise_api_error(*, status: int | None, body_text: str) -> None:
+    try:
+        parsed = json.loads(body_text)
+    except json.JSONDecodeError as exc:
+        raise AgentDocsClientError(
+            code="http_error",
+            message=body_text or "request failed",
+            status=status,
+        ) from exc
+
+    error_payload = parsed.get("error") if isinstance(parsed, dict) else None
+    if isinstance(error_payload, dict):
+        raise AgentDocsClientError(
+            code=str(error_payload.get("code") or "api_error"),
+            message=str(error_payload.get("message") or "request failed"),
+            status=status,
+            details=error_payload.get("details"),
+        )
+
+    raise AgentDocsClientError(
+        code="invalid_response",
+        message="request failed",
+        status=status,
+        details=parsed,
+    )
 
 
 def _normalize_base_url(base_url: str) -> str:
@@ -88,6 +159,7 @@ def _json_request(
     timeout: float = 10.0,
 ) -> Any:
     body = None
+    response_payload: dict[str, Any] = {}
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Accept": "application/json",
@@ -108,10 +180,13 @@ def _json_request(
             response_payload = json.loads(response.read().decode("utf-8"))
     except error.HTTPError as exc:
         details = exc.read().decode("utf-8")
-        raise RuntimeError(details or exc.reason) from exc
+        _raise_api_error(status=exc.code, body_text=details or exc.reason)
 
     if response_payload.get("ok") is not True:
-        raise RuntimeError(json.dumps(response_payload, ensure_ascii=False))
+        _raise_api_error(
+            status=None,
+            body_text=json.dumps(response_payload, ensure_ascii=False),
+        )
     return response_payload.get("data")
 
 
@@ -366,7 +441,17 @@ def run_continuous(
 
         processed += 1
         idle_loops = 0
-        print(json.dumps(completed_task, ensure_ascii=False), flush=True)
+        print(
+            json.dumps(
+                build_cli_success(
+                    command="continuous",
+                    event="task_processed",
+                    data=completed_task,
+                ),
+                ensure_ascii=False,
+            ),
+            flush=True,
+        )
 
     return {"processed": processed, "idle_loops": idle_loops}
 
@@ -506,65 +591,92 @@ def main() -> int:
 
     args = parser.parse_args()
 
-    if args.command == "setup":
-        result = setup_runtime(
-            base_url=args.base_url,
-            api_key=args.api_key,
-            agent_name=args.agent_name,
-            timeout=args.timeout,
-            config_path=args.config_path,
+    try:
+        if args.command == "setup":
+            result = setup_runtime(
+                base_url=args.base_url,
+                api_key=args.api_key,
+                agent_name=args.agent_name,
+                timeout=args.timeout,
+                config_path=args.config_path,
+            )
+        elif args.command == "show-config":
+            result = {
+                "config_exists": has_saved_config(args.config_path),
+                "config_file": Path(args.config_path).name,
+            }
+        elif args.command == "get-task":
+            result = get_one_task(task_id=args.task_id, config_path=args.config_path)
+        elif args.command == "pickup":
+            result = pickup_one_task(
+                config_path=args.config_path,
+                agent_name=args.agent_name,
+            )
+        elif args.command == "complete":
+            result = complete_one_task(
+                task_id=args.task_id,
+                result=args.result,
+                error_message=args.error_message,
+                config_path=args.config_path,
+            )
+        elif args.command == "diff":
+            result = get_task_diff(task_id=args.task_id, config_path=args.config_path)
+        elif args.command == "recovery-preview":
+            result = get_task_recovery_preview(
+                task_id=args.task_id,
+                config_path=args.config_path,
+            )
+        elif args.command == "relocate":
+            result = relocate_one_task(
+                task_id=args.task_id,
+                config_path=args.config_path,
+            )
+        elif args.command == "recover":
+            result = recover_one_task(
+                task_id=args.task_id,
+                mode=args.mode,
+                actor=args.actor,
+                config_path=args.config_path,
+            )
+        elif args.command == "process":
+            result = process_one_task(
+                mode=args.mode,
+                config_path=args.config_path,
+                agent_name=args.agent_name,
+            )
+        else:
+            run_continuous(
+                mode=args.mode,
+                poll_interval=args.poll_interval,
+                config_path=args.config_path,
+                agent_name=args.agent_name,
+            )
+            return 0
+    except AgentDocsClientError as exc:
+        print(json.dumps(exc.to_dict(), ensure_ascii=False), file=sys.stderr)
+        return 1
+    except Exception as exc:
+        print(
+            json.dumps(
+                {
+                    "ok": False,
+                    "error": {
+                        "code": "client_error",
+                        "message": str(exc),
+                    },
+                },
+                ensure_ascii=False,
+            ),
+            file=sys.stderr,
         )
-    elif args.command == "show-config":
-        result = {
-            "config_exists": has_saved_config(args.config_path),
-            "config_file": Path(args.config_path).name,
-        }
-    elif args.command == "get-task":
-        result = get_one_task(task_id=args.task_id, config_path=args.config_path)
-    elif args.command == "pickup":
-        result = pickup_one_task(
-            config_path=args.config_path,
-            agent_name=args.agent_name,
-        )
-    elif args.command == "complete":
-        result = complete_one_task(
-            task_id=args.task_id,
-            result=args.result,
-            error_message=args.error_message,
-            config_path=args.config_path,
-        )
-    elif args.command == "diff":
-        result = get_task_diff(task_id=args.task_id, config_path=args.config_path)
-    elif args.command == "recovery-preview":
-        result = get_task_recovery_preview(
-            task_id=args.task_id,
-            config_path=args.config_path,
-        )
-    elif args.command == "relocate":
-        result = relocate_one_task(task_id=args.task_id, config_path=args.config_path)
-    elif args.command == "recover":
-        result = recover_one_task(
-            task_id=args.task_id,
-            mode=args.mode,
-            actor=args.actor,
-            config_path=args.config_path,
-        )
-    elif args.command == "process":
-        result = process_one_task(
-            mode=args.mode,
-            config_path=args.config_path,
-            agent_name=args.agent_name,
-        )
-    else:
-        run_continuous(
-            mode=args.mode,
-            poll_interval=args.poll_interval,
-            config_path=args.config_path,
-            agent_name=args.agent_name,
-        )
-        return 0
+        return 1
 
-    print(json.dumps(result, ensure_ascii=False))
+    print(
+        json.dumps(
+            build_cli_success(command=args.command, data=result),
+            ensure_ascii=False,
+        )
+    )
     return 0
 
 

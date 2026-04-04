@@ -28,10 +28,13 @@ class HttpTaskApiClient:
         result: str | None,
         error_message: str | None,
     ) -> dict:
-        return self._post(
+        completed_task = self._post(
             f"/api/tasks/{task_id}/complete",
             {"result": result, "error_message": error_message},
         )
+        if completed_task is None:
+            raise RuntimeError("task completion returned no task payload")
+        return completed_task
 
     def _post(self, path: str, payload: dict) -> dict | None:
         body = json.dumps(payload).encode("utf-8")
@@ -39,13 +42,15 @@ class HttpTaskApiClient:
             f"{self.base_url}{path}",
             data=body,
             headers={
+                "Accept": "application/json",
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {self.api_key}",
+                "User-Agent": "AgentDocsSimulatedAgent/1.0",
             },
             method="POST",
         )
         try:
-            with request.urlopen(req) as response:
+            with request.urlopen(req, timeout=20) as response:
                 data = json.loads(response.read().decode("utf-8"))
         except error.HTTPError as exc:
             payload_text = exc.read().decode("utf-8")

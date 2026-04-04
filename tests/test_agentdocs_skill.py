@@ -5,6 +5,7 @@ import socket
 import subprocess
 import sys
 import time
+from io import BytesIO
 from pathlib import Path
 from urllib import error, request
 
@@ -232,9 +233,19 @@ def test_skill_markdown_contains_required_frontmatter_and_assets():
     assert "python scripts/agentdocs_skill_client.py setup" in content
     assert "python scripts/agentdocs_skill_client.py process" in content
     assert "python scripts/agentdocs_skill_client.py continuous" in content
-    assert "python scripts/agentdocs_skill_client.py recovery-preview" in content
-    assert "python scripts/agentdocs_skill_client.py recover" in content
     assert "server-side logic will try to repair pending tasks" in content
+    assert "they are not part of the agent workflow" in content
+    assert "If the environment is shared and queue ownership is unclear" in content
+    assert "Do not run a background worker against a shared production queue" in content
+    assert (
+        "All CLI success responses are JSON with `ok: true`, `command`, and `data`"
+        in content
+    )
+    assert "CLI failures are emitted as compact JSON on stderr" in content
+    assert (
+        "Do not call recovery-preview, relocate, or recover from the normal agent loop"
+        in content
+    )
     assert "./scripts/agentdocs_skill_client.py" in content
     assert "./references/workflow.md" in content
 
@@ -415,6 +426,88 @@ def test_skill_client_sends_explicit_user_agent_header(monkeypatch):
     assert result is None
     assert observed_headers["User-agent"] == "AgentDocsSkillClient/1.0"
     assert observed_headers["Accept"] == "application/json"
+
+
+def test_skill_client_formats_http_errors_for_agents(monkeypatch, capsys):
+    module = _load_skill_module()
+
+    def fake_urlopen(req, timeout=10.0):
+        raise error.HTTPError(
+            req.full_url,
+            409,
+            "Conflict",
+            hdrs=None,
+            fp=BytesIO(
+                b'{"ok": false, "error": {"code": "invalid_state", "message": "task has no result diff"}}'
+            ),
+        )
+
+    monkeypatch.setattr(module.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "agentdocs_skill_client.py",
+            "diff",
+            "--task-id",
+            "12",
+            "--config-path",
+            str(PROJECT_ROOT / ".pytest_cache" / "missing-config.json"),
+        ],
+    )
+    monkeypatch.setattr(
+        module,
+        "load_config",
+        lambda config_path: {
+            "base_url": "https://docs.example.com",
+            "api_key": "secret-key",
+            "agent_name": "agentdocs-test",
+            "timeout": 10.0,
+        },
+    )
+
+    exit_code = module.main()
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert captured.out == ""
+    assert json.loads(captured.err) == {
+        "ok": False,
+        "error": {
+            "code": "invalid_state",
+            "message": "task has no result diff",
+            "status": 409,
+        },
+    }
+
+
+def test_skill_client_wraps_cli_success_for_agents(monkeypatch, capsys):
+    module = _load_skill_module()
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "agentdocs_skill_client.py",
+            "show-config",
+            "--config-path",
+            str(PROJECT_ROOT / ".pytest_cache" / "agentdocs-config.json"),
+        ],
+    )
+    monkeypatch.setattr(module, "has_saved_config", lambda config_path: True)
+
+    exit_code = module.main()
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert captured.err == ""
+    assert json.loads(captured.out) == {
+        "ok": True,
+        "command": "show-config",
+        "data": {
+            "config_exists": True,
+            "config_file": "agentdocs-config.json",
+        },
+    }
 
 
 def test_skill_client_handles_recovery_endpoints_against_live_http_stack(skill_stack):

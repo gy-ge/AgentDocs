@@ -14,6 +14,8 @@ Before asking the human for connection data, first check whether `.agentdocs.con
 
 After setup, normal usage should call the same script without reconstructing URLs.
 
+CLI success responses are JSON on stdout with `ok: true`, `command`, and `data`. CLI failures are JSON on stderr with `ok: false` plus an `error` object.
+
 ## Daily Commands
 
 Process one pending task:
@@ -21,6 +23,8 @@ Process one pending task:
 ```bash
 python scripts/agentdocs_skill_client.py process
 ```
+
+Only run this if the agent is supposed to consume that queue. On a shared production environment, treat `process` as a destructive action because it claims real work.
 
 Pick up one task:
 
@@ -42,7 +46,17 @@ python scripts/agentdocs_skill_client.py complete --task-id 12 --error-message "
 
 The normal agent loop should treat stale pending-task recovery as a server concern. AgentDocs will attempt to relocate or requeue stale pending tasks automatically after document edits and again before dispatch.
 
-## Operator Diagnostics
+Run as a continuous worker:
+
+```bash
+python scripts/agentdocs_skill_client.py continuous --poll-interval 2
+```
+
+Reserve `continuous` for a dedicated worker deployment or an explicit human instruction to consume the queue. Do not use it as a connectivity smoke test on a shared queue.
+
+## Human Operator Diagnostics
+
+These commands are for human-led support or debugging. They are not part of the agent workflow and should not be called automatically by the agent.
 
 Inspect a finished task diff:
 
@@ -62,12 +76,6 @@ Recover a stale task by relocation:
 python scripts/agentdocs_skill_client.py recover --task-id 12 --mode relocate --actor operator
 ```
 
-Run as a continuous worker:
-
-```bash
-python scripts/agentdocs_skill_client.py continuous --poll-interval 2
-```
-
 ## Required HTTP Behavior
 
 - Base API prefix: `/api`
@@ -75,6 +83,7 @@ python scripts/agentdocs_skill_client.py continuous --poll-interval 2
 - Success envelope: `{"ok": true, "data": ...}`
 - Error envelope: `{"ok": false, "error": {"code": "...", "message": "..."}}`
 - Hosted gateways may expect an explicit `User-Agent`; the published Python client sends `User-Agent: AgentDocsSkillClient/1.0` and `Accept: application/json`.
+- CLI failures should be parsed from stderr as JSON with `ok: false` plus `error.code` and `error.message`.
 
 ## Minimum Agent Loop
 
@@ -144,7 +153,7 @@ Rules:
 
 ## Stale Recovery
 
-When a document changes after task creation, use these endpoints to understand the current state:
+When a document changes after task creation, the server should already repair stale pending tasks. Use these endpoints only for human-led diagnosis of stale non-pending tasks or when validating recovery behavior:
 
 - `GET /api/tasks/{task_id}`
 - `GET /api/tasks/{task_id}/diff`
@@ -152,7 +161,7 @@ When a document changes after task creation, use these endpoints to understand t
 - `POST /api/tasks/{task_id}/relocate`
 - `POST /api/tasks/{task_id}/recover`
 
-Prefer `recovery-preview` before taking recovery action so the human reviewer or orchestration layer can choose between relocation and requeue-from-current.
+Prefer `recovery-preview` before taking recovery action so the human reviewer or operator tooling can choose between relocation and requeue-from-current.
 
-The script wraps these endpoints so the agent does not need to build them by hand during normal operation.
+The script wraps these endpoints so operators do not need to build them by hand. They are intentionally outside the normal agent loop.
 If any third-party copy of this workflow disagrees with the live product, use https://github.com/gy-ge/AgentDocs as the source of truth.
