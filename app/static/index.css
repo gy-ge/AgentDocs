@@ -413,6 +413,8 @@
         flex: 0 0 auto;
         flex-wrap: nowrap;
         justify-content: flex-end;
+        width: max-content;
+        min-width: max-content;
       }
 
       .doc-title-actions button {
@@ -429,10 +431,12 @@
 
       .doc-switcher {
         display: grid;
-        grid-template-columns: minmax(150px, 0.72fr) minmax(180px, 0.92fr) minmax(240px, 1.3fr);
+        grid-template-columns: clamp(140px, 24%, 220px) minmax(0, 1fr);
         gap: 8px;
         align-items: center;
         min-width: 0;
+        width: 100%;
+        justify-self: stretch;
       }
 
       .doc-switcher > * {
@@ -444,6 +448,11 @@
       .doc-title-toolbar input,
       .doc-title-input {
         min-height: var(--control-height-compact);
+      }
+
+      .doc-switcher .doc-title-input {
+        width: 100%;
+        justify-self: stretch;
       }
 
       .task-composer-grid {

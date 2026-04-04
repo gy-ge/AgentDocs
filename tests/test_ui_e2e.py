@@ -88,6 +88,26 @@ def _wait_for_task_status(
     )
 
 
+def _wait_for_task_count_with_status(
+    base_url: str,
+    doc_id: int,
+    expected_status: str,
+    expected_count: int,
+    timeout: float = 20.0,
+) -> list[dict]:
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        tasks = _api_request(base_url, f"/api/tasks?doc_id={doc_id}")
+        if len(tasks) >= expected_count and all(
+            task["status"] == expected_status for task in tasks[:expected_count]
+        ):
+            return tasks
+        time.sleep(0.2)
+    raise AssertionError(
+        f"Document {doc_id} did not reach {expected_count} tasks with status {expected_status}"
+    )
+
+
 def _select_textarea_range(page, needle: str) -> None:
     page.locator("#doc-body").evaluate(
         """
@@ -106,10 +126,71 @@ def _select_textarea_range(page, needle: str) -> None:
     )
 
 
+def _show_selection_toolbar(page, needle: str) -> None:
+    _select_textarea_range(page, needle)
+    page.locator("#doc-body").evaluate(
+        """
+                (el) => {
+                    const rect = el.getBoundingClientRect();
+                    el.dispatchEvent(new MouseEvent('mouseup', {
+                        bubbles: true,
+                        clientX: rect.left + rect.width / 2,
+                        clientY: rect.top + 20,
+                    }));
+                }
+                """
+    )
+    page.locator("#selection-toolbar").wait_for(state="visible", timeout=5000)
+
+
 def _save_api_key(page) -> None:
     page.locator("#api-key").fill(API_KEY)
     page.get_by_role("button", name="Save and Continue").click()
     page.locator("#key-modal").wait_for(state="hidden", timeout=5000)
+
+
+def _create_doc_from_selector(page, title: str) -> None:
+    page.locator("#doc-selector").select_option("__create_new__")
+    page.locator("#create-doc-modal").wait_for(state="visible", timeout=5000)
+    page.locator("#create-doc-title").fill(title)
+    page.locator("#submit-create-doc").click()
+    page.locator("#create-doc-modal").wait_for(state="hidden", timeout=5000)
+    page.get_by_text("Loaded document #", exact=False).wait_for(timeout=5000)
+
+
+def test_create_doc_modal_cancel_and_confirm(ui_stack):
+    base_url = ui_stack["base_url"]
+    doc = _api_request(
+        base_url,
+        "/api/docs",
+        method="POST",
+        payload={
+            "title": "Existing Doc",
+            "raw_markdown": "# Existing Doc\n",
+            "actor": "browser",
+        },
+    )
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        page = browser.new_page(viewport={"width": 1440, "height": 1100})
+        page.goto(base_url, wait_until="networkidle")
+
+        _save_api_key(page)
+        page.locator("#doc-selector").select_option(str(doc["id"]))
+        page.get_by_text(f"Loaded document #{doc['id']}.").wait_for(timeout=5000)
+
+        page.locator("#doc-selector").select_option("__create_new__")
+        page.locator("#create-doc-modal").wait_for(state="visible", timeout=5000)
+        page.locator("#cancel-create-doc").click()
+        page.locator("#create-doc-modal").wait_for(state="hidden", timeout=5000)
+        assert page.locator("#doc-selector").input_value() == str(doc["id"])
+
+        _create_doc_from_selector(page, "Created In Modal")
+        assert page.locator("#doc-title").input_value() == "Created In Modal"
+        assert page.locator("#doc-selector").input_value() != str(doc["id"])
+
+        browser.close()
 
 
 @pytest.fixture
@@ -183,9 +264,7 @@ def test_task_selection_action_flow_and_autosave(ui_stack):
         page.goto(base_url, wait_until="networkidle")
 
         _save_api_key(page)
-        page.locator("#new-title").fill("Playwright Marker Flow")
-        page.locator("#create-doc").click()
-        page.get_by_text("Loaded document #", exact=False).wait_for(timeout=5000)
+        _create_doc_from_selector(page, "Playwright Marker Flow")
 
         page.locator("#doc-body").fill(
             "# Playwright Marker Flow\n\n## Section A\nAlpha beta gamma.\n\n## Section B\nDelta epsilon zeta."
@@ -410,9 +489,7 @@ def test_task_completion_pushes_without_manual_refresh_and_sse_live(ui_stack):
         page.goto(base_url, wait_until="networkidle")
 
         _save_api_key(page)
-        page.locator("#new-title").fill("SSE Push Verification")
-        page.locator("#create-doc").click()
-        page.get_by_text("Loaded document #", exact=False).wait_for(timeout=5000)
+        _create_doc_from_selector(page, "SSE Push Verification")
 
         # Verify SSE is active and UI reports live stream mode.
         page.wait_for_function(
@@ -530,10 +607,12 @@ def test_laptop_viewport_layout_stays_scrollable_and_compact(ui_stack):
                             const reviewPanel = document.querySelector('.review-surface-panel');
                             const reviewContent = document.querySelector('#review-surface .review-surface-content');
                             const docSelector = document.getElementById('doc-selector');
-                            const newTitle = document.getElementById('new-title');
                             const docTitle = document.getElementById('doc-title');
-                            const createDoc = document.getElementById('create-doc');
+                            const actions = document.querySelector('.editor-toolbar-actions');
                             const exportDoc = document.getElementById('export-doc');
+                                const savePill = document.getElementById('doc-save-pill');
+                                const revisionPill = document.getElementById('doc-revision-pill');
+                                const reviewPill = document.getElementById('review-surface-pill');
 
                             const read = (el) => {
                                 if (!el) {
@@ -567,10 +646,12 @@ def test_laptop_viewport_layout_stays_scrollable_and_compact(ui_stack):
                                 reviewContent: read(reviewContent),
                                 controlTops: {
                                     docSelector: top(docSelector),
-                                    newTitle: top(newTitle),
                                     docTitle: top(docTitle),
-                                    createDoc: top(createDoc),
+                                    actions: top(actions),
                                     exportDoc: top(exportDoc),
+                                    savePill: top(savePill),
+                                    revisionPill: top(revisionPill),
+                                    reviewPill: top(reviewPill),
                                 },
                             };
                         }
@@ -596,7 +677,7 @@ def test_laptop_viewport_layout_stays_scrollable_and_compact(ui_stack):
         assert metrics["taskList"]["scrollHeight"] > metrics["taskList"]["clientHeight"]
         assert metrics["taskList"]["overflowY"] in {"auto", "scroll"}
         assert metrics["composer"]["height"] < 280
-        assert metrics["toolbar"]["height"] <= 44
+        assert metrics["toolbar"]["height"] <= 80
         assert metrics["reviewPanel"]["bottom"] <= metrics["editorPanel"]["bottom"] + 2
         assert (
             metrics["reviewContent"]["scrollHeight"]
@@ -604,12 +685,258 @@ def test_laptop_viewport_layout_stays_scrollable_and_compact(ui_stack):
         )
         tops = metrics["controlTops"]
         assert tops["docSelector"] is not None
-        assert tops["newTitle"] is not None
         assert tops["docTitle"] is not None
-        assert tops["createDoc"] is not None
+        assert tops["actions"] is not None
         assert tops["exportDoc"] is not None
+        assert tops["savePill"] is not None
+        assert tops["revisionPill"] is not None
+        assert tops["reviewPill"] is not None
         assert abs(tops["docSelector"] - tops["docTitle"]) <= 2
-        assert abs(tops["newTitle"] - tops["createDoc"]) <= 2
-        assert abs(tops["createDoc"] - tops["exportDoc"]) <= 2
+        assert abs(tops["actions"] - tops["exportDoc"]) <= 2
+        assert abs(tops["savePill"] - tops["docTitle"]) <= 10
+        assert abs(tops["revisionPill"] - tops["docTitle"]) <= 10
+        assert abs(tops["reviewPill"] - tops["docTitle"]) <= 10
+
+        browser.close()
+
+
+def test_doc_title_input_uses_available_toolbar_width(ui_stack):
+    base_url = ui_stack["base_url"]
+    doc = _api_request(
+        base_url,
+        "/api/docs",
+        method="POST",
+        payload={
+            "title": "Width Check Document",
+            "raw_markdown": "# Width Check Document\n",
+            "actor": "browser",
+        },
+    )
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        page = browser.new_page(viewport={"width": 1440, "height": 1100})
+        page.goto(base_url, wait_until="networkidle")
+
+        _save_api_key(page)
+        page.locator("#doc-selector").select_option(str(doc["id"]))
+        page.get_by_text(f"Loaded document #{doc['id']}.").wait_for(timeout=5000)
+
+        metrics = page.evaluate(
+            """
+                        () => {
+                            const switcher = document.querySelector('.doc-switcher');
+                            const selector = document.getElementById('doc-selector');
+                            const title = document.getElementById('doc-title');
+                            const actions = document.querySelector('.editor-toolbar-actions');
+                            const toolbar = document.querySelector('.editor-toolbar');
+                            if (!switcher || !selector || !title || !toolbar || !actions) {
+                                throw new Error('Missing toolbar controls');
+                            }
+                            const switcherRect = switcher.getBoundingClientRect();
+                            const selectorRect = selector.getBoundingClientRect();
+                            const titleRect = title.getBoundingClientRect();
+                            const actionsRect = actions.getBoundingClientRect();
+                            const toolbarRect = toolbar.getBoundingClientRect();
+                            return {
+                                switcherRight: switcherRect.right,
+                                titleRight: titleRect.right,
+                                actionsLeft: actionsRect.left,
+                                selectorWidth: selectorRect.width,
+                                titleWidth: titleRect.width,
+                                toolbarWidth: toolbarRect.width,
+                                switcherWidth: switcherRect.width,
+                            };
+                        }
+                        """
+        )
+
+        assert metrics["switcherWidth"] > metrics["toolbarWidth"] * 0.35
+        assert metrics["titleWidth"] > metrics["selectorWidth"]
+        assert abs(metrics["actionsLeft"] - metrics["switcherRight"]) <= 10
+        assert abs(metrics["switcherRight"] - metrics["titleRight"]) <= 2
+        assert page.locator("#save-doc").count() == 0
+
+        browser.close()
+
+
+def test_review_mode_keeps_left_scroll_and_syncs_comment_rail(ui_stack):
+    base_url = ui_stack["base_url"]
+    item_lines = [
+        f"- review sync item {index:02d} keeps the rail busy and the surface tall"
+        for index in range(1, 15)
+    ]
+    filler = "\n".join(
+        f"Paragraph {index:02d} extends the review panel for scroll-sync regression coverage."
+        for index in range(1, 18)
+    )
+    raw_markdown = (
+        "# Review Scroll Sync\n\n## Items\n"
+        + "\n".join(item_lines)
+        + "\n\n## Notes\n"
+        + filler
+    )
+    doc = _api_request(
+        base_url,
+        "/api/docs",
+        method="POST",
+        payload={
+            "title": "Review Scroll Sync",
+            "raw_markdown": raw_markdown,
+            "actor": "browser",
+        },
+    )
+
+    for line in item_lines:
+        start = raw_markdown.index(line)
+        end = start + len(line)
+        _api_request(
+            base_url,
+            f"/api/docs/{doc['id']}/tasks",
+            method="POST",
+            payload={
+                "action": "rewrite",
+                "instruction": f"review sync {line}",
+                "source_text": line,
+                "start_offset": start,
+                "end_offset": end,
+                "doc_revision": 1,
+            },
+        )
+
+    _wait_for_task_count_with_status(
+        base_url, doc["id"], "done", len(item_lines), timeout=25.0
+    )
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        page = browser.new_page(viewport={"width": 1366, "height": 768})
+        page.goto(base_url, wait_until="networkidle")
+
+        _save_api_key(page)
+        page.locator("#doc-selector").select_option(str(doc["id"]))
+        page.get_by_text(f"Loaded document #{doc['id']}.").wait_for(timeout=5000)
+        page.locator("#task-comment-list [data-comment-task-id]").nth(12).wait_for(
+            timeout=5000
+        )
+        page.locator("#review-mode-review").click()
+        page.locator("#review-surface .review-surface-content").wait_for(timeout=5000)
+
+        page.evaluate(
+            """
+            () => {
+              const reviewContent = document.querySelector('#review-surface .review-surface-content');
+              const taskList = document.getElementById('task-comment-list');
+              if (!reviewContent || !taskList) {
+                throw new Error('Missing review content or task list');
+              }
+              reviewContent.scrollTop = Math.max(0, reviewContent.scrollHeight * 0.58);
+              taskList.scrollTop = 0;
+            }
+            """
+        )
+
+        target_marker = page.locator("#review-surface [data-review-task-id]").nth(11)
+        target_marker.scroll_into_view_if_needed()
+        target_task_id = target_marker.get_attribute("data-review-task-id")
+        assert target_task_id is not None
+
+        scroll_before = page.evaluate(
+            """
+            () => {
+              const reviewContent = document.querySelector('#review-surface .review-surface-content');
+              return reviewContent ? reviewContent.scrollTop : 0;
+            }
+            """
+        )
+
+        target_marker.click()
+        page.wait_for_function(
+            """
+            (taskId) => {
+              const activeCard = document.querySelector('#task-comment-list .task-comment-card.is-active');
+              return !!activeCard && activeCard.getAttribute('data-comment-task-id') === taskId;
+            }
+            """,
+            arg=target_task_id,
+            timeout=5000,
+        )
+
+        metrics = page.evaluate(
+            """
+            () => {
+              const reviewContent = document.querySelector('#review-surface .review-surface-content');
+              const taskList = document.getElementById('task-comment-list');
+              const activeCard = document.querySelector('#task-comment-list .task-comment-card.is-active');
+              if (!reviewContent || !taskList || !activeCard) {
+                throw new Error('Missing review sync elements');
+              }
+              const listRect = taskList.getBoundingClientRect();
+              const cardRect = activeCard.getBoundingClientRect();
+              return {
+                reviewScrollTop: reviewContent.scrollTop,
+                taskListScrollTop: taskList.scrollTop,
+                activeCardTop: cardRect.top,
+                activeCardBottom: cardRect.bottom,
+                taskListTop: listRect.top,
+                taskListBottom: listRect.bottom,
+              };
+            }
+            """
+        )
+
+        assert metrics["reviewScrollTop"] > 120
+        assert abs(metrics["reviewScrollTop"] - scroll_before) < 180
+        assert metrics["taskListScrollTop"] > 0
+        assert metrics["activeCardTop"] >= metrics["taskListTop"] - 1
+        assert metrics["activeCardTop"] <= metrics["taskListTop"] + 56
+        assert metrics["activeCardBottom"] > metrics["taskListTop"] + 80
+
+        browser.close()
+
+
+def test_selection_toolbar_template_updates_instruction(ui_stack):
+    base_url = ui_stack["base_url"]
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        page = browser.new_page(viewport={"width": 1440, "height": 1100})
+        page.goto(base_url, wait_until="networkidle")
+
+        _save_api_key(page)
+        _create_doc_from_selector(page, "Selection Toolbar Template Sync")
+        page.locator("#doc-body").fill(
+            "# Selection Toolbar Template Sync\n\nAlpha beta gamma for selection toolbar."
+        )
+        page.wait_for_function(
+            "() => document.querySelector('#doc-save-pill')?.textContent === 'Saved'",
+            timeout=6000,
+        )
+
+        _show_selection_toolbar(page, "Alpha beta gamma")
+        page.locator("#selection-toolbar-template").select_option(
+            "builtin:instruction-example"
+        )
+
+        expected_instruction = "Example: Define goals, style, constraints, and length"
+        page.wait_for_function(
+            """
+            (snippet) => {
+              const toolbarInstruction = document.getElementById('selection-toolbar-instruction');
+              const taskInstruction = document.getElementById('task-instruction');
+              return !!toolbarInstruction && !!taskInstruction
+                && (toolbarInstruction.value || '').includes(snippet)
+                && (taskInstruction.value || '').includes(snippet);
+            }
+            """,
+            arg=expected_instruction,
+            timeout=5000,
+        )
+
+        assert (
+            expected_instruction
+            in page.locator("#selection-toolbar-instruction").input_value()
+        )
+        assert expected_instruction in page.locator("#task-instruction").input_value()
 
         browser.close()

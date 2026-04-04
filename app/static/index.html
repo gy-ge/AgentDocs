@@ -83,6 +83,25 @@
       </div>
     </section>
 
+    <div id="create-doc-modal" class="modal-backdrop hidden">
+      <section class="modal-card" aria-labelledby="create-doc-modal-title" aria-modal="true" role="dialog">
+        <form id="create-doc-form" class="stack" style="gap: 14px">
+          <div>
+            <h2 id="create-doc-modal-title" data-i18n="new_doc_title">New Title</h2>
+            <p data-i18n="doc_create_prompt">Enter a title for the new document</p>
+          </div>
+          <div>
+            <label for="create-doc-title" data-i18n="new_doc_title">New Title</label>
+            <input id="create-doc-title" data-i18n="new_doc_placeholder" placeholder="Enter title to create" />
+          </div>
+          <div class="modal-actions">
+            <button id="submit-create-doc" type="submit" class="primary" data-i18n="create">Create</button>
+            <button id="cancel-create-doc" type="button" class="secondary" data-i18n="close">Close</button>
+          </div>
+        </form>
+      </section>
+    </div>
+
     <main class="app-shell">
       <div class="app-frame">
         <header class="app-header">
@@ -112,17 +131,11 @@
                         <option value="" data-i18n="please_select_doc">Please select document</option>
                       </select>
                     </div>
-                    <div class="compact-field">
-                      <label class="visually-hidden" for="new-title" data-i18n="new_doc_title">New Title</label>
-                      <input id="new-title" data-i18n="new_doc_placeholder" placeholder="Enter title to create" />
-                    </div>
                     <label class="visually-hidden" for="doc-title" data-i18n="title">Title</label>
                     <input id="doc-title" class="doc-title-input" data-i18n="no_doc_selected" placeholder="No document selected" />
                   </div>
 
                   <div class="editor-toolbar-actions doc-title-actions">
-                      <button id="create-doc" class="primary" data-i18n="create">Create</button>
-                      <button id="save-doc" class="primary" data-i18n="save_doc_short">Save</button>
                       <button id="export-doc" class="secondary" data-i18n="export_markdown_short">Export</button>
                       <button id="delete-doc" class="danger" data-i18n="delete_doc_short">Delete</button>
                       <button id="review-mode-edit" class="secondary toolbar-mode-button" type="button" data-i18n="review_mode_edit">Edit</button>
@@ -340,6 +353,9 @@
           please_select_doc: "Please select document",
           new_doc_title: "New Title",
           new_doc_placeholder: "Enter title to create",
+          doc_create_option: "+ New document",
+          doc_create_prompt: "Enter a title for the new document",
+          doc_create_cancelled: "Document creation cancelled.",
           create: "Create",
           title: "Title",
           common_actions: "Common Actions",
@@ -549,6 +565,9 @@
           please_select_doc: "请选择文档",
           new_doc_title: "新建文档",
           new_doc_placeholder: "输入新文档标题后创建",
+          doc_create_option: "+ 新建文档",
+          doc_create_prompt: "请输入新文档标题",
+          doc_create_cancelled: "已取消新建文档。",
           create: "新建",
           title: "标题",
           common_actions: "常用动作",
@@ -823,6 +842,9 @@
       const keyFormEl = document.getElementById("key-form");
       const keyModalEl = document.getElementById("key-modal");
       const templateModalEl = document.getElementById("template-modal");
+      const createDocModalEl = document.getElementById("create-doc-modal");
+      const createDocFormEl = document.getElementById("create-doc-form");
+      const createDocTitleInputEl = document.getElementById("create-doc-title");
       const docSavePillEl = document.getElementById("doc-save-pill");
       const docRevisionPillEl = document.getElementById("doc-revision-pill");
       const docSelectorEl = document.getElementById("doc-selector");
@@ -832,7 +854,6 @@
       const docBodyInput = document.getElementById("doc-body");
       const docSaveMetaEl = document.getElementById("doc-save-meta");
       const docConflictActionsEl = document.getElementById("doc-conflict-actions");
-      const saveDocButtonEl = document.getElementById("save-doc");
       const taskActionEl = document.getElementById("task-action");
       const taskInstructionEl = document.getElementById("task-instruction");
       const taskTemplateEl = document.getElementById("task-template");
@@ -861,6 +882,7 @@
       const reviewModeReviewButtonEl = document.getElementById("review-mode-review");
       const reviewModeEditButtonEl = document.getElementById("review-mode-edit");
       const composerDrawerEl = document.getElementById("composer-drawer");
+      const CREATE_DOC_OPTION_VALUE = '__create_new__';
 
       apiKeyInput.value = localStorage.getItem("agentdocs.apiKey") || "";
 
@@ -990,8 +1012,6 @@
           docSavePillEl.textContent = t('doc_save_state_idle');
           docSavePillEl.className = 'pill';
           docSaveMetaEl.textContent = t('doc_last_saved_never');
-          saveDocButtonEl.disabled = true;
-          saveDocButtonEl.textContent = t('save_doc_short');
           renderDocumentConflictActions();
           updateDocumentTitle();
           return;
@@ -1001,8 +1021,6 @@
           docSavePillEl.textContent = t('doc_save_state_saving');
           docSavePillEl.className = 'pill warn';
           docSaveMetaEl.textContent = formatSavedTime(state.lastSavedAt);
-          saveDocButtonEl.disabled = true;
-          saveDocButtonEl.textContent = t('doc_save_state_saving');
           renderDocumentConflictActions();
           updateDocumentTitle(docTitleInput.value.trim());
           return;
@@ -1012,14 +1030,11 @@
         if (state.docDirty) {
           docSavePillEl.textContent = t('doc_save_state_unsaved');
           docSavePillEl.className = 'pill warn';
-          saveDocButtonEl.disabled = false;
         } else {
           docSavePillEl.textContent = t('doc_save_state_saved');
           docSavePillEl.className = 'pill success';
-          saveDocButtonEl.disabled = false;
         }
         docSaveMetaEl.textContent = state.docConflictDetected ? t('doc_conflict_detected') : formatSavedTime(state.lastSavedAt);
-        saveDocButtonEl.textContent = t('save_doc_short');
         renderDocumentConflictActions();
         updateDocumentTitle(docTitleInput.value.trim());
       }
@@ -1070,7 +1085,10 @@
         state.taskSignature = "";
         docRevisionPillEl.textContent = t("no_doc_selected_pill");
         updateDocumentTitle();
-        docSelectorEl.innerHTML = `<option value="">${escapeHtml(t("please_select_doc"))}</option>`;
+        docSelectorEl.innerHTML = `
+          <option value="">${escapeHtml(t("please_select_doc"))}</option>
+          <option value="${CREATE_DOC_OPTION_VALUE}">${escapeHtml(t("doc_create_option"))}</option>
+        `;
         docSelectorEl.value = "";
         docTitleInput.value = "";
         docBodyInput.value = "";
@@ -1180,12 +1198,40 @@
         }
       }
 
+      function applyTaskTemplateSelection(templateId, options = {}) {
+        const { syncSelectionToolbar = true } = options;
+        const normalizedTemplateId = normalizeTemplateId(templateId || '');
+        const template = normalizedTemplateId
+          ? getTemplateCatalog().find((item) => normalizeTemplateId(item.id) === normalizedTemplateId) || null
+          : null;
+
+        if (taskTemplateEl) {
+          taskTemplateEl.value = [...taskTemplateEl.options].some((option) => option.value === normalizedTemplateId)
+            ? normalizedTemplateId
+            : '';
+        }
+
+        if (template) {
+          if ([...taskActionEl.options].some((option) => option.value === template.action)) {
+            taskActionEl.value = template.action;
+            localStorage.setItem(LAST_TASK_ACTION_KEY, template.action);
+          }
+          taskInstructionEl.value = template.instruction || '';
+        } else if (!normalizedTemplateId) {
+          taskInstructionEl.value = '';
+        }
+
+        if (syncSelectionToolbar) {
+          syncSelectionToolbarFromComposer();
+        }
+
+        return template;
+      }
+
       function buildSelectionTaskPayload(action) {
-        const template = getSelectionToolbarTemplate();
         return {
           action,
           instruction: mergeInstructionParts([
-            template?.instruction || '',
             selectionToolbarInstructionEl?.value || '',
           ]),
         };
@@ -1205,6 +1251,70 @@
         return Boolean(element && reviewSurfaceEl.contains(element));
       }
 
+      function captureScrollPosition(element) {
+        if (!element) {
+          return null;
+        }
+        return {
+          top: element.scrollTop,
+          left: element.scrollLeft,
+        };
+      }
+
+      function restoreScrollPosition(element, position) {
+        if (!element || !position) {
+          return;
+        }
+        const maxTop = Math.max(0, element.scrollHeight - element.clientHeight);
+        const maxLeft = Math.max(0, element.scrollWidth - element.clientWidth);
+        element.scrollTop = Math.min(position.top, maxTop);
+        element.scrollLeft = Math.min(position.left, maxLeft);
+      }
+
+      function scrollElementChildIntoView(container, child, options = {}) {
+        if (!container || !child) {
+          return false;
+        }
+        const { behavior = 'smooth', block = 'nearest', padding = 16 } = options;
+        const containerRect = container.getBoundingClientRect();
+        const childRect = child.getBoundingClientRect();
+        const childTop = container.scrollTop + (childRect.top - containerRect.top);
+        const childBottom = childTop + childRect.height;
+        const visibleTop = container.scrollTop;
+        const visibleBottom = visibleTop + container.clientHeight;
+        let nextTop = null;
+
+        if (block === 'center') {
+          nextTop = childTop - (container.clientHeight - childRect.height) / 2;
+        } else if (block === 'start') {
+          nextTop = childTop - padding;
+        } else if (childTop < visibleTop + padding) {
+          nextTop = childTop - padding;
+        } else if (childBottom > visibleBottom - padding) {
+          nextTop = childBottom - container.clientHeight + padding;
+        }
+
+        if (nextTop === null) {
+          return false;
+        }
+
+        const maxTop = Math.max(0, container.scrollHeight - container.clientHeight);
+        container.scrollTo({ top: Math.max(0, Math.min(nextTop, maxTop)), behavior });
+        return true;
+      }
+
+      function syncActiveTaskCommentCard(options = {}) {
+        if (!taskCommentListEl || !state.selectedTaskId) {
+          return;
+        }
+        const { behavior = 'smooth', block = 'start' } = options;
+        const activeCard = taskCommentListEl.querySelector(`[data-comment-task-id="${state.selectedTaskId}"]`);
+        if (!activeCard) {
+          return;
+        }
+        scrollElementChildIntoView(taskCommentListEl, activeCard, { behavior, block, padding: 12 });
+      }
+
       function selectReviewTaskText(task) {
         if (!reviewSurfaceEl || !task) {
           return false;
@@ -1213,7 +1323,8 @@
         if (!marker) {
           return false;
         }
-        marker.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        const reviewContentEl = marker.closest('.review-surface-content');
+        scrollElementChildIntoView(reviewContentEl, marker, { block: 'center', behavior: 'smooth', padding: 20 });
         marker.focus({ preventScroll: true });
         const selection = window.getSelection();
         if (!selection) {
@@ -1427,6 +1538,7 @@
         if (!taskCommentListEl) {
           return;
         }
+        const previousScrollPosition = captureScrollPosition(taskCommentListEl);
         if (!state.docId) {
           taskCommentListEl.innerHTML = `<div class="task-comment-empty">${escapeHtml(t('review_surface_placeholder'))}</div>`;
           return;
@@ -1553,6 +1665,9 @@
             safeRun(() => rejectTask(taskId));
           });
         });
+
+        restoreScrollPosition(taskCommentListEl, previousScrollPosition);
+        syncActiveTaskCommentCard({ behavior: previousScrollPosition ? 'auto' : 'smooth' });
       }
 
       function buildReviewMarkup(task, currentText) {
@@ -1574,6 +1689,7 @@
         if (!reviewSurfaceEl || !reviewSurfacePillEl) {
           return;
         }
+        const previousScrollPosition = captureScrollPosition(reviewSurfaceEl.querySelector('.review-surface-content'));
         if (!state.docId) {
           reviewSurfacePillEl.textContent = t('editor_task_markers_empty');
           reviewSurfaceEl.innerHTML = `<div class="review-surface-content is-empty">${escapeHtml(t('review_surface_placeholder'))}</div>`;
@@ -1614,6 +1730,7 @@
           ${helperText}
           <div class="review-surface-content${rawMarkdown ? '' : ' is-empty'}">${surfaceHtml || escapeHtml(t('doc_body_placeholder'))}</div>
         `;
+        restoreScrollPosition(reviewSurfaceEl.querySelector('.review-surface-content'), previousScrollPosition);
         reviewSurfacePillEl.textContent = orderedTasks.length
           ? t('editor_task_markers_count', { count: orderedTasks.length })
           : t('editor_task_markers_empty');
@@ -1624,24 +1741,32 @@
           if (!task) {
             return;
           }
-          const openTask = async () => {
+          const openTask = async (options = {}) => {
+            const { showPopover = false } = options;
             await selectTask(taskId);
+            if (!showPopover) {
+              return;
+            }
+            const refreshedNode = reviewSurfaceEl.querySelector(`[data-review-task-id="${taskId}"]`);
+            if (refreshedNode) {
+              showInlinePopover(taskId, refreshedNode);
+            }
           };
           node.addEventListener('click', (event) => {
             event.stopPropagation();
             if (hasActiveReviewTextSelection()) {
               return;
             }
-            if (task.status === 'done' || task.status === 'failed' || task.status === 'cancelled' || task.status === 'rejected') {
-              showInlinePopover(taskId, node);
-            } else {
-              safeRun(openTask);
-            }
+            safeRun(() => openTask({
+              showPopover: task.status === 'done' || task.status === 'failed' || task.status === 'cancelled' || task.status === 'rejected',
+            }));
           });
           node.addEventListener('keydown', (event) => {
             if (event.key === 'Enter' || event.key === ' ') {
               event.preventDefault();
-              safeRun(openTask);
+              safeRun(() => openTask({
+                showPopover: task.status === 'done' || task.status === 'failed' || task.status === 'cancelled' || task.status === 'rejected',
+              }));
             }
           });
         });
@@ -2566,8 +2691,10 @@
       }
 
       function renderDocOptions(docs) {
+        const placeholderOption = `<option value="">${escapeHtml(t("please_select_doc"))}</option>`;
+        const createOption = `<option value="${CREATE_DOC_OPTION_VALUE}">${escapeHtml(t("doc_create_option"))}</option>`;
         if (!docs.length) {
-          docSelectorEl.innerHTML = `<option value="">${escapeHtml(t("no_doc_selected"))}</option>`;
+          docSelectorEl.innerHTML = `${placeholderOption}${createOption}`;
           docSelectorEl.value = '';
           return;
         }
@@ -2575,8 +2702,37 @@
           .map(
             (doc) => `<option value="${doc.id}">${escapeHtml(t("doc_option_label", { title: doc.title, rev: doc.revision }))}</option>`
           )
-          .join('');
+          .join('') + createOption;
         docSelectorEl.value = state.docId ? String(state.docId) : String(docs[0].id);
+      }
+
+      function syncDocSelectorToCurrentDocument() {
+        if (state.docId) {
+          docSelectorEl.value = String(state.docId);
+          return;
+        }
+        docSelectorEl.value = '';
+      }
+
+      function openCreateDocModal() {
+        if (!createDocModalEl || !createDocTitleInputEl) {
+          return;
+        }
+        createDocTitleInputEl.value = '';
+        createDocModalEl.classList.remove('hidden');
+        setTimeout(() => createDocTitleInputEl.focus(), 0);
+      }
+
+      function closeCreateDocModal(options = {}) {
+        const { restoreSelector = true } = options;
+        if (!createDocModalEl || !createDocTitleInputEl) {
+          return;
+        }
+        createDocModalEl.classList.add('hidden');
+        createDocTitleInputEl.value = '';
+        if (restoreSelector) {
+          syncDocSelectorToCurrentDocument();
+        }
       }
 
       async function loadDocs() {
@@ -2881,17 +3037,26 @@
         renderTaskCommentRail(state.tasks);
       }
 
-      async function createDoc() {
+      async function createDoc(title) {
         await flushDocumentChanges();
-        const title = document.getElementById('new-title').value.trim();
-        if (!title) throw new Error(t("field_required", { field: t("new_doc_title") }));
+        const normalizedTitle = String(title || '').trim();
+        if (!normalizedTitle) throw new Error(t("field_required", { field: t("new_doc_title") }));
         const doc = await api('/api/docs', {
           method: 'POST',
-          body: JSON.stringify({ title, raw_markdown: `# ${title}\n`, actor: 'browser' }),
+          body: JSON.stringify({ title: normalizedTitle, raw_markdown: `# ${normalizedTitle}\n`, actor: 'browser' }),
         });
-        document.getElementById('new-title').value = '';
         await loadDocsOnly();
         await selectDoc(doc.id, { refreshDocs: false });
+        return doc;
+      }
+
+      async function submitCreateDocFromModal() {
+        const normalizedTitle = String(createDocTitleInputEl?.value || '').trim();
+        if (!normalizedTitle) {
+          throw new Error(t("field_required", { field: t("new_doc_title") }));
+        }
+        closeCreateDocModal({ restoreSelector: false });
+        return createDoc(normalizedTitle);
       }
 
       async function persistDocumentChanges(options = {}) {
@@ -3182,10 +3347,12 @@
         saveApiKeyAndReloadData();
       });
       document.getElementById('refresh-current').addEventListener('click', () => safeRun(refreshCurrent));
-      document.getElementById('create-doc').addEventListener('click', () => safeRun(createDoc));
-      document.getElementById('save-doc').addEventListener('click', () => safeRun(saveDoc));
       document.getElementById('export-doc').addEventListener('click', () => safeRun(async () => exportDoc()));
       document.getElementById('close-template-modal').addEventListener('click', closeTemplateModal);
+      document.getElementById('cancel-create-doc').addEventListener('click', () => {
+        closeCreateDocModal();
+        setStatus(t('doc_create_cancelled'));
+      });
       document.getElementById('save-template').addEventListener('click', () => safeRun(async () => saveTemplateFromForm()));
       document.getElementById('reset-template-form').addEventListener('click', resetTemplateForm);
       document.getElementById('cleanup-stale').addEventListener('click', () => safeRun(cleanupStaleTasks));
@@ -3197,7 +3364,21 @@
       }
       document.getElementById('delete-doc').addEventListener('click', () => safeRun(deleteDoc));
       document.getElementById('create-task').addEventListener('click', () => safeRun(createTask));
-      docSelectorEl.addEventListener('change', () => safeRun(() => selectDoc(Number(docSelectorEl.value))));
+      createDocFormEl.addEventListener('submit', (event) => {
+        event.preventDefault();
+        safeRun(submitCreateDocFromModal);
+      });
+      docSelectorEl.addEventListener('change', () => {
+        if (docSelectorEl.value === CREATE_DOC_OPTION_VALUE) {
+          openCreateDocModal();
+          return;
+        }
+        if (!docSelectorEl.value) {
+          syncDocSelectorToCurrentDocument();
+          return;
+        }
+        safeRun(() => selectDoc(Number(docSelectorEl.value)));
+      });
       taskTemplateEl.addEventListener('change', () => {
         if (taskTemplateEl.value === MANAGE_TEMPLATE_OPTION) {
           taskTemplateEl.value = '';
@@ -3207,16 +3388,14 @@
           });
           return;
         }
-        const template = getTemplateCatalog().find(t => normalizeTemplateId(t.id) === taskTemplateEl.value);
-        if (template) {
-          taskActionEl.value = template.action;
-          taskInstructionEl.value = template.instruction;
-          localStorage.setItem(LAST_TASK_ACTION_KEY, template.action);
-        }
-        syncSelectionToolbarFromComposer();
+        applyTaskTemplateSelection(taskTemplateEl.value);
       });
       selectionToolbarTemplateEl?.addEventListener('change', () => {
         if (selectionToolbarTemplateEl.value !== MANAGE_TEMPLATE_OPTION) {
+          applyTaskTemplateSelection(selectionToolbarTemplateEl.value, { syncSelectionToolbar: false });
+          if (selectionToolbarInstructionEl) {
+            selectionToolbarInstructionEl.value = taskInstructionEl.value || '';
+          }
           return;
         }
         selectionToolbarTemplateEl.value = '';

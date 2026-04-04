@@ -102,7 +102,7 @@ uv run playwright install chromium
 docker compose up --build -d
 ```
 
-`docker-compose.yml` 现在默认基于当前仓库里的 `Dockerfile` 本地构建镜像，不再依赖预先发布的 GHCR 镜像。
+`docker-compose.yml` 现在默认拉取预先发布的 GHCR 镜像。
 
 容器入口会在启动 Uvicorn 之前自动执行 `alembic upgrade head`。运行前仍需要先准备好 `.env` 文件，步骤与上面的快速开始一致。
 
