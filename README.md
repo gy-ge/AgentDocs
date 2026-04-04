@@ -87,6 +87,8 @@ Run the full test suite:
 uv run pytest
 ```
 
+This repository's automated CI test entry currently runs this local suite. For manual live-environment verification after deployment, use the Online Smoke Test section below instead of adding the target environment to always-on CI.
+
 If this is your first run with browser tests, install the Playwright Chromium runtime first:
 
 ```bash
@@ -216,6 +218,63 @@ uv run python scripts/simulate_agent.py --api-key change-me --mode uppercase
 uv run python scripts/simulate_agent.py --api-key change-me --mode fail
 ```
 
+## Online Smoke Test
+
+This smoke script is for manual post-deploy verification when you want to inspect a specific live environment. It is not intended to run in GitHub Actions or as a mandatory CI/CD step.
+
+For manual production-like checks, use the dedicated smoke script instead of editing URLs into source files.
+
+Add the target environment to a local env file such as `.env.live`:
+
+```dotenv
+AGENTDOCS_SMOKE_BASE_URL=https://example.com
+AGENTDOCS_SMOKE_API_KEY=change-me
+```
+
+Then run:
+
+```bash
+uv run python scripts/live_smoke_test.py --env-file .env.live
+```
+
+For a more readable operator summary:
+
+```bash
+uv run python scripts/live_smoke_test.py --env-file .env.live --output human
+```
+
+To run only part of the smoke test:
+
+```bash
+uv run python scripts/live_smoke_test.py --env-file .env.live --checks basic
+uv run python scripts/live_smoke_test.py --env-file .env.live --checks tasks
+uv run python scripts/live_smoke_test.py --env-file .env.live --checks rollback
+```
+
+The stages work like this:
+
+- `basic`: auth, document list, create, fetch, and cleanup
+- `tasks`: includes `basic`, then verifies manual pickup, complete, accept, reject, cancel, task list, and version list
+- `rollback`: includes `tasks`, then verifies rollback and final content restoration
+
+What the smoke script verifies:
+
+- bearer authentication
+- document create, fetch, list, and delete
+- manual agent pickup and completion through the task APIs
+- accept, reject, and cancel flows
+- version listing and rollback
+- UTC timestamp serialization on API fields
+
+The script creates temporary documents and deletes them before exiting.
+
+Recommended usage:
+
+- keep one or more local env files such as `.env.live` or `.env.staging`
+- run the script only when you explicitly want to verify that target environment
+- do not wire this script into always-on CI unless you intentionally want external-environment checks
+- keep `.env.example` as the shared template, and put real live targets only in local files such as `.env.live`
+
 ## UI E2E Tests
 
 Run the browser E2E suite directly with:
@@ -223,6 +282,8 @@ Run the browser E2E suite directly with:
 ```bash
 uv run pytest tests/test_ui_e2e.py
 ```
+
+This UI suite is part of the local automated test path. If you want to verify a deployed environment instead, use the Online Smoke Test section rather than pointing pytest at a live service.
 
 What the E2E suite covers now:
 

@@ -87,6 +87,8 @@ uv run uvicorn app.main:app --reload
 uv run pytest
 ```
 
+当前仓库的自动化 CI 测试路径跑的是这套本地测试。部署后的线上环境验证请使用后文的“线上 Smoke Test”，不要把真实线上目标直接接入常驻 CI。
+
 如果是第一次跑包含浏览器用例的测试，先安装 Playwright Chromium：
 
 ```bash
@@ -216,6 +218,63 @@ uv run python scripts/simulate_agent.py --api-key change-me --mode uppercase
 uv run python scripts/simulate_agent.py --api-key change-me --mode fail
 ```
 
+## 线上 Smoke Test
+
+这个脚本用于手工做部署后验证，适合你明确想检查某个线上或预发环境时使用，不是给 GitHub Actions 或固定 CI/CD 流程常驻执行的。
+
+如果要做手工线上检查，建议使用单独的 smoke script，而不是把目标 URL 直接写进源码。
+
+先在本地准备一个环境文件，例如 `.env.live`：
+
+```dotenv
+AGENTDOCS_SMOKE_BASE_URL=https://example.com
+AGENTDOCS_SMOKE_API_KEY=change-me
+```
+
+执行方式：
+
+```bash
+uv run python scripts/live_smoke_test.py --env-file .env.live
+```
+
+如果希望输出更适合人工阅读的摘要：
+
+```bash
+uv run python scripts/live_smoke_test.py --env-file .env.live --output human
+```
+
+如果只想跑部分检查：
+
+```bash
+uv run python scripts/live_smoke_test.py --env-file .env.live --checks basic
+uv run python scripts/live_smoke_test.py --env-file .env.live --checks tasks
+uv run python scripts/live_smoke_test.py --env-file .env.live --checks rollback
+```
+
+各阶段含义如下：
+
+- `basic`：认证、文档列表、创建文档、读取文档、清理临时文档
+- `tasks`：包含 `basic`，再继续验证手工 pickup、complete、accept、reject、cancel、任务列表和版本列表
+- `rollback`：包含 `tasks`，再继续验证版本回滚与正文恢复
+
+这个 smoke script 会验证：
+
+- Bearer 认证
+- 文档创建、读取、列表与删除
+- 通过任务 API 手工 pickup 与 complete
+- accept、reject、cancel 流转
+- 版本列表与 rollback
+- API 中 UTC 带时区时间戳序列化
+
+脚本运行时会创建临时文档，并在退出前自动删除。
+
+推荐用法：
+
+- 用 `.env.live`、`.env.staging` 之类的本地文件保存不同目标环境
+- 只在你明确需要验证对应环境时手工执行
+- 除非你明确要做外部环境巡检，否则不要把这个脚本接入常驻 CI
+- `.env.example` 只保留共享模板，真正的线上地址和密钥只放在本地 `.env.live` 这类文件中
+
 ## UI 端到端测试
 
 单独执行浏览器 E2E：
@@ -223,6 +282,8 @@ uv run python scripts/simulate_agent.py --api-key change-me --mode fail
 ```bash
 uv run pytest tests/test_ui_e2e.py
 ```
+
+这套 UI E2E 属于本地自动化测试路径；如果你要检查已经部署好的环境，应该使用上面的“线上 Smoke Test”，而不是让 pytest 直接指向真实线上服务。
 
 当前覆盖内容：
 
