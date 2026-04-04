@@ -1,6 +1,6 @@
 # AgentDocs
 
-AgentDocs is a minimal Markdown collaboration service for a single human author and a single external agent workflow. The backend is FastAPI plus SQLite, the frontend is a single static HTML workbench, and Markdown blocks are parsed on read instead of being persisted as a separate source of truth.
+AgentDocs is a minimal Markdown collaboration service for a single human author and a single external agent workflow. The backend is FastAPI plus SQLite, the frontend is a single static HTML workbench, and Markdown blocks are parsed on read instead of being persisted as a separate source of truth. In normal production use, agents are expected to integrate through the published AgentDocs skill, while the REST protocol remains the underlying transport.
 
 [Architecture](docs/architecture.md) | [API Contract](docs/api_contract.md) | [中文说明](README_zh.md)
 
@@ -10,13 +10,13 @@ Implemented now:
 
 - Document CRUD with optimistic revision checks
 - Block-scoped task creation from selected Markdown ranges
-- Agent pickup and completion flows through the REST API
+- Agent collaboration through the published AgentDocs skill, backed by REST pickup and completion APIs
 - Authenticated SSE task and document update stream for browser-side realtime sync
 - Human accept, reject, cancel, retry, and rollback operations
 - Task diff preview, batch-accept preview, stale detection, stale cleanup, relocation, and requeue-from-current recovery
 - Server-persisted task templates and document-level default task settings
 - Word-style browser workbench with inline review popover, selection toolbar, comment rail, bottom drawers, review badge, and keyboard shortcuts
-- Simulated agent script for local testing
+- Simulated agent script for local testing and protocol verification
 
 Explicitly out of scope for the current version:
 
@@ -185,7 +185,22 @@ Authorization: Bearer <API_KEY>
 
 The API does not use X-API-KEY.
 
+## Recommended Agent Workflow
+
+For real agent collaboration, prefer the published AgentDocs skill instead of hand-building API calls.
+
+Recommended flow:
+
+1. Open [skills/agentdocs/SKILL.md](skills/agentdocs/SKILL.md) or install the published skill package that contains it.
+2. Run the bundled setup once so the agent saves the AgentDocs base URL, API key, and agent name.
+3. Use the bundled commands such as `process`, `pickup`, `complete`, or `continuous` from [skills/agentdocs/scripts/agentdocs_skill_client.py](skills/agentdocs/scripts/agentdocs_skill_client.py) instead of reconstructing raw HTTP requests.
+4. Keep accept, reject, rollback, and stale-task investigation as human or operator actions outside the normal agent loop.
+
+The skill is the recommended collaboration surface because it preserves a stable operator workflow, reuses saved configuration, sends gateway-safe headers, and keeps agents from reimplementing stale-task recovery logic that already exists server-side.
+
 ## Simulated Agent
+
+This script is for local testing and smoke verification. It is not the recommended production integration path.
 
 Run one task once:
 
@@ -220,7 +235,7 @@ The test starts its own temporary database, Uvicorn process, and simulated agent
 
 ## Agent Integration
 
-The external agent protocol is intentionally small.
+The external agent protocol is intentionally small. The published AgentDocs skill is the preferred way to consume it; the details below describe the underlying transport for custom integrations, debugging, and tests.
 
 1. Call POST /api/tasks/next with {"agent_name": "your-agent"}. The server returns one pending task and moves it to processing.
 2. Use the top-level task fields source_text, action, and instruction to build your prompt.
@@ -239,4 +254,4 @@ The external agent protocol is intentionally small.
 
 Action and instruction are free-form strings. Typical action names in this repository are rewrite, translate, summarize, extract, and fix.
 
-If you want the published AgentDocs skill package for this protocol, see [skills/agentdocs/SKILL.md](skills/agentdocs/SKILL.md). The canonical source is https://github.com/gy-ge/AgentDocs, and it includes a runnable HTTP smoke-test client at [skills/agentdocs/scripts/agentdocs_skill_client.py](skills/agentdocs/scripts/agentdocs_skill_client.py).
+If you want the published AgentDocs skill package for this protocol, see [skills/agentdocs/SKILL.md](skills/agentdocs/SKILL.md). The canonical source is https://github.com/gy-ge/AgentDocs, and it includes a runnable skill client at [skills/agentdocs/scripts/agentdocs_skill_client.py](skills/agentdocs/scripts/agentdocs_skill_client.py). In day-to-day use, prefer that client over hand-crafted API calls.

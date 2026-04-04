@@ -19,17 +19,23 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.add_column("documents", sa.Column("default_task_action", sa.Text(), nullable=True))
-    op.add_column("documents", sa.Column("default_task_instruction", sa.Text(), nullable=True))
-    op.execute("UPDATE documents SET default_task_action = 'rewrite' WHERE default_task_action IS NULL")
+    op.add_column(
+        "documents", sa.Column("default_task_action", sa.Text(), nullable=True)
+    )
+    op.add_column(
+        "documents", sa.Column("default_task_instruction", sa.Text(), nullable=True)
+    )
+    op.execute(
+        "UPDATE documents SET default_task_action = 'rewrite' WHERE default_task_action IS NULL"
+    )
     op.create_table(
         "task_templates",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
         sa.Column("name", sa.Text(), nullable=False),
         sa.Column("action", sa.Text(), nullable=False),
         sa.Column("instruction", sa.Text(), nullable=False),
-        sa.Column("created_at", sa.DateTime(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
 

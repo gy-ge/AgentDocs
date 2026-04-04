@@ -17,10 +17,10 @@ class Document(Base):
     default_task_action: Mapped[str | None] = mapped_column(Text, nullable=True)
     default_task_instruction: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=utcnow, nullable=False
+        DateTime(timezone=True), default=utcnow, nullable=False
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=utcnow, nullable=False
+        DateTime(timezone=True), default=utcnow, nullable=False
     )
 
 
@@ -43,11 +43,17 @@ class Task(Base):
     agent_name: Mapped[str | None] = mapped_column(Text, nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=utcnow, nullable=False
+        DateTime(timezone=True), default=utcnow, nullable=False
     )
-    started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    resolved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    resolved_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
 
 class DocumentVersion(Base):
@@ -62,7 +68,7 @@ class DocumentVersion(Base):
     actor: Mapped[str] = mapped_column(Text, nullable=False)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=utcnow, nullable=False
+        DateTime(timezone=True), default=utcnow, nullable=False
     )
 
 
@@ -74,8 +80,8 @@ class TaskTemplate(Base):
     action: Mapped[str] = mapped_column(Text, nullable=False)
     instruction: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=utcnow, nullable=False
+        DateTime(timezone=True), default=utcnow, nullable=False
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=utcnow, nullable=False
+        DateTime(timezone=True), default=utcnow, nullable=False
     )

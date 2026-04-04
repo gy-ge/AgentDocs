@@ -1,10 +1,18 @@
 import asyncio
 import json
+from datetime import datetime, timezone
 
 import pytest
 
 from app.api import tasks as task_routes
 from app.services.task_events import TaskEventBroker
+
+
+def assert_utc_timestamp(value: str):
+    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    assert parsed.tzinfo is not None
+    assert parsed.utcoffset() == timezone.utc.utcoffset(parsed)
+    return parsed
 
 
 def create_document(client, auth_headers, raw_markdown: str, title: str = "Doc"):
@@ -278,6 +286,89 @@ def test_document_update_versions_and_rollback(client, auth_headers):
     rollback_data = rollback_response.json()["data"]
     assert rollback_data["revision"] == 3
     assert rollback_data["raw_markdown"] == "# Title\n\nAlpha\n"
+
+
+def test_api_timestamps_are_timezone_aware(client, auth_headers):
+    document = create_document(
+        client,
+        auth_headers,
+        "# Title\n\nHello world\n",
+        title="Timezone Doc",
+    )
+    doc_id = document["id"]
+
+    list_response = client.get("/api/docs", headers=auth_headers)
+    assert list_response.status_code == 200
+    list_item = next(
+        item for item in list_response.json()["data"] if item["id"] == doc_id
+    )
+    assert_utc_timestamp(list_item["updated_at"])
+
+    detail_response = client.get(f"/api/docs/{doc_id}", headers=auth_headers)
+    assert detail_response.status_code == 200
+    assert_utc_timestamp(detail_response.json()["data"]["updated_at"])
+
+    versions_response = client.get(f"/api/docs/{doc_id}/versions", headers=auth_headers)
+    assert versions_response.status_code == 200
+    assert_utc_timestamp(versions_response.json()["data"][0]["created_at"])
+
+    task, _, _ = create_task(
+        client,
+        auth_headers,
+        doc_id,
+        "# Title\n\nHello world\n",
+        "Hello",
+    )
+    assert_utc_timestamp(task["created_at"])
+    assert task["started_at"] is None
+    assert task["completed_at"] is None
+    assert task["resolved_at"] is None
+
+    pickup_response = client.post(
+        "/api/tasks/next",
+        headers=auth_headers,
+        json={"agent_name": "tz-agent"},
+    )
+    assert pickup_response.status_code == 200
+    picked_up = pickup_response.json()["data"]
+    assert_utc_timestamp(picked_up["created_at"])
+    assert_utc_timestamp(picked_up["started_at"])
+
+    complete_response = client.post(
+        f"/api/tasks/{task['id']}/complete",
+        headers=auth_headers,
+        json={"result": "Hello revised", "error_message": None},
+    )
+    assert complete_response.status_code == 200
+    completed = complete_response.json()["data"]
+    assert_utc_timestamp(completed["created_at"])
+    assert_utc_timestamp(completed["started_at"])
+    assert_utc_timestamp(completed["completed_at"])
+    assert completed["resolved_at"] is None
+
+    templates_create_response = client.post(
+        "/api/task-templates",
+        headers=auth_headers,
+        json={
+            "name": "Timezone Template",
+            "action": "rewrite",
+            "instruction": "rewrite text",
+        },
+    )
+    assert templates_create_response.status_code == 200
+    template = templates_create_response.json()["data"]
+    assert_utc_timestamp(template["created_at"])
+    assert_utc_timestamp(template["updated_at"])
+
+    templates_list_response = client.get("/api/task-templates", headers=auth_headers)
+    assert templates_list_response.status_code == 200
+    listed_template = next(
+        item
+        for item in templates_list_response.json()["data"]
+        if item["id"] == template["id"]
+    )
+    assert_utc_timestamp(listed_template["created_at"])
+    assert_utc_timestamp(listed_template["updated_at"])
 
 
 def test_delete_document_removes_document_and_related_records(client, auth_headers):

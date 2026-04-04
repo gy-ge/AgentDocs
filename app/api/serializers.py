@@ -3,7 +3,8 @@
 Each ``serialize_*`` function converts an ORM model or service result
 dictionary into its corresponding Pydantic schema.  Callers should
 then use ``.model_dump(mode="json")`` on the returned schema before
-embedding it in the JSON response body.
+embedding it in the JSON response body. Datetime fields are normalized
+to UTC with an explicit timezone offset by the shared API schema base.
 """
 
 from app.schemas.docs import BlockRead, DocumentListItem, DocumentRead

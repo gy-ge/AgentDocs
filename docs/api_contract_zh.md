@@ -41,6 +41,12 @@ Base URL：
 - conflict
 - invalid_state
 
+时间字段：
+
+- 所有响应里的 datetime 字段都序列化为带显式时区偏移的 ISO 8601 / RFC 3339 字符串。
+- API 会把所有响应时间统一规范成 UTC，目前输出形如 2026-04-04T10:51:17+00:00。
+- started_at、completed_at、resolved_at 这类生命周期字段在对应状态尚未发生前会保持为 null。
+
 ## 文档接口
 
 ### GET /api/docs
@@ -337,11 +343,13 @@ context 字段包括：
 
 ### POST /api/tasks/next
 
+这个接口是已发布 AgentDocs skill 在底层使用的任务领取原语。正常 agent 协同场景下，优先使用配套 skill 客户端，而不是手工拼接请求。
+
 请求：
 
 ```json
 {
-  "agent_name": "simulated-agent"
+  "agent_name": "agentdocs-skill"
 }
 ```
 
@@ -462,6 +470,15 @@ context 字段包括：
 ### GET /api/task-templates
 
 返回所有服务端持久化模板。
+
+模板字段包括：
+
+- id
+- name
+- action
+- instruction
+- created_at
+- updated_at
 
 ### POST /api/task-templates
 

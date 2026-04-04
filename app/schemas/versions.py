@@ -1,11 +1,9 @@
 from datetime import datetime
 
-from pydantic import BaseModel
-
-from app.schemas.common import NonEmptyText
+from app.schemas.common import ApiModel, NonEmptyText
 
 
-class VersionRead(BaseModel):
+class VersionRead(ApiModel):
     id: int
     revision: int
     actor: str
@@ -13,7 +11,7 @@ class VersionRead(BaseModel):
     created_at: datetime
 
 
-class RollbackRequest(BaseModel):
+class RollbackRequest(ApiModel):
     expected_revision: int
     actor: NonEmptyText = "browser"
     note: str | None = None

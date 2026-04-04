@@ -1,6 +1,6 @@
 # AgentDocs 架构说明
 
-AgentDocs 是一个围绕单份 Markdown 文档、单个人工审核者和单个外部 Agent 工作流构建的小型异步协作系统。当前实现优先保证显式状态流转、revision 校验和恢复工具，而不是让 Agent 在无审核的情况下直接改写正文。
+AgentDocs 是一个围绕单份 Markdown 文档、单个人工审核者和单个外部 Agent 工作流构建的小型异步协作系统。当前实现优先保证显式状态流转、revision 校验和恢复工具，而不是让 Agent 在无审核的情况下直接改写正文。面对生产协同时，推荐让 Agent 通过已发布的 AgentDocs skill 接入，REST 任务协议作为其底层传输层保留。
 
 ## 系统边界
 
@@ -9,7 +9,7 @@ AgentDocs 是一个围绕单份 Markdown 文档、单个人工审核者和单个
 - 使用 SQLite 存储 Markdown 文档、任务状态、文档版本和任务模板
 - 在读取文档时把 Markdown 解析成运行时 block 视图
 - 只允许在当前文档里创建单个 block 范围内的任务
-- 允许外部 Agent 轮询领取任务、回写结果或上报失败
+- 允许外部 Agent 通过已发布 skill 协同，或在底层传输层直接轮询领取任务、回写结果或上报失败
 - 通过认证后的 SSE 流向浏览器推送任务与文档更新事件
 - 在 Agent 结果真正改写文档前，要求人工显式 accept，包括批量合并前预览和批量合并后的回滚入口
 - 检测 stale 任务，并在文档变更后自动同步可恢复任务、在派发前自动恢复 pending 任务，同时保留清理、预览和手动恢复能力给操作端
@@ -33,10 +33,10 @@ documents.raw_markdown 是唯一的文档真源。
 
 当前 schema 一共有四张表：
 
-- documents：标题、正文、revision、默认任务设置、时间戳
-- tasks：source 区间、source_text 与 source_hash、action、instruction、结果、状态、时间戳
+- documents：标题、正文、revision、默认任务设置，以及以带时区 ISO 8601 形式返回的 UTC 时间戳
+- tasks：source 区间、source_text 与 source_hash、action、instruction、结果、状态，以及以带时区 ISO 8601 形式返回的 UTC 生命周期时间戳
 - doc_versions：文档创建、正文修改、会改变正文的 accept，以及 rollback 产生的快照
-- task_templates：保存在服务端的可复用 action 与 instruction 模板
+- task_templates：保存在服务端的可复用 action 与 instruction 模板，以及 UTC 的 created_at、updated_at 时间戳
 
 ## 任务生命周期
 
@@ -78,7 +78,7 @@ stale 检测只对 pending、processing 和 done 任务生效。
 - app/services/markdown.py：轻量级标题分块解析器
 - app/static/index.html：浏览器工作台，采用 Word 风格审阅界面
 - app/static/index.css：工作台样式
-- scripts/simulate_agent.py：本地 API 联调用模拟 worker
+- scripts/simulate_agent.py：用于本地 API 联调与冒烟验证的模拟 worker，不是推荐的生产接入方式
 
 ## 浏览器工作台
 

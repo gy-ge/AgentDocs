@@ -1,6 +1,6 @@
 # AgentDocs Architecture
 
-AgentDocs is a small asynchronous Markdown collaboration system built around one source document, one human reviewer, and one external agent workflow. The implementation favors explicit state transitions, revision checks, and recovery tooling over automation that writes directly into documents without review.
+AgentDocs is a small asynchronous Markdown collaboration system built around one source document, one human reviewer, and one external agent workflow. The implementation favors explicit state transitions, revision checks, and recovery tooling over automation that writes directly into documents without review. The preferred production-facing collaboration surface for agents is the published AgentDocs skill, with the REST task protocol serving as the underlying transport.
 
 ## System Boundaries
 
@@ -9,7 +9,7 @@ What the system does:
 - Stores Markdown documents, task state, document versions, and task templates in SQLite
 - Parses Markdown into runtime block views when documents are read
 - Restricts task creation to a single block range inside the current document text
-- Lets an external agent poll for work, submit a result, or report failure
+- Lets an external agent collaborate through the published skill or, at the transport layer, poll for work, submit a result, or report failure
 - Pushes authenticated task and document updates to the browser through an SSE stream
 - Requires a human-driven accept step before agent output changes the document, including batch preview before bulk merges and rollback after review
 - Detects stale tasks, auto-syncs recoverable tasks after document changes, auto-recovers pending tasks before dispatch, and still exposes cleanup / preview / manual recovery tools for operators
@@ -33,10 +33,10 @@ documents.raw_markdown is the only document source of truth.
 
 The current schema contains four tables:
 
-- documents: title, raw_markdown, revision, default task settings, timestamps
-- tasks: source range, source text and hash, action, instruction, agent result, status, timestamps
+- documents: title, raw_markdown, revision, default task settings, and UTC timestamps returned as timezone-aware ISO 8601 values
+- tasks: source range, source text and hash, action, instruction, agent result, status, and UTC lifecycle timestamps returned as timezone-aware ISO 8601 values
 - doc_versions: snapshots created on document creation, content edits, accept operations that change content, and rollback
-- task_templates: reusable action and instruction presets stored on the server
+- task_templates: reusable action and instruction presets stored on the server, plus UTC created_at and updated_at timestamps
 
 ## Task Lifecycle
 
@@ -78,7 +78,7 @@ Stale checks apply to pending, processing, and done tasks.
 - app/services/markdown.py: lightweight heading-based block parser
 - app/static/index.html: browser workbench with Word-style review UI
 - app/static/index.css: workbench styling
-- scripts/simulate_agent.py: local worker for API integration testing
+- scripts/simulate_agent.py: local worker for API integration testing and smoke checks, not the preferred production integration path
 
 ## Browser Workbench
 

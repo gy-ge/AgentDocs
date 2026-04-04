@@ -1,11 +1,9 @@
 from datetime import datetime
 
-from pydantic import BaseModel
-
-from app.schemas.common import NonEmptyText
+from app.schemas.common import ApiModel, NonEmptyText
 
 
-class BlockRead(BaseModel):
+class BlockRead(ApiModel):
     heading: str
     level: int
     position: int
@@ -14,13 +12,13 @@ class BlockRead(BaseModel):
     content: str
 
 
-class DocumentCreate(BaseModel):
+class DocumentCreate(ApiModel):
     title: NonEmptyText
     raw_markdown: str = ""
     actor: NonEmptyText = "browser"
 
 
-class DocumentUpdate(BaseModel):
+class DocumentUpdate(ApiModel):
     title: NonEmptyText
     raw_markdown: str
     expected_revision: int
@@ -28,14 +26,14 @@ class DocumentUpdate(BaseModel):
     note: str | None = None
 
 
-class DocumentListItem(BaseModel):
+class DocumentListItem(ApiModel):
     id: int
     title: str
     revision: int
     updated_at: datetime
 
 
-class DocumentRead(BaseModel):
+class DocumentRead(ApiModel):
     id: int
     title: str
     raw_markdown: str
@@ -46,7 +44,7 @@ class DocumentRead(BaseModel):
     updated_at: datetime
 
 
-class TaskDefaultsUpdate(BaseModel):
+class TaskDefaultsUpdate(ApiModel):
     actor: NonEmptyText = "browser"
     default_task_action: str | None = None
     default_task_instruction: str | None = None

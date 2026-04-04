@@ -1,23 +1,21 @@
 from datetime import datetime
 
-from pydantic import BaseModel
-
-from app.schemas.common import NonEmptyText
+from app.schemas.common import ApiModel, NonEmptyText
 
 
-class TaskTemplateCreate(BaseModel):
+class TaskTemplateCreate(ApiModel):
     name: NonEmptyText
     action: NonEmptyText
     instruction: NonEmptyText
 
 
-class TaskTemplateUpdate(BaseModel):
+class TaskTemplateUpdate(ApiModel):
     name: NonEmptyText
     action: NonEmptyText
     instruction: NonEmptyText
 
 
-class TaskTemplateRead(BaseModel):
+class TaskTemplateRead(ApiModel):
     id: int
     name: str
     action: str

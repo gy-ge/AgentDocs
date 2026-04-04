@@ -1,12 +1,12 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import Field
 
-from app.schemas.common import NonEmptyText
+from app.schemas.common import ApiModel, NonEmptyText
 
 
-class TaskCreate(BaseModel):
+class TaskCreate(ApiModel):
     action: NonEmptyText
     instruction: str | None = None
     source_text: str
@@ -15,16 +15,16 @@ class TaskCreate(BaseModel):
     doc_revision: int
 
 
-class TaskNextRequest(BaseModel):
+class TaskNextRequest(ApiModel):
     agent_name: NonEmptyText
 
 
-class TaskCompleteRequest(BaseModel):
+class TaskCompleteRequest(ApiModel):
     result: str | None = None
     error_message: str | None = None
 
 
-class TaskDiffRead(BaseModel):
+class TaskDiffRead(ApiModel):
     task_id: int
     doc_id: int
     current_text: str
@@ -36,7 +36,7 @@ class TaskDiffRead(BaseModel):
     diff: str
 
 
-class TaskContextBlockRead(BaseModel):
+class TaskContextBlockRead(ApiModel):
     heading: str
     level: int
     position: int
@@ -44,13 +44,13 @@ class TaskContextBlockRead(BaseModel):
     end_offset: int
 
 
-class TaskContextHeadingRead(BaseModel):
+class TaskContextHeadingRead(ApiModel):
     heading: str
     level: int
     position: int
 
 
-class TaskContextRead(BaseModel):
+class TaskContextRead(ApiModel):
     document_title: str
     document_revision: int
     current_selection_text: str
@@ -62,7 +62,7 @@ class TaskContextRead(BaseModel):
     context_after: str
 
 
-class TaskRead(BaseModel):
+class TaskRead(ApiModel):
     id: int
     doc_id: int
     doc_revision: int
@@ -85,13 +85,13 @@ class TaskRead(BaseModel):
     resolved_at: datetime | None = None
 
 
-class TaskAcceptRequest(BaseModel):
+class TaskAcceptRequest(ApiModel):
     expected_revision: int
     actor: NonEmptyText = "browser"
     note: str | None = None
 
 
-class TaskBatchActionRequest(BaseModel):
+class TaskBatchActionRequest(ApiModel):
     actor: NonEmptyText = "browser"
     note: str | None = None
     action: NonEmptyText | None = None
@@ -100,12 +100,12 @@ class TaskBatchActionRequest(BaseModel):
     limit: int | None = Field(default=None, ge=1, le=50)
 
 
-class TaskRelocateAttemptRead(BaseModel):
+class TaskRelocateAttemptRead(ApiModel):
     task_id: int
     reason: str
 
 
-class TaskBatchPreviewItemRead(BaseModel):
+class TaskBatchPreviewItemRead(ApiModel):
     task_id: int
     action: str
     heading: str | None = None
@@ -116,7 +116,7 @@ class TaskBatchPreviewItemRead(BaseModel):
     reason: str | None = None
 
 
-class TaskBatchPreviewRead(BaseModel):
+class TaskBatchPreviewRead(ApiModel):
     doc_id: int
     document_revision: int
     action: str | None = None
@@ -131,7 +131,7 @@ class TaskBatchPreviewRead(BaseModel):
     skipped_tasks: list[TaskBatchPreviewItemRead]
 
 
-class TaskBatchAcceptRead(BaseModel):
+class TaskBatchAcceptRead(ApiModel):
     doc_id: int
     document_revision: int
     accepted: int
@@ -142,19 +142,19 @@ class TaskBatchAcceptRead(BaseModel):
     rollback_revision: int | None = None
 
 
-class TaskRelocateRead(BaseModel):
+class TaskRelocateRead(ApiModel):
     task: TaskRead
     relocation_strategy: str
 
 
-class CleanupStaleTasksRead(BaseModel):
+class CleanupStaleTasksRead(ApiModel):
     doc_id: int
     cancelled: int
     rejected: int
     unchanged: int
 
 
-class TaskRecoveryPreviewRead(BaseModel):
+class TaskRecoveryPreviewRead(ApiModel):
     task_id: int
     doc_id: int
     task_status: str
@@ -172,16 +172,14 @@ class TaskRecoveryPreviewRead(BaseModel):
     context: TaskContextRead | None = None
 
 
-class TaskRecoverRequest(BaseModel):
+class TaskRecoverRequest(ApiModel):
     mode: Literal["relocate", "requeue_from_current"]
     actor: NonEmptyText = "browser"
 
 
-class TaskRecoveryResultRead(BaseModel):
+class TaskRecoveryResultRead(ApiModel):
     mode: str
     source_task: TaskRead
     new_task: TaskRead | None = None
     relocation_strategy: str | None = None
     closed_source_status: str | None = None
-
-

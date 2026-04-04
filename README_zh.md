@@ -1,6 +1,6 @@
 # AgentDocs
 
-AgentDocs 是一个面向单个作者与单个外部 Agent 工作流的极简 Markdown 协作服务。后端使用 FastAPI 和 SQLite，前端是单文件静态工作台；Markdown block 只在读取时解析，不会作为独立真源持久化。
+AgentDocs 是一个面向单个作者与单个外部 Agent 工作流的极简 Markdown 协作服务。后端使用 FastAPI 和 SQLite，前端是单文件静态工作台；Markdown block 只在读取时解析，不会作为独立真源持久化。在正常生产协同里，推荐让 Agent 通过已发布的 AgentDocs skill 接入，REST 协议作为其底层传输层保留。
 
 [架构说明](docs/architecture_zh.md) | [API 契约](docs/api_contract_zh.md) | [English README](README.md)
 
@@ -10,13 +10,13 @@ AgentDocs 是一个面向单个作者与单个外部 Agent 工作流的极简 Ma
 
 - 带 revision 乐观并发校验的文档 CRUD
 - 基于 Markdown 选区的单 block 任务创建
-- 通过 REST API 完成 Agent 领取与回写
+- 通过已发布的 AgentDocs skill 协同，底层仍由 REST API 完成领取与回写
 - 基于认证 SSE 的任务与文档更新流，用于浏览器实时同步
 - 人工 accept、reject、cancel、retry 与 rollback
 - 任务 diff 预览、批量接受预览、stale 检测、stale 清理、重定位与按当前正文重建
 - 服务端持久化任务模板与文档级默认任务设置
 - Word 风格浏览器工作台：行内审阅浮窗、选区快捷工具栏、评论栏、底部折叠抽屉、审阅徽章与键盘快捷键
-- 本地模拟 Agent 脚本
+- 用于本地测试与协议验证的模拟 Agent 脚本
 
 当前明确不做：
 
@@ -185,7 +185,22 @@ Authorization: Bearer <API_KEY>
 
 当前实现不使用 X-API-KEY。
 
+## 推荐的 Agent 协同方式
+
+如果是实际的 Agent 协同，优先使用已发布的 AgentDocs skill，而不是手工拼接 API 调用。
+
+推荐流程：
+
+1. 打开 [skills/agentdocs/SKILL.md](skills/agentdocs/SKILL.md)，或安装包含它的已发布 skill 包。
+2. 先运行一次配套 setup，把 AgentDocs 的 base URL、API key 和 agent name 保存下来。
+3. 日常使用 [skills/agentdocs/scripts/agentdocs_skill_client.py](skills/agentdocs/scripts/agentdocs_skill_client.py) 提供的 `process`、`pickup`、`complete`、`continuous` 等命令，而不是自己重写原始 HTTP 请求。
+4. accept、reject、rollback 和 stale 任务排查仍然保留给人工或运维操作，不放进默认 agent 循环。
+
+之所以把 skill 作为推荐入口，是因为它能复用已保存配置、自动携带适合网关环境的请求头，并避免 agent 重复实现服务端已经具备的 stale 任务恢复逻辑。
+
 ## 模拟 Agent
+
+这个脚本主要用于本地测试和联调冒烟，不是推荐的生产接入方式。
 
 执行一次任务：
 
@@ -220,7 +235,7 @@ uv run pytest tests/test_ui_e2e.py
 
 ## Agent 接入
 
-外部 Agent 协议保持很小。
+外部 Agent 协议保持很小。已发布的 AgentDocs skill 是推荐消费方式；下面这些细节主要用于自定义接入、调试和测试时理解底层传输协议。
 
 1. 调用 POST /api/tasks/next，并传入 {"agent_name": "your-agent"}。服务端会返回一条 pending 任务，并将其改为 processing。
 2. 使用任务顶层字段 source_text、action、instruction 生成提示词。
@@ -239,4 +254,4 @@ uv run pytest tests/test_ui_e2e.py
 
 action 和 instruction 都是自由文本。这个仓库里常见的 action 名称有 rewrite、translate、summarize、extract 和 fix。
 
-如果你希望使用这套协议对应的已发布 AgentDocs skill 包，可查看 [skills/agentdocs/SKILL.md](skills/agentdocs/SKILL.md)。其唯一来源仓库是 https://github.com/gy-ge/AgentDocs，并附带可直接做 HTTP 联调的示例客户端：[skills/agentdocs/scripts/agentdocs_skill_client.py](skills/agentdocs/scripts/agentdocs_skill_client.py)。
+如果你希望使用这套协议对应的已发布 AgentDocs skill 包，可查看 [skills/agentdocs/SKILL.md](skills/agentdocs/SKILL.md)。其唯一来源仓库是 https://github.com/gy-ge/AgentDocs，并附带可直接使用的 skill 客户端：[skills/agentdocs/scripts/agentdocs_skill_client.py](skills/agentdocs/scripts/agentdocs_skill_client.py)。日常协同优先使用这个客户端，而不是手工拼接 API 请求。

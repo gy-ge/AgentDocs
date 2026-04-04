@@ -41,6 +41,12 @@ Common error codes:
 - conflict
 - invalid_state
 
+Datetime fields:
+
+- Every response datetime field is serialized as an ISO 8601 / RFC 3339 string with an explicit timezone offset.
+- The API normalizes all response datetimes to UTC and currently emits values like 2026-04-04T10:51:17+00:00.
+- Nullable lifecycle fields such as started_at, completed_at, and resolved_at remain null until that state transition has happened.
+
 ## Documents
 
 ### GET /api/docs
@@ -337,11 +343,13 @@ Response data contains:
 
 ### POST /api/tasks/next
 
+This endpoint is the transport primitive used by the published AgentDocs skill. In normal agent operation, prefer the bundled skill client over hand-building requests.
+
 Request:
 
 ```json
 {
-  "agent_name": "simulated-agent"
+  "agent_name": "agentdocs-skill"
 }
 ```
 
@@ -462,6 +470,15 @@ Behavior:
 ### GET /api/task-templates
 
 Returns all persisted server-side templates.
+
+Template payload fields include:
+
+- id
+- name
+- action
+- instruction
+- created_at
+- updated_at
 
 ### POST /api/task-templates
 
