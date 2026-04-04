@@ -16,3 +16,4 @@ ui-*.txt
 ui-*.png
 ui-*.log
 lighthouse-*/
+skills/agentdocs-integration/.agentdocs.config.json

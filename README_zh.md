@@ -238,3 +238,5 @@ uv run pytest tests/test_ui_e2e.py
 5. 如果文档变化导致任务 stale，可结合 GET /api/tasks/{task_id}/diff、GET /api/tasks/{task_id}/recovery-preview、POST /api/tasks/{task_id}/relocate 和 POST /api/tasks/{task_id}/recover 处理。
 
 action 和 instruction 都是自由文本。这个仓库里常见的 action 名称有 rewrite、translate、summarize、extract 和 fix。
+
+如果你希望使用这套协议对应的已发布 AgentDocs 集成 skill 包，可查看 [skills/agentdocs-integration/SKILL.md](skills/agentdocs-integration/SKILL.md)。其中附带了可直接做 HTTP 联调的示例客户端：[skills/agentdocs-integration/scripts/agentdocs_skill_client.py](skills/agentdocs-integration/scripts/agentdocs_skill_client.py)。

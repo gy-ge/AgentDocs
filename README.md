@@ -238,3 +238,5 @@ The external agent protocol is intentionally small.
 5. If the task becomes stale because the document changed, the browser or operator can inspect GET /api/tasks/{task_id}/diff, GET /api/tasks/{task_id}/recovery-preview, POST /api/tasks/{task_id}/relocate, or POST /api/tasks/{task_id}/recover.
 
 Action and instruction are free-form strings. Typical action names in this repository are rewrite, translate, summarize, extract, and fix.
+
+If you want the published AgentDocs integration skill package for this protocol, see [skills/agentdocs-integration/SKILL.md](skills/agentdocs-integration/SKILL.md). It includes a runnable HTTP smoke-test client at [skills/agentdocs-integration/scripts/agentdocs_skill_client.py](skills/agentdocs-integration/scripts/agentdocs_skill_client.py).
