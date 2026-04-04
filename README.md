@@ -117,7 +117,7 @@ Copy-Item C:/path/to/docker-compose.yml ./docker-compose.yml
 docker compose up -d
 ```
 
-That is enough for a first boot. If you do nothing else, Docker will pull the image, create a named volume for the database, and publish the app on port 8000.
+That is enough for a first boot. If you do nothing else, Docker will pull the image, create a local `data` folder next to `docker-compose.yml` if needed, and publish the app on port 8000.
 
 Save [docker-compose.yml](docker-compose.yml) into the target folder, then run:
 
@@ -161,18 +161,18 @@ docker compose ps
 docker compose down
 ```
 
-The SQLite database is persisted in the named Docker volume `agentdocs-data`, mounted at `/app/data` inside the container. The compose default sets `SQLITE_PATH=/app/data/doc.db` so the database stays inside that persistent volume.
+The SQLite database is persisted in the `data` folder next to [docker-compose.yml](docker-compose.yml). Inside the container, that folder is mounted at `/app/data`. The compose default sets `SQLITE_PATH=/app/data/doc.db`, so the database file ends up as `./data/doc.db` on the host.
 
-If you override `SQLITE_PATH`, keep it under `/app/data` unless you intentionally want non-persistent container-local storage.
+If you override `SQLITE_PATH`, keep it under `/app/data` unless you intentionally want the database to stop using the host-side `data` folder.
 
-If you prefer to inspect the database file directly on the host, you can replace the volume mapping in [docker-compose.yml](docker-compose.yml) from `agentdocs-data:/app/data` to `./data:/app/data`. Keep `SQLITE_PATH=/app/data/doc.db` unchanged in that case.
+This also makes backup simple: stop the stack if you want a quiet backup, then copy the local `data` folder.
 
 ## Troubleshooting Startup
 
 - If `uv sync` says your Python version does not satisfy the project requirement, run `uv python install 3.10` and then rerun `uv sync`.
 - If you override `SQLITE_PATH`, make sure the parent directory is writable; the default local setup now creates missing directories automatically, but it cannot bypass filesystem permission errors.
 - If port 8000 is already in use, set `AGENTDOCS_PORT` in the compose-side `.env`, for example `AGENTDOCS_PORT=8080`, then open that port in the browser.
-- If you use the host bind mount form `./data:/app/data`, create the local `data` directory if your Docker setup does not auto-create it with writable permissions.
+- If Docker does not auto-create a writable `data` directory on your platform, create it yourself next to `docker-compose.yml` before running `docker compose up -d`.
 - If the page loads but API requests return 401, enter the `API_KEY` from the compose-side `.env` or your shell environment in the browser connection settings. The default value is `change-me`.
 
 ## Authentication

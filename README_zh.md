@@ -117,7 +117,7 @@ Copy-Item C:/path/to/docker-compose.yml ./docker-compose.yml
 docker compose up -d
 ```
 
-第一次启动只需要这些步骤。默认情况下，Docker 会拉取镜像、创建数据库用的命名卷，并把服务发布到 8000 端口。
+第一次启动只需要这些步骤。默认情况下，Docker 会拉取镜像、按需在 `docker-compose.yml` 同级创建本地 `data` 目录，并把服务发布到 8000 端口。
 
 把 [docker-compose.yml](docker-compose.yml) 放到目标目录后，执行：
 
@@ -161,18 +161,18 @@ docker compose ps
 docker compose down
 ```
 
-SQLite 数据库会持久化在名为 `agentdocs-data` 的 Docker volume 中，并挂载到容器内的 `/app/data`。compose 默认把 `SQLITE_PATH` 设为 `/app/data/doc.db`，因此数据库会落在持久化卷里。
+SQLite 数据库会持久化在 [docker-compose.yml](docker-compose.yml) 同级的 `data` 目录中。这个目录在容器内挂载为 `/app/data`。compose 默认把 `SQLITE_PATH` 设为 `/app/data/doc.db`，因此宿主机上的数据库文件就是 `./data/doc.db`。
 
-如果你要自定义 `SQLITE_PATH`，除非你明确想使用容器内临时存储，否则应当继续放在 `/app/data` 下面。
+如果你要自定义 `SQLITE_PATH`，除非你明确想脱离宿主机侧的 `data` 目录，否则应当继续放在 `/app/data` 下面。
 
-如果你希望直接在宿主机上查看数据库文件，可以把 [docker-compose.yml](docker-compose.yml) 里的卷映射从 `agentdocs-data:/app/data` 改成 `./data:/app/data`。这种情况下保留 `SQLITE_PATH=/app/data/doc.db` 不变即可。
+这样备份也会简单很多：如果你想要安静备份，先停掉服务，然后直接复制本地 `data` 目录即可。
 
 ## 启动排查
 
 - 如果 `uv sync` 提示当前 Python 版本不满足要求，先执行 `uv python install 3.10`，然后重新运行 `uv sync`。
 - 如果你自定义了 `SQLITE_PATH`，请确保该路径的父目录可写；当前默认配置会自动创建缺失目录，但不会绕过权限问题。
 - 如果 8000 端口已被占用，可以在 compose 侧 `.env` 中设置 `AGENTDOCS_PORT=8080` 一类的值，然后改用对应端口访问。
-- 如果你使用了 `./data:/app/data` 这种宿主机目录挂载，而 Docker 环境没有自动创建可写目录，请先手工创建本地 `data` 目录。
+- 如果你的 Docker 环境没有自动创建可写的 `data` 目录，请先在 `docker-compose.yml` 同级手工创建该目录，再执行 `docker compose up -d`。
 - 如果浏览器能打开页面但 API 请求返回 401，请在连接设置里填写 compose 侧 `.env` 或当前 shell 环境中设置的 `API_KEY`，默认值是 `change-me`。
 
 ## 认证方式
